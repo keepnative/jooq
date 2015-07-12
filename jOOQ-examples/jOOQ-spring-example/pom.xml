@@ -21,7 +21,7 @@
         <org.springframework.version>4.1.2.RELEASE</org.springframework.version>
         <org.jooq.version>3.6.2</org.jooq.version>
         <org.h2.version>1.4.181</org.h2.version>
-		<java.version>1.8</java.version>
+		<java.version>1.6</java.version>
     </properties>
     
     <dependencies>
@@ -108,8 +108,8 @@
                     <maxmem>1024m</maxmem>
                     <meminitial>256m</meminitial>
                     <encoding>UTF-8</encoding>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>1.6</source>
+                    <target>1.6</target>
                     <debug>true</debug>
                     <debuglevel>lines,vars,source</debuglevel>
                     <!-- [#2413] Make compiler warnings a bit more visible
