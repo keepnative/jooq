@@ -4954,6 +4954,12 @@ public interface DSLContext extends Scope {
     @Support
     CreateIndexStep createIndex(Name index);
 
+    @Support
+    CreateIndexStep createUniqueIndex(String index);
+
+    @Support
+    CreateIndexStep createUniqueIndex(Name index);
+
     /**
      * Create a new DSL <code>CREATE SEQUENCE</code> statement.
      *

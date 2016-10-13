@@ -1694,6 +1694,16 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
     }
 
     @Override
+    public CreateIndexStep createUniqueIndex(Name index) {
+        return new CreateIndexImpl(configuration(), index, true);
+    }
+
+    @Override
+    public CreateIndexStep createUniqueIndex(String index) {
+        return createUniqueIndex(name(index));
+    }
+
+    @Override
     public CreateIndexStep createIndex(Name index) {
         return new CreateIndexImpl(configuration(), index);
     }
