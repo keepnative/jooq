@@ -74,13 +74,13 @@ public class DB2DataType {
     public static final DataType<UByte>      TINYINTUNSIGNED    = new DefaultDataType<UByte>(SQLDialect.DB2, SQLDataType.TINYINTUNSIGNED, "tinyint unsigned", "unsigned");
     public static final DataType<Short>      SMALLINT           = new DefaultDataType<Short>(SQLDialect.DB2, SQLDataType.SMALLINT, "smallint", "signed");
     public static final DataType<UShort>     SMALLINTUNSIGNED   = new DefaultDataType<UShort>(SQLDialect.DB2, SQLDataType.SMALLINTUNSIGNED, "smallint unsigned", "unsigned");
-    public static final DataType<Integer>    INT                = new DefaultDataType<Integer>(SQLDialect.DB2, SQLDataType.INTEGER, "int", "signed");
+    public static final DataType<Integer>    INT                = new DefaultDataType<Integer>(SQLDialect.DB2, SQLDataType.INTEGER, "number", "signed");
     public static final DataType<UInteger>   INTUNSIGNED        = new DefaultDataType<UInteger>(SQLDialect.DB2, SQLDataType.INTEGERUNSIGNED, "int unsigned", "unsigned");
     public static final DataType<Integer>    MEDIUMINT          = new DefaultDataType<Integer>(SQLDialect.DB2, SQLDataType.INTEGER, "mediumint", "signed");
     public static final DataType<UInteger>   MEDIUMINTUNSIGNED  = new DefaultDataType<UInteger>(SQLDialect.DB2, SQLDataType.INTEGERUNSIGNED, "mediumint unsigned", "unsigned");
     public static final DataType<Integer>    INTEGER            = new DefaultDataType<Integer>(SQLDialect.DB2, SQLDataType.INTEGER, "integer", "signed");
     public static final DataType<UInteger>   INTEGERUNSIGNED    = new DefaultDataType<UInteger>(SQLDialect.DB2, SQLDataType.INTEGERUNSIGNED, "integer unsigned", "unsigned");
-    public static final DataType<Long>       BIGINT             = new DefaultDataType<Long>(SQLDialect.DB2, SQLDataType.BIGINT, "bigint", "signed");
+    public static final DataType<Long>       BIGINT             = new DefaultDataType<Long>(SQLDialect.DB2, SQLDataType.BIGINT, "number", "signed");
     public static final DataType<ULong>      BIGINTUNSIGNED     = new DefaultDataType<ULong>(SQLDialect.DB2, SQLDataType.BIGINTUNSIGNED, "bigint unsigned", "unsigned");
     public static final DataType<Double>     DOUBLE             = new DefaultDataType<Double>(SQLDialect.DB2, SQLDataType.DOUBLE, "double", "decimal");
     public static final DataType<Double>     FLOAT              = new DefaultDataType<Double>(SQLDialect.DB2, SQLDataType.FLOAT, "float", "decimal");
@@ -90,7 +90,7 @@ public class DB2DataType {
     public static final DataType<Boolean>    BIT                = new DefaultDataType<Boolean>(SQLDialect.DB2, SQLDataType.BIT, "bit", "unsigned");
     public static final DataType<BigDecimal> DECIMAL            = new DefaultDataType<BigDecimal>(SQLDialect.DB2, SQLDataType.DECIMAL, "decimal", "decimal");
     public static final DataType<BigDecimal> DEC                = new DefaultDataType<BigDecimal>(SQLDialect.DB2, SQLDataType.DECIMAL, "dec", "decimal");
-    public static final DataType<String>     VARCHAR            = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.VARCHAR, "varchar", "char");
+    public static final DataType<String>     VARCHAR            = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.VARCHAR, "varchar2", "char");
     public static final DataType<String>     CHAR               = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.CHAR, "char", "char");
     public static final DataType<byte[]>     BLOB               = new DefaultDataType<byte[]>(SQLDialect.DB2, SQLDataType.BLOB, "blob", "binary");
     public static final DataType<byte[]>     BINARY             = new DefaultDataType<byte[]>(SQLDialect.DB2, SQLDataType.BINARY, "binary", "binary");
@@ -123,14 +123,14 @@ public class DB2DataType {
     // Dialect-specific data types and synonyms thereof
     // -------------------------------------------------------------------------
 
-    public static final DataType<String>     TINYTEXT           = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.CLOB, "tinytext", "char");
-    public static final DataType<String>     MEDIUMTEXT         = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.CLOB, "mediumtext", "char");
-    public static final DataType<String>     TEXT               = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.CLOB, "text", "char");
-    public static final DataType<String>     LONGTEXT           = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.CLOB, "longtext", "char");
+    public static final DataType<String>     TINYTEXT           = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.CLOB, "clob", "char");
+    public static final DataType<String>     MEDIUMTEXT         = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.CLOB, "clob", "char");
+    public static final DataType<String>     TEXT               = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.CLOB, "clob", "char");
+    public static final DataType<String>     LONGTEXT           = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.CLOB, "clob", "char");
     public static final DataType<String>     ENUM               = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.VARCHAR, "enum", "char");
     public static final DataType<String>     SET                = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.VARCHAR, "set", "char");
-    public static final DataType<byte[]>     TINYBLOB           = new DefaultDataType<byte[]>(SQLDialect.DB2, SQLDataType.BLOB, "tinyblob", "binary");
-    public static final DataType<byte[]>     MEDIUMBLOB         = new DefaultDataType<byte[]>(SQLDialect.DB2, SQLDataType.BLOB, "mediumblob", "binary");
-    public static final DataType<byte[]>     LONGBLOB           = new DefaultDataType<byte[]>(SQLDialect.DB2, SQLDataType.BLOB, "longblob", "binary");
+    public static final DataType<byte[]>     TINYBLOB           = new DefaultDataType<byte[]>(SQLDialect.DB2, SQLDataType.BLOB, "blob", "binary");
+    public static final DataType<byte[]>     MEDIUMBLOB         = new DefaultDataType<byte[]>(SQLDialect.DB2, SQLDataType.BLOB, "blob", "binary");
+    public static final DataType<byte[]>     LONGBLOB           = new DefaultDataType<byte[]>(SQLDialect.DB2, SQLDataType.BLOB, "blob", "binary");
     public static final DataType<Date>       YEAR               = new DefaultDataType<Date>(SQLDialect.DB2, SQLDataType.DATE, "year", "date");
 }

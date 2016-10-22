@@ -123,14 +123,14 @@ public class OracleDataType {
     // Dialect-specific data types and synonyms thereof
     // -------------------------------------------------------------------------
 
-    public static final DataType<String>     TINYTEXT           = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.CLOB, "tinytext", "char");
-    public static final DataType<String>     MEDIUMTEXT         = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.CLOB, "mediumtext", "char");
-    public static final DataType<String>     TEXT               = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.CLOB, "text", "char");
-    public static final DataType<String>     LONGTEXT           = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.CLOB, "longtext", "char");
+    public static final DataType<String>     TINYTEXT           = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.CLOB, "clob", "char");
+    public static final DataType<String>     MEDIUMTEXT         = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.CLOB, "clob", "char");
+    public static final DataType<String>     TEXT               = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.CLOB, "clob", "char");
+    public static final DataType<String>     LONGTEXT           = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.CLOB, "clob", "char");
     public static final DataType<String>     ENUM               = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.VARCHAR, "enum", "char");
     public static final DataType<String>     SET                = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.VARCHAR, "set", "char");
-    public static final DataType<byte[]>     TINYBLOB           = new DefaultDataType<byte[]>(SQLDialect.ORACLE, SQLDataType.BLOB, "tinyblob", "binary");
-    public static final DataType<byte[]>     MEDIUMBLOB         = new DefaultDataType<byte[]>(SQLDialect.ORACLE, SQLDataType.BLOB, "mediumblob", "binary");
-    public static final DataType<byte[]>     LONGBLOB           = new DefaultDataType<byte[]>(SQLDialect.ORACLE, SQLDataType.BLOB, "longblob", "binary");
+    public static final DataType<byte[]>     TINYBLOB           = new DefaultDataType<byte[]>(SQLDialect.ORACLE, SQLDataType.BLOB, "blob", "binary");
+    public static final DataType<byte[]>     MEDIUMBLOB         = new DefaultDataType<byte[]>(SQLDialect.ORACLE, SQLDataType.BLOB, "blob", "binary");
+    public static final DataType<byte[]>     LONGBLOB           = new DefaultDataType<byte[]>(SQLDialect.ORACLE, SQLDataType.BLOB, "blob", "binary");
     public static final DataType<Date>       YEAR               = new DefaultDataType<Date>(SQLDialect.ORACLE, SQLDataType.DATE, "year", "date");
 }

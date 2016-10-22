@@ -371,7 +371,16 @@ public class DefaultDataType<T> implements DataType<T> {
 
     @Override
     public final boolean hasPrecision() {
-        return type == BigInteger.class || type == BigDecimal.class;
+        if (type == BigInteger.class || type == BigDecimal.class) {
+            return true;
+        }
+
+        if ((dialect == SQLDialect.ORACLE || dialect == SQLDialect.DB2)
+                && (type == Long.class || type == Integer.class)) {
+            return true;
+        }
+
+        return false;
     }
 
     @Override
@@ -393,7 +402,16 @@ public class DefaultDataType<T> implements DataType<T> {
 
     @Override
     public final boolean hasScale() {
-        return type == BigDecimal.class;
+        if (type == BigDecimal.class) {
+            return true;
+        }
+
+        if ((dialect == SQLDialect.ORACLE || dialect == SQLDialect.DB2)
+                && (type == Long.class || type == Integer.class)) {
+            return true;
+        }
+
+        return false;
     }
 
     @Override
