@@ -266,9 +266,9 @@ class AlterTableImpl extends AbstractQuery implements
 
             // Some databases default to NOT NULL, so explicitly setting columns to NULL is mostly required here
             // [#3400] ... but not in Firebird
-            else if (family != FIREBIRD) {
-                ctx.sql(' ').keyword("null");
-            }
+//            else if (family != FIREBIRD) {
+//                ctx.sql(' ').keyword("null");
+//            }
 
             /* [pro] xx
             xx xxxxxxx xx xxxxx

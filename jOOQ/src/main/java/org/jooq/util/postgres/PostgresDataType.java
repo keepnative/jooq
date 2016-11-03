@@ -96,7 +96,7 @@ public class PostgresDataType {
     public static final DataType<Date>         DATE                     = new DefaultDataType<Date>(SQLDialect.POSTGRES, SQLDataType.DATE, "date");
     public static final DataType<Time>         TIME                     = new DefaultDataType<Time>(SQLDialect.POSTGRES, SQLDataType.TIME, "time");
     public static final DataType<Timestamp>    TIMESTAMP                = new DefaultDataType<Timestamp>(SQLDialect.POSTGRES, SQLDataType.TIMESTAMP, "timestamp");
-    public static final DataType<byte[]>       BYTEA                    = new DefaultDataType<byte[]>(SQLDialect.POSTGRES, SQLDataType.BLOB, "bytea");
+    public static final DataType<byte[]>       BYTEA                    = new DefaultDataType<byte[]>(SQLDialect.POSTGRES, SQLDataType.BLOB, "oid");
     public static final DataType<YearToMonth>  INTERVALYEARTOMONTH      = new DefaultDataType<YearToMonth>(SQLDialect.POSTGRES, SQLDataType.INTERVALYEARTOMONTH, "interval year to month");
     public static final DataType<DayToSecond>  INTERVALDAYTOSECOND      = new DefaultDataType<DayToSecond>(SQLDialect.POSTGRES, SQLDataType.INTERVALDAYTOSECOND, "interval day to second");
 

@@ -85,10 +85,10 @@ public class OracleDataType {
     public static final DataType<Double>     DOUBLE             = new DefaultDataType<Double>(SQLDialect.ORACLE, SQLDataType.DOUBLE, "double", "decimal");
     public static final DataType<Double>     FLOAT              = new DefaultDataType<Double>(SQLDialect.ORACLE, SQLDataType.FLOAT, "float", "decimal");
     public static final DataType<Float>      REAL               = new DefaultDataType<Float>(SQLDialect.ORACLE, SQLDataType.REAL, "real", "decimal");
-    public static final DataType<Boolean>    BOOLEAN            = new DefaultDataType<Boolean>(SQLDialect.ORACLE, SQLDataType.BOOLEAN, "boolean", "unsigned");
-    public static final DataType<Boolean>    BOOL               = new DefaultDataType<Boolean>(SQLDialect.ORACLE, SQLDataType.BOOLEAN, "bool", "unsigned");
-    public static final DataType<Boolean>    BIT                = new DefaultDataType<Boolean>(SQLDialect.ORACLE, SQLDataType.BIT, "bit", "unsigned");
-    public static final DataType<BigDecimal> DECIMAL            = new DefaultDataType<BigDecimal>(SQLDialect.ORACLE, SQLDataType.DECIMAL, "decimal", "decimal");
+    public static final DataType<Boolean>    BOOLEAN            = new DefaultDataType<Boolean>(SQLDialect.ORACLE, SQLDataType.BOOLEAN, "number", "unsigned");
+    public static final DataType<Boolean>    BOOL               = new DefaultDataType<Boolean>(SQLDialect.ORACLE, SQLDataType.BOOLEAN, "number", "unsigned");
+    public static final DataType<Boolean>    BIT                = new DefaultDataType<Boolean>(SQLDialect.ORACLE, SQLDataType.BIT, "number", "unsigned");
+    public static final DataType<BigDecimal> DECIMAL            = new DefaultDataType<BigDecimal>(SQLDialect.ORACLE, SQLDataType.DECIMAL, "number", "decimal");
     public static final DataType<BigDecimal> DEC                = new DefaultDataType<BigDecimal>(SQLDialect.ORACLE, SQLDataType.DECIMAL, "dec", "decimal");
     public static final DataType<String>     VARCHAR            = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.VARCHAR, "varchar2", "char");
     public static final DataType<String>     CHAR               = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.CHAR, "char", "char");

@@ -284,6 +284,9 @@ public class DefaultDataType<T> implements DataType<T> {
             else if (type == Byte.class || type == UByte.class) {
                 precision = BYTE_PRECISION;
             }
+            else if (type == Boolean.class && SQLDialect.ORACLE.equals(dialect)) {
+                precision = 1;
+            }
         }
 
         this.nullable = nullable;
@@ -373,10 +376,8 @@ public class DefaultDataType<T> implements DataType<T> {
     public final boolean hasPrecision() {
         if (type == BigInteger.class || type == BigDecimal.class) {
             return true;
-        }
-
-        if ((dialect == SQLDialect.ORACLE || dialect == SQLDialect.DB2)
-                && (type == Long.class || type == Integer.class)) {
+        } else if (dialect == SQLDialect.ORACLE
+                && (type == Long.class || type == Integer.class || type == Boolean.class)) {
             return true;
         }
 
@@ -404,10 +405,8 @@ public class DefaultDataType<T> implements DataType<T> {
     public final boolean hasScale() {
         if (type == BigDecimal.class) {
             return true;
-        }
-
-        if ((dialect == SQLDialect.ORACLE || dialect == SQLDialect.DB2)
-                && (type == Long.class || type == Integer.class)) {
+        } else if (dialect == SQLDialect.ORACLE
+                && (type == Long.class || type == Integer.class || type == Boolean.class)) {
             return true;
         }
 
