@@ -48,6 +48,7 @@ import static org.jooq.Clause.DELETE_RETURNING;
 import static org.jooq.Clause.DELETE_WHERE;
 import static org.jooq.SQLDialect.MARIADB;
 import static org.jooq.SQLDialect.MYSQL;
+import static org.jooq.SQLDialect.SQL_SERVER;
 
 import java.util.Collection;
 
@@ -109,7 +110,7 @@ class DeleteQueryImpl<R extends Record> extends AbstractDMLQuery<R> implements D
 
         // [#2464] MySQL supports a peculiar multi-table DELETE syntax for aliased tables:
         // DELETE t1 FROM my_table AS t1
-        if (asList(MARIADB, MYSQL).contains(ctx.configuration().dialect())) {
+        if (asList(MARIADB, MYSQL, SQL_SERVER).contains(ctx.configuration().dialect())) {
 
             // [#2579] TODO: Improve Table API to discover aliased tables more
             // reliably instead of resorting to instanceof:
