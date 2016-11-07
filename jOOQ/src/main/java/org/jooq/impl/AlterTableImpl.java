@@ -374,17 +374,9 @@ class AlterTableImpl extends AbstractQuery implements
             ctx.start(ALTER_TABLE_DROP);
 
             switch (family) {
-                /* [pro] xx
-                xxxx xxxxxxx
-                xxxx xxxxxxxxxx
-                    xxxxxxxxx xxxxxxxxxxxxxxxx xxxxxxxxx
-                    xxxxxx
-
-                xxxx xxxxx
-                    xxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                    xxxxxx
-                xx [/pro] */
-
+                case ORACLE:
+                    ctx.sql(' ').keyword("drop column");
+                    break;
                 default:
                     ctx.sql(' ').keyword("drop");
                     break;
