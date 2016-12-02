@@ -97,6 +97,7 @@ class AlterTableImpl extends AbstractQuery implements
     private Field<?>              dropColumn;
     private boolean               dropColumnCascade;
     private Constraint            dropConstraint;
+    private Constraint            primaryKey;
 
     AlterTableImpl(Configuration configuration, Table<?> table) {
         super(configuration);
@@ -204,6 +205,12 @@ class AlterTableImpl extends AbstractQuery implements
     @Override
     public final AlterTableImpl dropConstraint(String constraint) {
         return drop(DSL.constraint(constraint));
+    }
+
+    @Override
+    public final AlterTableImpl dropPrimaryKey(String primaryKey) {
+        this.primaryKey = DSL.constraint(primaryKey);
+        return this;
     }
 
     @Override
@@ -374,6 +381,7 @@ class AlterTableImpl extends AbstractQuery implements
             ctx.start(ALTER_TABLE_DROP);
 
             switch (family) {
+                case SQL_SERVER:
                 case ORACLE:
                     ctx.sql(' ').keyword("drop column");
                     break;
@@ -412,6 +420,27 @@ class AlterTableImpl extends AbstractQuery implements
                .keyword("drop")
                .sql(' ')
                .visit(dropConstraint);
+
+            ctx.data().remove(DATA_DROP_CONSTRAINT);
+            ctx.end(ALTER_TABLE_DROP);
+        }
+        else if (primaryKey != null) {
+            ctx.start(ALTER_TABLE_DROP);
+            ctx.data(DATA_DROP_CONSTRAINT, true);
+
+            switch (family) {
+                case HSQLDB:
+                case POSTGRES:
+                case SQL_SERVER:
+                    ctx.sql(' ')
+                        .keyword("drop")
+                        .sql(' ')
+                        .visit(primaryKey);
+                    break;
+                default:
+                    ctx.sql(' ').keyword("drop primary key");
+                    break;
+            }
 
             ctx.data().remove(DATA_DROP_CONSTRAINT);
             ctx.end(ALTER_TABLE_DROP);

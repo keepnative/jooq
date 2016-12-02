@@ -186,4 +186,8 @@ public interface AlterTableStep {
      */
     @Support
     AlterTableFinalStep dropConstraint(String constraint);
+
+    @Support
+    AlterTableFinalStep dropPrimaryKey(String primaryKey);
+
 }
