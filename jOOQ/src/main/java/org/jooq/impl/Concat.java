@@ -81,6 +81,7 @@ class Concat extends AbstractFunction<String> {
 
         switch (configuration.dialect().family()) {
             case MARIADB:
+            case SQL_SERVER:
             case MYSQL:
                 return function("concat", SQLDataType.VARCHAR, cast);
 
