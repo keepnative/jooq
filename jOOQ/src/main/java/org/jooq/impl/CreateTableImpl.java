@@ -181,13 +181,7 @@ class CreateTableImpl<R extends Record> extends AbstractQuery implements
                    .sql(' ');
                 Utils.toSQLDDLTypeDeclaration(ctx, type);
 
-                if (type.nullable()) {
-
-                    // [#4321] Not all dialects support explicit NULL type declarations
-                    if (!asList(DERBY, FIREBIRD).contains(ctx.family()))
-                        ctx.sql(' ').keyword("null");
-                }
-                else {
+                if (!type.nullable()) {
                     ctx.sql(' ').keyword("not null");
                 }
 
