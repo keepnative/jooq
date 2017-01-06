@@ -341,6 +341,7 @@ class AlterTableImpl extends AbstractQuery implements
                     xx [/pro] */
 
                     case DERBY:
+                    case DB2:
                         ctx.sql(' ').keyword("set data type");
                         break;
 
