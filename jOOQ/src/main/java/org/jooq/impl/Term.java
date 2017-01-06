@@ -118,6 +118,8 @@ enum Term {
                 case DERBY:
                 case SQLITE:
                     return "length";
+                case SQL_SERVER:
+                    return "len";
             }
 
             return "char_length";
