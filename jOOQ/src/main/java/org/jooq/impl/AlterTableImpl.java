@@ -324,6 +324,10 @@ class AlterTableImpl extends AbstractQuery implements
                     break;
                 }
 
+                case ORACLE:
+                    ctx.sql(' ').keyword("modify");
+                    break;
+
                 default:
                     ctx.sql(' ').keyword("alter");
                     break;
