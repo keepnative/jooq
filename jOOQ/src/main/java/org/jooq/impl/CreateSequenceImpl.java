@@ -48,6 +48,7 @@ import org.jooq.Clause;
 import org.jooq.Configuration;
 import org.jooq.Context;
 import org.jooq.CreateSequenceFinalStep;
+import org.jooq.SQLDialect;
 import org.jooq.Sequence;
 
 /**
@@ -78,6 +79,8 @@ class CreateSequenceImpl extends AbstractQuery implements
 
     @Override
     public final void accept(Context<?> ctx) {
+        SQLDialect family = ctx.configuration().dialect().family();
+
         ctx.start(CREATE_SEQUENCE_SEQUENCE)
            .keyword("create sequence")
            .sql(' ')
@@ -88,6 +91,11 @@ class CreateSequenceImpl extends AbstractQuery implements
         xx xxxxxxxxxxxxx xx xxxxxxxxxx
             xxxxxxxxxxxxxxxxxx xxxxxxxxxxxx xxxx
         xx [/pro] */
+        switch (family) {
+            case SQL_SERVER:
+                ctx.sql(' ').keyword("start with").sql(' ').sql(1);
+                break;
+        }
 
         ctx.end(CREATE_SEQUENCE_SEQUENCE);
     }
