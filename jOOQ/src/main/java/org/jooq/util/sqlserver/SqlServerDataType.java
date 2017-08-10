@@ -38,7 +38,7 @@ public class SqlServerDataType {
     public static final DataType<Boolean> BIT = new DefaultDataType<Boolean>(SQLDialect.SQL_SERVER, SQLDataType.BIT, "bit", "unsigned");
     public static final DataType<BigDecimal> DECIMAL = new DefaultDataType<BigDecimal>(SQLDialect.SQL_SERVER, SQLDataType.DECIMAL, "numeric", "decimal");
     public static final DataType<BigDecimal> DEC = new DefaultDataType<BigDecimal>(SQLDialect.SQL_SERVER, SQLDataType.DECIMAL, "dec", "decimal");
-    public static final DataType<String> VARCHAR = new DefaultDataType<String>(SQLDialect.SQL_SERVER, SQLDataType.VARCHAR, "varchar", "char");
+    public static final DataType<String> VARCHAR = new DefaultDataType<String>(SQLDialect.SQL_SERVER, SQLDataType.VARCHAR, "varchar", "varchar");
     public static final DataType<String> CHAR = new DefaultDataType<String>(SQLDialect.SQL_SERVER, SQLDataType.CHAR, "char", "char");
     public static final DataType<byte[]> BLOB = new DefaultDataType<byte[]>(SQLDialect.SQL_SERVER, SQLDataType.BLOB, "blob", "binary");
     public static final DataType<byte[]> BINARY = new DefaultDataType<byte[]>(SQLDialect.SQL_SERVER, SQLDataType.BINARY, "binary", "binary");

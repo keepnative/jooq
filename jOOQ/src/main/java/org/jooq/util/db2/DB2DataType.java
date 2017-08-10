@@ -90,7 +90,7 @@ public class DB2DataType {
     public static final DataType<Boolean>    BIT                = new DefaultDataType<Boolean>(SQLDialect.DB2, SQLDataType.BIT, "smallint", "unsigned");
     public static final DataType<BigDecimal> DECIMAL            = new DefaultDataType<BigDecimal>(SQLDialect.DB2, SQLDataType.DECIMAL, "numeric", "decimal");
     public static final DataType<BigDecimal> DEC                = new DefaultDataType<BigDecimal>(SQLDialect.DB2, SQLDataType.DECIMAL, "dec", "decimal");
-    public static final DataType<String>     VARCHAR            = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.VARCHAR, "varchar", "char");
+    public static final DataType<String>     VARCHAR            = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.VARCHAR, "varchar", "varchar");
     public static final DataType<String>     CHAR               = new DefaultDataType<String>(SQLDialect.DB2, SQLDataType.CHAR, "char", "char");
     public static final DataType<byte[]>     BLOB               = new DefaultDataType<byte[]>(SQLDialect.DB2, SQLDataType.BLOB, "blob", "binary");
     public static final DataType<byte[]>     BINARY             = new DefaultDataType<byte[]>(SQLDialect.DB2, SQLDataType.BINARY, "binary", "binary");

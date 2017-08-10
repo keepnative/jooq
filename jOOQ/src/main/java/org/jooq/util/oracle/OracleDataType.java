@@ -90,7 +90,7 @@ public class OracleDataType {
     public static final DataType<Boolean>    BIT                = new DefaultDataType<Boolean>(SQLDialect.ORACLE, SQLDataType.BIT, "number", "unsigned");
     public static final DataType<BigDecimal> DECIMAL            = new DefaultDataType<BigDecimal>(SQLDialect.ORACLE, SQLDataType.DECIMAL, "number", "decimal");
     public static final DataType<BigDecimal> DEC                = new DefaultDataType<BigDecimal>(SQLDialect.ORACLE, SQLDataType.DECIMAL, "dec", "decimal");
-    public static final DataType<String>     VARCHAR            = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.VARCHAR, "varchar2", "char");
+    public static final DataType<String>     VARCHAR            = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.VARCHAR, "varchar2", "varchar2");
     public static final DataType<String>     CHAR               = new DefaultDataType<String>(SQLDialect.ORACLE, SQLDataType.CHAR, "char", "char");
     public static final DataType<byte[]>     BLOB               = new DefaultDataType<byte[]>(SQLDialect.ORACLE, SQLDataType.BLOB, "blob", "binary");
     public static final DataType<byte[]>     BINARY             = new DefaultDataType<byte[]>(SQLDialect.ORACLE, SQLDataType.BINARY, "binary", "binary");
