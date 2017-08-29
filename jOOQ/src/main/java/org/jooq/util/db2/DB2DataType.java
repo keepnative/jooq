@@ -74,13 +74,13 @@ public class DB2DataType {
     public static final DataType<UByte>      TINYINTUNSIGNED    = new DefaultDataType<UByte>(SQLDialect.DB2, SQLDataType.TINYINTUNSIGNED, "tinyint unsigned", "unsigned");
     public static final DataType<Short>      SMALLINT           = new DefaultDataType<Short>(SQLDialect.DB2, SQLDataType.SMALLINT, "smallint", "signed");
     public static final DataType<UShort>     SMALLINTUNSIGNED   = new DefaultDataType<UShort>(SQLDialect.DB2, SQLDataType.SMALLINTUNSIGNED, "smallint unsigned", "unsigned");
-    public static final DataType<Integer>    INT                = new DefaultDataType<Integer>(SQLDialect.DB2, SQLDataType.INTEGER, "integer", "signed");
+    public static final DataType<Integer>    INT                = new DefaultDataType<Integer>(SQLDialect.DB2, SQLDataType.INTEGER, "integer", "integer");
     public static final DataType<UInteger>   INTUNSIGNED        = new DefaultDataType<UInteger>(SQLDialect.DB2, SQLDataType.INTEGERUNSIGNED, "int unsigned", "unsigned");
     public static final DataType<Integer>    MEDIUMINT          = new DefaultDataType<Integer>(SQLDialect.DB2, SQLDataType.INTEGER, "mediumint", "signed");
     public static final DataType<UInteger>   MEDIUMINTUNSIGNED  = new DefaultDataType<UInteger>(SQLDialect.DB2, SQLDataType.INTEGERUNSIGNED, "mediumint unsigned", "unsigned");
-    public static final DataType<Integer>    INTEGER            = new DefaultDataType<Integer>(SQLDialect.DB2, SQLDataType.INTEGER, "integer", "signed");
+    public static final DataType<Integer>    INTEGER            = new DefaultDataType<Integer>(SQLDialect.DB2, SQLDataType.INTEGER, "integer", "integer");
     public static final DataType<UInteger>   INTEGERUNSIGNED    = new DefaultDataType<UInteger>(SQLDialect.DB2, SQLDataType.INTEGERUNSIGNED, "integer unsigned", "unsigned");
-    public static final DataType<Long>       BIGINT             = new DefaultDataType<Long>(SQLDialect.DB2, SQLDataType.BIGINT, "bigint", "signed");
+    public static final DataType<Long>       BIGINT             = new DefaultDataType<Long>(SQLDialect.DB2, SQLDataType.BIGINT, "bigint", "bigint");
     public static final DataType<ULong>      BIGINTUNSIGNED     = new DefaultDataType<ULong>(SQLDialect.DB2, SQLDataType.BIGINTUNSIGNED, "bigint unsigned", "unsigned");
     public static final DataType<Double>     DOUBLE             = new DefaultDataType<Double>(SQLDialect.DB2, SQLDataType.DOUBLE, "double", "decimal");
     public static final DataType<Double>     FLOAT              = new DefaultDataType<Double>(SQLDialect.DB2, SQLDataType.FLOAT, "float", "decimal");
