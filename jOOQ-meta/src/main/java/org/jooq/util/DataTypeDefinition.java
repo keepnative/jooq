@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -99,6 +99,11 @@ public interface DataTypeDefinition {
      * Whether this data type represents a udt.
      */
     boolean isUDT();
+
+    /**
+     * Whether this data type represents an array.
+     */
+    boolean isArray();
 
     /**
      * Whether this data type is a NUMBER type without precision and scale.

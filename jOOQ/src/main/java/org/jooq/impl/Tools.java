@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -118,6 +118,7 @@ import org.jooq.Record;
 import org.jooq.RecordType;
 import org.jooq.RenderContext;
 import org.jooq.Result;
+import org.jooq.Results;
 import org.jooq.Row;
 import org.jooq.SQLDialect;
 import org.jooq.Schema;
@@ -130,7 +131,7 @@ import org.jooq.conf.BackslashEscaping;
 import org.jooq.conf.Settings;
 import org.jooq.exception.DataAccessException;
 import org.jooq.exception.TooManyRowsException;
-import org.jooq.impl.Utils.Cache.CachedOperation;
+import org.jooq.impl.Tools.Cache.CachedOperation;
 import org.jooq.tools.JooqLogger;
 import org.jooq.tools.StringUtils;
 import org.jooq.tools.jdbc.JDBCUtils;
@@ -141,167 +142,180 @@ import org.jooq.tools.reflect.Reflect;
  *
  * @author Lukas Eder
  */
-final class Utils {
+final class Tools {
 
-    static final JooqLogger       log                                          = JooqLogger.getLogger(Utils.class);
+    static final JooqLogger       log                                          = JooqLogger.getLogger(Tools.class);
 
     // ------------------------------------------------------------------------
     // Some constants for use with Context.data()
     // ------------------------------------------------------------------------
 
-    /**
-     * [#1537] This constant is used internally by jOOQ to omit the RETURNING
-     * clause in {@link DSLContext#batchStore(UpdatableRecord...)} calls for
-     * {@link SQLDialect#POSTGRES}.
-     */
-    static final String           DATA_OMIT_RETURNING_CLAUSE                   = "org.jooq.configuration.omit-returning-clause";
+    enum DataKey {
 
-    /**
-     * [#1905] This constant is used internally by jOOQ to indicate to
-     * subqueries that they're being rendered in the context of a row value
-     * expression predicate.
-     * <p>
-     * This is particularly useful for H2, which pretends that ARRAYs and RVEs
-     * are the same
-     */
-    static final String           DATA_ROW_VALUE_EXPRESSION_PREDICATE_SUBQUERY = "org.jooq.configuration.row-value-expression-subquery";
+        /**
+         * [#1537] This constant is used internally by jOOQ to omit the RETURNING
+         * clause in {@link DSLContext#batchStore(UpdatableRecord...)} calls for
+         * {@link SQLDialect#POSTGRES}.
+         */
+        DATA_OMIT_RETURNING_CLAUSE,
 
-    /**
-     * [#1296] This constant is used internally by jOOQ to indicate that
-     * {@link ResultSet} rows must be locked to simulate a
-     * <code>FOR UPDATE</code> clause.
-     */
-    static final String           DATA_LOCK_ROWS_FOR_UPDATE                    = "org.jooq.configuration.lock-rows-for-update";
+        /**
+         * [#1905] This constant is used internally by jOOQ to indicate to
+         * subqueries that they're being rendered in the context of a row value
+         * expression predicate.
+         * <p>
+         * This is particularly useful for H2, which pretends that ARRAYs and RVEs
+         * are the same
+         */
+        DATA_ROW_VALUE_EXPRESSION_PREDICATE_SUBQUERY,
 
-    /**
-     * [#1520] Count the number of bind values, and potentially enforce a static
-     * statement.
-     */
-    static final String           DATA_COUNT_BIND_VALUES                       = "org.jooq.configuration.count-bind-values";
+        /**
+         * [#1296] This constant is used internally by jOOQ to indicate that
+         * {@link ResultSet} rows must be locked to emulate a
+         * <code>FOR UPDATE</code> clause.
+         */
+        DATA_LOCK_ROWS_FOR_UPDATE,
 
-    /**
-     * [#1520] Enforce executing static statements.
-     * <p>
-     * Some SQL dialects support only a limited amount of bind variables. This
-     * flag is set when static statements have too many bind variables. Known
-     * values are:
-     * <ul>
-     * <li>{@link SQLDialect#ASE} : 2000</li>
-     * <li>{@link SQLDialect#INGRES} : 1024</li>
-     * <li>{@link SQLDialect#SQLITE} : 999</li>
-     * <li>{@link SQLDialect#SQLSERVER} : 2100</li>
-     * </ul>
-     */
-    static final String           DATA_FORCE_STATIC_STATEMENT                  = "org.jooq.configuration.force-static-statement";
+        /**
+         * [#1520] Count the number of bind values, and potentially enforce a static
+         * statement.
+         */
+        DATA_COUNT_BIND_VALUES,
 
-    /**
-     * [#2665] Omit the emission of clause events by {@link QueryPart}s.
-     * <p>
-     * Some {@link QueryPart}s may contain further {@link QueryPart}s for whom
-     * {@link Clause} emission should be avoided. For example
-     * {@link Clause#FIELD_REFERENCE} may contain a
-     * {@link Clause#TABLE_REFERENCE}.
-     */
-    static final String           DATA_OMIT_CLAUSE_EVENT_EMISSION              = "org.jooq.configuration.omit-clause-event-emission";
+        /**
+         * [#1520] Enforce executing static statements.
+         * <p>
+         * Some SQL dialects support only a limited amount of bind variables. This
+         * flag is set when static statements have too many bind variables. Known
+         * values are:
+         * <ul>
+         * <li>{@link SQLDialect#ASE} : 2000</li>
+         * <li>{@link SQLDialect#INGRES} : 1024</li>
+         * <li>{@link SQLDialect#SQLITE} : 999</li>
+         * <li>{@link SQLDialect#SQLSERVER} : 2100</li>
+         * </ul>
+         */
+        DATA_FORCE_STATIC_STATEMENT,
 
-    /**
-     * [#2665] Wrap derived tables in parentheses.
-     * <p>
-     * Before allowing for hooking into the SQL transformation SPI, new
-     * {@link RenderContext} instances could be created to "try" to render a
-     * given SQL subclause before inserting it into the real SQL string. This
-     * practice should no longer be pursued, as such "sub-renderers" will emit /
-     * divert {@link Clause} events.
-     */
-    static final String           DATA_WRAP_DERIVED_TABLES_IN_PARENTHESES      = "org.jooq.configuration.wrap-derived-tables-in-parentheses";
+        /**
+         * [#2665] Omit the emission of clause events by {@link QueryPart}s.
+         * <p>
+         * Some {@link QueryPart}s may contain further {@link QueryPart}s for whom
+         * {@link Clause} emission should be avoided. For example
+         * {@link Clause#FIELD_REFERENCE} may contain a
+         * {@link Clause#TABLE_REFERENCE}.
+         */
+        DATA_OMIT_CLAUSE_EVENT_EMISSION,
 
-    /**
-     * [#2790] A locally scoped data map.
-     * <p>
-     * Sometimes, it is useful to have some information only available while
-     * visiting QueryParts in the same context of the current subquery, e.g.
-     * when communicating between SELECT and WINDOW clauses, as is required to
-     * emulate #531.
-     */
-    static final String           DATA_LOCALLY_SCOPED_DATA_MAP                 = "org.jooq.configuration.locally-scoped-data-map";
+        /**
+         * [#2665] Wrap derived tables in parentheses.
+         * <p>
+         * Before allowing for hooking into the SQL transformation SPI, new
+         * {@link RenderContext} instances could be created to "try" to render a
+         * given SQL subclause before inserting it into the real SQL string. This
+         * practice should no longer be pursued, as such "sub-renderers" will emit /
+         * divert {@link Clause} events.
+         */
+        DATA_WRAP_DERIVED_TABLES_IN_PARENTHESES,
 
-    /**
-     * [#531] The local window definitions.
-     * <p>
-     * The window definitions declared in the <code>WINDOW</code> clause are
-     * needed in the <code>SELECT</code> clause when emulating them by inlining
-     * window specifications.
-     */
-    static final String           DATA_WINDOW_DEFINITIONS                      = "org.jooq.configuration.local-window-definitions";
+        /**
+         * [#2790] A locally scoped data map.
+         * <p>
+         * Sometimes, it is useful to have some information only available while
+         * visiting QueryParts in the same context of the current subquery, e.g.
+         * when communicating between SELECT and WINDOW clauses, as is required to
+         * emulate #531.
+         */
+        DATA_LOCALLY_SCOPED_DATA_MAP,
 
-    /* [pro] xx
-    xxx
-     x xxxxxxx xxxxxxxxx xxxxxxxxx xxx xxx xxxxx xxxxx xxxxxxx
-     x xxx
-     x xx xxxx x xxxxxxxxxxx xxxxx xxxxxxx xxxxxxxxxxx xxxxxx xxxxxxx xxxxx
-     x xxxxxxxxxxx xx xxx xxxxxxxxxx xxxxxxxxxxxx xx xxxxxxxxxxxxxxxx xxxxxxx
-     xx
-    xxxxxx xxxxx xxxxxx           xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx        x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    xx [/pro] */
+        /**
+         * [#531] The local window definitions.
+         * <p>
+         * The window definitions declared in the <code>WINDOW</code> clause are
+         * needed in the <code>SELECT</code> clause when emulating them by inlining
+         * window specifications.
+         */
+        DATA_WINDOW_DEFINITIONS,
 
-    /**
-     * [#1629] The {@link Connection#getAutoCommit()} flag value before starting
-     * a new transaction.
-     */
-    static final String           DATA_DEFAULT_TRANSACTION_PROVIDER_AUTOCOMMIT = "org.jooq.configuration.default-transaction-provider-autocommit";
 
-    /**
-     * [#1629] The {@link Connection#getAutoCommit()} flag value before starting
-     * a new transaction.
-     */
-    static final String           DATA_DEFAULT_TRANSACTION_PROVIDER_SAVEPOINTS = "org.jooq.configuration.default-transaction-provider-savepoints";
 
-    /**
-     * [#1629] The {@link DefaultConnectionProvider} instance to be used during
-     * the transaction.
-     */
-    static final String           DATA_DEFAULT_TRANSACTION_PROVIDER_CONNECTION = "org.jooq.configuration.default-transaction-provider-connection-provider";
 
-    /**
-     * [#2080] When emulating OFFSET pagination in certain databases, synthetic
-     * aliases are generated that must be referenced also in
-     * <code>ORDER BY</code> clauses, in lieu of their corresponding original
-     * aliases.
-     */
-    static final String           DATA_OVERRIDE_ALIASES_IN_ORDER_BY            = "org.jooq.configuration.override-aliases-in-order-by";
 
-    /**
-     * [#2080] When emulating OFFSET pagination in certain databases, synthetic
-     * aliases are generated that must be referenced also in
-     * <code>ORDER BY</code> clauses, in lieu of their corresponding original
-     * aliases.
-     */
-    static final String           DATA_UNALIAS_ALIASES_IN_ORDER_BY             = "org.jooq.configuration.unalias-aliases-in-order-by";
 
-    /**
-     * [#3381] The table to be used for the {@link Clause#SELECT_INTO} clause.
-     */
-    static final String           DATA_SELECT_INTO_TABLE                       = "org.jooq.configuration.select-into-table";
 
-    /**
-     * [#3381] Omit the {@link Clause#SELECT_INTO}, as it is being emulated.
-     */
-    static final String           DATA_OMIT_INTO_CLAUSE                        = "org.jooq.configuration.omit-into-clause";
 
-    /**
-     * [#1658] Specify whether the trailing LIMIT clause needs to be rendered.
-     */
-    static final String           DATA_RENDER_TRAILING_LIMIT_IF_APPLICABLE     = "org.jooq.configuration.render-trailing-limit-if-applicable";
 
-    /**
-     * [#3886] Whether a list has already been indented.
-     */
-    static final String           DATA_LIST_ALREADY_INDENTED                   = "org.jooq.configuration.list-already-indented";
 
-    /**
-     * [#3338] Whether a constraint is being dropped.
-     */
-    static final String           DATA_DROP_CONSTRAINT                         = "org.jooq.configuration.drop-constraint";
+
+        /**
+         * [#1629] The {@link Connection#getAutoCommit()} flag value before starting
+         * a new transaction.
+         */
+        DATA_DEFAULT_TRANSACTION_PROVIDER_AUTOCOMMIT,
+
+        /**
+         * [#1629] The {@link Connection#getAutoCommit()} flag value before starting
+         * a new transaction.
+         */
+        DATA_DEFAULT_TRANSACTION_PROVIDER_SAVEPOINTS,
+
+        /**
+         * [#1629] The {@link DefaultConnectionProvider} instance to be used during
+         * the transaction.
+         */
+        DATA_DEFAULT_TRANSACTION_PROVIDER_CONNECTION,
+
+        /**
+         * [#2080] When emulating OFFSET pagination in certain databases, synthetic
+         * aliases are generated that must be referenced also in
+         * <code>ORDER BY</code> clauses, in lieu of their corresponding original
+         * aliases.
+         */
+        DATA_OVERRIDE_ALIASES_IN_ORDER_BY,
+
+        /**
+         * [#2080] When emulating OFFSET pagination in certain databases, synthetic
+         * aliases are generated that must be referenced also in
+         * <code>ORDER BY</code> clauses, in lieu of their corresponding original
+         * aliases.
+         */
+        DATA_UNALIAS_ALIASES_IN_ORDER_BY,
+
+        /**
+         * [#3381] The table to be used for the {@link Clause#SELECT_INTO} clause.
+         */
+        DATA_SELECT_INTO_TABLE,
+
+        /**
+         * [#3381] Omit the {@link Clause#SELECT_INTO}, as it is being emulated.
+         */
+        DATA_OMIT_INTO_CLAUSE,
+
+        /**
+         * [#1658] Specify whether the trailing LIMIT clause needs to be rendered.
+         */
+        DATA_RENDER_TRAILING_LIMIT_IF_APPLICABLE,
+
+        /**
+         * [#3886] Whether a list has already been indented.
+         */
+        DATA_LIST_ALREADY_INDENTED,
+
+        /**
+         * [#3338] Whether a constraint is being dropped.
+         */
+        DATA_DROP_CONSTRAINT,
+
+        /**
+         * [#1206] Whether to collect Semi / Anti JOIN.
+         */
+        DATA_COLLECT_SEMI_ANTI_JOIN,
+
+        /**
+         * [#1206] The collected Semi / Anti JOIN predicates.
+         */
+        DATA_COLLECTED_SEMI_ANTI_JOIN,
+    }
 
     /**
      * [#2965] These are {@link ConcurrentHashMap}s containing caches for
@@ -388,23 +402,23 @@ final class Utils {
         return rows;
     }
 
-    /* [pro] xx
-    xxx
-     x xxxxxx x xxx xxxxxxxxxxxx xxxxxx xxxxxx xxxxxxxxxxxx
-     xx
-    xxxxxx xxxxx xx xxxxxxx xxxxxxxxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxx xxxxx x
-        xxx x
-            xxxxxx xxxxxxxxxxxxxxxxxxx
-        x
-        xxxxx xxxxxxxxxx xx x
-            xxxxx xxx xxxxxxxxxxxxxxxxxxxxxx
-                xxxxxxxxxxxx xxxx xxxx xxx xxxxxxx x xxxxxxxxxxx xxxx xxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxx x x x xxxx
-                    x xx xxxxxxxxx x x x xxxxxxxxxxxxxxxx
 
-        x
-    x
 
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     /**
      * Create a new record
      */
@@ -864,14 +878,12 @@ final class Utils {
      * @return The argument objects themselves, if they are {@link Field}s, or a bind
      *         values created from the argument objects.
      */
-    static final List<Field<?>> fields(Object[] values) {
-        List<Field<?>> result = new ArrayList<Field<?>>();
+    static final <T> List<Field<T>> fields(T[] values) {
+        List<Field<T>> result = new ArrayList<Field<T>>();
 
-        if (values != null) {
-            for (Object value : values) {
+        if (values != null)
+            for (T value : values)
                 result.add(field(value));
-            }
-        }
 
         return result;
     }
@@ -1064,6 +1076,19 @@ final class Utils {
 
     /**
      * A utility method that fails with an exception if
+     * {@link Row#indexOf(Name)} doesn't return any index.
+     */
+    static final int indexOrFail(Row row, Name fieldName) {
+        int result = row.indexOf(fieldName);
+
+        if (result < 0)
+            throw new IllegalArgumentException("Field (" + fieldName + ") is not contained in Row " + row);
+
+        return result;
+    }
+
+    /**
+     * A utility method that fails with an exception if
      * {@link RecordType#indexOf(Field)} doesn't return any index.
      */
     static final int indexOrFail(RecordType<?> row, Field<?> field) {
@@ -1089,8 +1114,24 @@ final class Utils {
     }
 
     /**
+     * A utility method that fails with an exception if
+     * {@link RecordType#indexOf(Name)} doesn't return any index.
+     */
+    static final int indexOrFail(RecordType<?> row, Name fieldName) {
+        int result = row.indexOf(fieldName);
+
+        if (result < 0)
+            throw new IllegalArgumentException("Field (" + fieldName + ") is not contained in RecordType " + row);
+
+        return result;
+    }
+
+    /**
      * Create a new array
      */
+
+    @SafeVarargs
+
     static final <T> T[] array(T... array) {
         return array;
     }
@@ -1099,6 +1140,9 @@ final class Utils {
      * Use this rather than {@link Arrays#asList(Object...)} for
      * <code>null</code>-safety
      */
+
+    @SafeVarargs
+
     static final <T> List<T> list(T... array) {
         return array == null ? Collections.<T>emptyList() : Arrays.asList(array);
     }
@@ -1732,14 +1776,14 @@ final class Utils {
      */
     @SuppressWarnings("deprecation")
     static final Schema getMappedSchema(Configuration configuration, Schema schema) {
-        org.jooq.SchemaMapping mapping = configuration.schemaMapping();
+        if (configuration != null) {
+            org.jooq.SchemaMapping mapping = configuration.schemaMapping();
 
-        if (mapping != null) {
-            return mapping.map(schema);
+            if (mapping != null)
+                return mapping.map(schema);
         }
-        else {
-            return schema;
-        }
+
+        return schema;
     }
 
     /**
@@ -1747,15 +1791,62 @@ final class Utils {
      */
     @SuppressWarnings("deprecation")
     static final <R extends Record> Table<R> getMappedTable(Configuration configuration, Table<R> table) {
-        org.jooq.SchemaMapping mapping = configuration.schemaMapping();
+        if (configuration != null) {
+            org.jooq.SchemaMapping mapping = configuration.schemaMapping();
 
-        if (mapping != null) {
-            return mapping.map(table);
+            if (mapping != null)
+                return mapping.map(table);
         }
-        else {
-            return table;
-        }
+
+        return table;
     }
+
+    /**
+     * Map an {@link ArrayRecord} according to the configured {@link org.jooq.SchemaMapping}
+     */
+    @SuppressWarnings("unchecked")
+    static final String getMappedUDTName(Configuration configuration, Class<? extends UDTRecord<?>> type) {
+        return getMappedUDTName(configuration, Tools.newRecord(false, (Class<UDTRecord<?>>) type).<RuntimeException>operate(null));
+    }
+
+    /**
+     * Map an {@link ArrayRecord} according to the configured {@link org.jooq.SchemaMapping}
+     */
+    static final String getMappedUDTName(Configuration configuration, UDTRecord<?> record) {
+        UDT<?> udt = record.getUDT();
+        Schema mapped = getMappedSchema(configuration, udt.getSchema());
+        StringBuilder sb = new StringBuilder();
+
+        if (mapped != null)
+            sb.append(mapped.getName()).append('.');
+
+        sb.append(record.getUDT().getName());
+        return sb.toString();
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     /**
      * Return a non-negative hash code for a {@link QueryPart}, taking into
@@ -1778,12 +1869,12 @@ final class Utils {
     static final Field<String> escapeForLike(Object value, Configuration configuration) {
         if (value != null && value.getClass() == String.class) {
 
-            /* [pro] xx
-            xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xx xxxxxxx x
-                xxxxxx xxxxxxx x xxxxx x xxxxx
-            x
-            xxxx
-            xx [/pro] */
+
+
+
+
+
+
             {
                 return val(escape("" + value, ESCAPE));
             }
@@ -1807,12 +1898,12 @@ final class Utils {
     static final Field<String> escapeForLike(Field<?> field, Configuration configuration) {
         if (nullSafe(field).getDataType().isString()) {
 
-            /* [pro] xx
-            xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xx xxxxxxx x
-                xxxxxx xxxxxxxxxxxxxxxxxxxxxxx xxxxxx xxxxxxxxxxxxxxxxx
-            x
-            xxxx
-            xx [/pro] */
+
+
+
+
+
+
             {
                 return escape((Field<String>) field, ESCAPE);
             }
@@ -2435,27 +2526,27 @@ final class Utils {
      * {@link SQLException#getNextException()} list.
      */
     static final void consumeExceptions(Configuration configuration, PreparedStatement stmt, SQLException previous) {
-        /* [pro] xx
-        xxx x x xx
 
-        xx xx xxxx xxxx xxxxx xxx xxxx xxxxxxxx xxxx xxxx xxx xxxxxx
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxxx xxxxxxxxxx
-                xxxxxxxxxxxx xxx xx x xx x x xxxxxxxxxxxxxxxxxxxxxx xxxx
-                    xxx x
-                        xx xxxxxxxxxxxxxxxxxxxxxxx xx xxxxxxxxxxxxxxxxxxxxx xx xxx
-                            xxxxx xxxxxxxxxxxx
-                    x
-                    xxxxx xxxxxxxxxxxxx xx x
-                        xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                        xxxxxxxx x xx
-                    x
-        x
 
-        xx xx xx xxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxx xxxxxxxx xxxxxxx xxxxxxxx x x xxxxxxxxxxxxxxxxxxxxx x xx xxxx xx xxxxxxxx x xxxx xxxxxx xxxxxx xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-        xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     }
 
     /**
@@ -2484,9 +2575,10 @@ final class Utils {
     /**
      * [#3681] Consume all {@link ResultSet}s from a JDBC {@link Statement}.
      */
-    static void consumeResultSets(ExecuteContext ctx, ExecuteListener listener, List<Result<Record>> results, Intern intern) throws SQLException {
+    static void consumeResultSets(ExecuteContext ctx, ExecuteListener listener, Results results, Intern intern) throws SQLException {
         boolean anyResults = false;
         int i = 0;
+        int rows = (ctx.resultSet() == null) ? ctx.statement().getUpdateCount() : 0;
 
         for (i = 0; i < maxConsumedResults; i++) {
             if (ctx.resultSet() != null) {
@@ -2494,12 +2586,18 @@ final class Utils {
 
                 Field<?>[] fields = new MetaDataFieldProvider(ctx.configuration(), ctx.resultSet().getMetaData()).getFields();
                 Cursor<Record> c = new CursorImpl<Record>(ctx, listener, fields, intern != null ? intern.internIndexes(fields) : null, true, false);
-                results.add(c.fetch());
+                results.resultsOrRows().add(new ResultsImpl.ResultOrRowsImpl(c.fetch()));
+            }
+            else {
+                if (rows != -1)
+                    results.resultsOrRows().add(new ResultsImpl.ResultOrRowsImpl(rows));
+                else
+                    break;
             }
 
             if (ctx.statement().getMoreResults())
                 ctx.resultSet(ctx.statement().getResultSet());
-            else if (ctx.statement().getUpdateCount() != -1)
+            else if ((rows = ctx.statement().getUpdateCount()) != -1)
                 ctx.resultSet(null);
             else
                 break;
@@ -2604,45 +2702,45 @@ final class Utils {
     @SuppressWarnings("unused")
     static void executeImmediateBegin(Context<?> ctx, DropStatementType type) {
         switch (ctx.family()) {
-            /* [pro] xx
-            xxxx xxxx x
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxxxxx xxxxxxxx xxxxxxx xxx xxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx
 
-                xxxxxx
-            x
 
-            xxxx xxxxxxx x
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx
 
-                xxxxxx
-            x
 
-            xxxx xxxxxxxxxx x
-                xxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                xxxxxx
-            x
 
-            xxxx xxxxxxx x
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                xxxxxx
-            x
 
-            xx
-                xxxxxxxx xxxxxxx xxxxx xx xxxxxxxxxxx xx xxxxx
 
-                xxxxxx xxxxxxxxx xxxxxxxx
-                    xx xxxxxxxxx xx xxxxx xx xxxxx xxxxxx xxxxxx xxxxx xxxxx xxxxxx xxxxx xxxxxxxxx xxxxx
-                    xxx xxxxxxxxx xxxx xxxxxx
-                    xxxx xxxx
-                xxx xxxxxxxxxx
-                xxxxxxx xxxxxxxxx xxxxxxxxx
-                xxxx xxxxxxxxx xxxxxxx
-             xx
 
-            xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             case FIREBIRD: {
                 ctx.keyword("execute block").formatSeparator()
@@ -2665,53 +2763,53 @@ final class Utils {
      */
     static void executeImmediateEnd(Context<?> ctx, DropStatementType type) {
         switch (ctx.family()) {
-            /* [pro] xx
-            xxxx xxxx x
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxxxx
 
-                xxxxxx
-            x
 
-            xxxx xxxxxxx x
-                xxxxxx xxx x
-                      xxxx xx xxxxx    x xxxxxxxxxxx
-                    x xxxx xx xxxxxxxx x xxxxxxxxxxx
-                    x xxxx xx xxxxx    x xxxxxxxxxxx
-                    x xxxx xx xxxx     x xxxxxxxxxxx
-                    x xxxxxxxxxxxx
 
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxx xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxxxxxxxxxxxxxxxxx xx x xxx x xxx xxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxxxxxxxxxxxxx
 
-                xxxxxx
-            x
 
-            xxxx xxxxxxxxxx x
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxx xx xxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxx xxxxxxxx
 
-                xxxxxx
-            x
 
-            xxxx xxxxxxx x
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxx xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxxxxxxxxxxxxx
 
-                xxxxxx
-            x
 
-            xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             case FIREBIRD: {
                 ctx.sql("';").formatSeparator()

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,23 +38,42 @@
  *
  *
  */
-package org.jooq.example.spring;
+package org.jooq.impl;
 
-import org.springframework.transaction.annotation.Transactional;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.jooq.Context;
+import org.jooq.Field;
 
 /**
- * This Book Service (or DAO or Repository) is used by this example to interact with the library's T_BOOK table.
- *
  * @author Lukas Eder
  */
-public interface BookService {
+class MapCondition extends AbstractCondition {
 
-	/**
-	 * Create a new book.
-	 * <p>
-	 * The implementation of this method has a bug, which causes this method to fail and roll back the transaction.
-	 */
-	@Transactional
-	void create(int id, int authorId, String title);
+    /**
+     * Generated UID
+     */
+    private static final long serialVersionUID = 6320436041406801993L;
 
+    private final Map<Field<?>, ?>   map;
+
+    MapCondition(Map<Field<?>, ?> map) {
+        this.map = map;
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Override
+    public void accept(Context<?> ctx) {
+        ConditionProviderImpl condition = new ConditionProviderImpl();
+
+        for (Entry<Field<?>, ?> entry : map.entrySet()) {
+            Field f1 = entry.getKey();
+            Field f2 = Tools.field(entry.getValue(), f1);
+
+            condition.addConditions(f1.eq(f2));
+        }
+
+        ctx.visit(condition);
+    }
 }

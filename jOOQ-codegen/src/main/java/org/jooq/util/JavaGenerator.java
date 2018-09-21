@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -78,6 +78,7 @@ import org.jooq.EnumType;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
 import org.jooq.Identity;
+// ...
 import org.jooq.Package;
 import org.jooq.Parameter;
 import org.jooq.Record;
@@ -111,6 +112,8 @@ import org.jooq.tools.StringUtils;
 import org.jooq.tools.reflect.Reflect;
 import org.jooq.tools.reflect.ReflectException;
 import org.jooq.util.GeneratorStrategy.Mode;
+// ...
+// ...
 // ...
 // ...
 // ...
@@ -365,17 +368,17 @@ public class JavaGenerator extends AbstractGenerator {
             generateRoutines(schema);
         }
 
-        /* [pro] xx
-        xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x xx x
-            xxxxxxxxxxxxxxxxxxxxxxxxx
-        x
-        xx [/pro] */
 
-        /* [pro] xx
-        xx xxxxxxxxx xxxxxxxxxx xxxxxxxxxxxxxxx x
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        x
-        xx [/pro] */
+
+
+
+
+
+
+
+
+
+
 
         log.info("Removing excess files");
         empty(getStrategy().getFile(schema).getParentFile(), (scala ? ".scala" : ".java"), files);
@@ -411,52 +414,89 @@ public class JavaGenerator extends AbstractGenerator {
         }
     }
 
-    /* [pro] xx
-    xxxxxxxxx xxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx x
-        xxxxxxxxxxxxxx xxxxxxxxxxxxxx x xxxxxxxxxxxxxxxx xxxxxxxxx
 
-        xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x xx x
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        x
-    x
 
-    xxxxxxxxx xxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx x
-        xxxxxxxxxxxxxxxxxxxx xxxxxxxxx
-        xxxxxxxxxxxxxx xxxxxxxxxxxxxx x xxxxxxxxxxxxxxxx xxxxxxxxx
 
-        xxxxxxxxxx xxx x xxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxx
-        xxxxxxxxxxxxxxxxx xxxxxxxx
-        xxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxx xxxxxx xx xxx xxxxxx xx x x xxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxx
 
-        xx xxxxxxx
-        	xxxxxxxxxxxxxxxxxxx xxxxxx xxxx
-        xxxx
-            xxxxxxxxxxxxxxxxxxx xxxxx xxxxxx xxxx
 
-        xxx xxxxxxxxxxxxxxxxxxxxxx xxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxxxx xxxxxxxxxxxxx xxx x xxxxxxxxxxxxxxx
 
-            xxxxx xxxxxx xxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxx xxxxxx xxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxx
-            xxxxx xxxxxx xxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxx
-            xxxxx xxxxxx xxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxx xxxxxx xxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-            xxxxxxxxxxxxxxxxxxxxxxx xxxxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-            xx xxxxxxx
-            	xxxxxxxxxxxxxxxxxxxxxxx xx x xxxxxx x xxx xxxxxxxxxxxxxx xxx xxxxx xxxxxxxx xxxxxxxxxxxx xxxxxxxxxx xxxxxxxxxxxxxxxx xxxxxxxxxx xxxxxxxxxx xxxxxxxxx xxxxxxx
-            xxxx
-                xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxx xxxxx xxxxxx xx x xxx xxxxxxxxxxxxxx xxx xxxxxx xxxxxxxxxxxx xxxxxxxxxx xxxxxxxx xxxxxxxxxxxxxxxx xxxxxxxxxx xxxxxxxxxx xxxxxxxxx xxxxxxx
-        x
 
-        xxxxxxxxxxxxxxxxx
-        xxxxxxxxxxxx
 
-        xxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxx
-    x
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     private boolean hasTableValuedFunctions(SchemaDefinition schema) {
         for (TableDefinition table : database.getTables(schema)) {
@@ -612,7 +652,7 @@ public class JavaGenerator extends AbstractGenerator {
         }
 
         out.println("}");
-        out.close();
+        closeJavaWriter(out);
 
         watch.splitInfo("Keys generated");
     }
@@ -744,14 +784,14 @@ public class JavaGenerator extends AbstractGenerator {
         JavaWriter out = newJavaWriter(getStrategy().getFile(table, Mode.RECORD));
         log.info("Generating record", out.file().getName());
         generateRecord(table, out);
-        out.close();
+        closeJavaWriter(out);
     }
 
     protected void generateUDTRecord(UDTDefinition udt) {
         JavaWriter out = newJavaWriter(getStrategy().getFile(udt, Mode.RECORD));
         log.info("Generating record", out.file().getName());
         generateRecord(udt, out);
-        out.close();
+        closeJavaWriter(out);
     }
 
     protected void generateRecord(TableDefinition table, JavaWriter out) {
@@ -827,34 +867,43 @@ public class JavaGenerator extends AbstractGenerator {
             final String type = out.ref(getJavaType(column.getType()));
             final String name = column.getQualifiedOutputName();
             final boolean isUDT = column.getType().isUDT();
+            final boolean isArray = column.getType().isArray();
+            final boolean isUDTArray = column.getType().isArray() && database.getArray(column.getType().getSchema(), column.getType().getUserType()).getElementType().isUDT();
 
-            out.tab(1).javadoc("Setter for <code>%s</code>.%s", name, defaultIfBlank(" " + comment, ""));
 
-            if (scala) {
-                out.tab(1).println("def %s(value : %s) : %s = {", setter, type, setterReturnType);
-                out.tab(2).println("setValue(%s, value)", i);
-                if (fluentSetters())
-                    out.tab(2).println("this");
-                out.tab(1).println("}");
-            }
-            else {
-                out.tab(1).overrideIf(generateInterfaces() && !generateImmutablePojos() && !isUDT);
-                out.tab(1).println("public %s %s(%s value) {", setterReturnType, setter, type);
-                out.tab(2).println("setValue(%s, value);", i);
-                if (fluentSetters())
-                    out.tab(2).println("return this;");
-                out.tab(1).println("}");
+            // We cannot have covariant setters for arrays because of type erasure
+            if (!(generateInterfaces() && isArray)) {
+                out.tab(1).javadoc("Setter for <code>%s</code>.%s", name, defaultIfBlank(" " + comment, ""));
+
+                if (scala) {
+                    out.tab(1).println("def %s(value : %s) : %s = {", setter, type, setterReturnType);
+                    out.tab(2).println("setValue(%s, value)", i);
+                    if (fluentSetters())
+                        out.tab(2).println("this");
+                    out.tab(1).println("}");
+                }
+                else {
+                    out.tab(1).overrideIf(generateInterfaces() && !generateImmutablePojos() && !isUDT);
+                    out.tab(1).println("public %s %s(%s value) {", setterReturnType, setter, type);
+                    out.tab(2).println("setValue(%s, value);", i);
+                    if (fluentSetters())
+                        out.tab(2).println("return this;");
+                    out.tab(1).println("}");
+                }
             }
 
             // [#3117] Avoid covariant setters for UDTs when generating interfaces
-            if (generateInterfaces() && !generateImmutablePojos() && isUDT) {
-                final String typeInterface = out.ref(getJavaType(column.getType(), Mode.INTERFACE));
+            if (generateInterfaces() && !generateImmutablePojos() && (isUDT || isArray)) {
+                final String columnType = out.ref(getJavaType(column.getType(), Mode.RECORD));
+                final String columnTypeInterface = out.ref(getJavaType(column.getType(), Mode.INTERFACE));
 
                 out.tab(1).javadoc("Setter for <code>%s</code>.%s", name, defaultIfBlank(" " + comment, ""));
                 out.tab(1).override();
 
                 if (scala) {
-                    out.tab(1).println("def %s(value : %s) : %s = {", setter, typeInterface, setterReturnType);
+                    // [#3082] TODO Handle <interfaces/> + ARRAY also for Scala
+
+                    out.tab(1).println("def %s(value : %s) : %s = {", setter, columnTypeInterface, setterReturnType);
                     out.tab(2).println("if (value == null)");
                     out.tab(3).println("setValue(%s, null)", i);
                     out.tab(2).println("else");
@@ -864,13 +913,37 @@ public class JavaGenerator extends AbstractGenerator {
                     out.tab(1).println("}");
                 }
                 else {
-                    out.tab(1).println("public %s %s(%s value) {", setterReturnType, setter, typeInterface);
+                    out.tab(1).println("public %s %s(%s value) {", setterReturnType, setter, columnTypeInterface);
                     out.tab(2).println("if (value == null)");
                     out.tab(3).println("setValue(%s, null);", i);
-                    out.tab(2).println("else");
-                    out.tab(3).println("setValue(%s, value.into(new %s()));", i, type);
+
+                    if (isUDT) {
+                        out.tab(2).println("else");
+                        out.tab(3).println("setValue(%s, value.into(new %s()));", i, type);
+                    }
+                    else if (isArray) {
+                        final ArrayDefinition array = database.getArray(column.getType().getSchema(), column.getType().getUserType());
+                        final String componentType = out.ref(getJavaType(array.getElementType(), Mode.RECORD));
+                        final String componentTypeInterface = out.ref(getJavaType(array.getElementType(), Mode.INTERFACE));
+
+                        out.tab(2).println("else {");
+                        out.tab(3).println("%s a = new %s();", columnType, columnType);
+                        out.println();
+                        out.tab(3).println("for (%s i : value)", componentTypeInterface);
+
+                        if (isUDTArray)
+                            out.tab(4).println("a.add(i.into(new %s()));", componentType);
+                        else
+                            out.tab(4).println("a.add(i);", componentType);
+
+                        out.println();
+                        out.tab(3).println("setValue(1, a);");
+                        out.tab(2).println("}");
+                    }
+
                     if (fluentSetters())
                         out.tab(2).println("return this;");
+
                     out.tab(1).println("}");
                 }
             }
@@ -1192,14 +1265,14 @@ public class JavaGenerator extends AbstractGenerator {
         JavaWriter out = newJavaWriter(getStrategy().getFile(table, Mode.INTERFACE));
         log.info("Generating interface", out.file().getName());
         generateInterface(table, out);
-        out.close();
+        closeJavaWriter(out);
     }
 
     protected void generateUDTInterface(UDTDefinition udt) {
         JavaWriter out = newJavaWriter(getStrategy().getFile(udt, Mode.INTERFACE));
         log.info("Generating interface", out.file().getName());
         generateInterface(udt, out);
-        out.close();
+        closeJavaWriter(out);
     }
 
     protected void generateInterface(TableDefinition table, JavaWriter out) {
@@ -1235,7 +1308,7 @@ public class JavaGenerator extends AbstractGenerator {
             final String setterReturnType = fluentSetters() ? className : "void";
             final String setter = getStrategy().getJavaSetterName(column, Mode.DEFAULT);
             final String getter = getStrategy().getJavaGetterName(column, Mode.DEFAULT);
-            final String type = out.ref(getJavaType((column).getType(), Mode.INTERFACE));
+            final String type = out.ref(getJavaType(column.getType(), Mode.INTERFACE));
             final String name = column.getQualifiedOutputName();
 
             if (!generateImmutablePojos()) {
@@ -1323,7 +1396,7 @@ public class JavaGenerator extends AbstractGenerator {
         JavaWriter out = newJavaWriter(getStrategy().getFile(udt));
         log.info("Generating UDT ", out.file().getName());
         generateUDT(udt, out);
-        out.close();
+        closeJavaWriter(out);
     }
 
     protected void generateUDT(UDTDefinition udt, JavaWriter out) {
@@ -1438,7 +1511,7 @@ public class JavaGenerator extends AbstractGenerator {
 
         generateUDTClassFooter(udt, out);
         out.println("}");
-        out.close();
+        closeJavaWriter(out);
     }
 
     /**
@@ -1591,7 +1664,7 @@ public class JavaGenerator extends AbstractGenerator {
         }
 
         out.println("}");
-        out.close();
+        closeJavaWriter(out);
 
         watch.splitInfo("UDT references generated");
     }
@@ -1615,103 +1688,104 @@ public class JavaGenerator extends AbstractGenerator {
         JavaWriter out = newJavaWriter(getStrategy().getFile(array, Mode.RECORD));
         log.info("Generating ARRAY", out.file().getName());
         generateArray(array, out);
-        out.close();
+        closeJavaWriter(out);
     }
 
+
     protected void generateArray(ArrayDefinition array, JavaWriter out) {
-        /* [pro] xx
-        xxxxx xxxxxxxxxxxxxxxx xxxxxx x xxxxxxxxxxxxxxxxxx
-        xxxxx xxxxxx xxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxx
-        xxxxx xxxxxx xxxxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxx xxxxxx xxxxxxxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxx xxxxxxxxxxxx xxxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxx
-        xxxxx xxxxxx xxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxx
-        xxxxx xxxxxx xxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxx
-        xxxxx xxxxxxxxxxxx xxxxxxxxxx x xxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxx
 
-        xxxxxxxxxxxxxxxxx xxxxxx xxxxxxxxxxxxx
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxx
-        xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxx
 
-        xx xxxxxxx
-            xxxxxxxxxxxxxxxxxx xx xxxxxxx xxxxxxxxxx xxxxxxx xxxxxxxxxxxx xxxxx xxxxxxxxxxxxxxxx xxxx xxxxxxxxxxxx xxxx xxxxxx xxx
-                    xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxx xxxxxxxxx xxxxxxxxxx xxxxxxxxxxxxxxx xxxxxxxxxxx xxxxxxxxxxxx
-        xxxx
-            xxxxxxxxxxxxxxxxxxx xxxxx xx xxxxxxx xxxxxxxxxxxxxxx xxxxxxxxxx xxxxxx xxx
-            		xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxx xxxxxxxxxxxx
 
-        xxxxxxxxxxxxxxxxxx
 
-        xx xxxxxxx x
-        x
-        xxxx xx xxxxxxxxxxxxxxxxxxxxxx x
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x xxxxx x xxxxxxx x xxx xxx xxxxxx xxxxxx xxxxxxxxxxx xxxxxxxxx xxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxx xxxxxxxxxxxxxx xxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxx
 
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxx xxxxxxxxxxxxxxxxxxxxxxx xxxxx xxxxxxxxxx xxxxxxxxx xxxxxxxxxx xxxxxxxxxxxxxxx xxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxx
 
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x xxxxx x xxxxxxx x xxx xxx xxxxxx xxxxxx xxxxxxxxxxx xxxxxxxxx xxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxx xxxxxxxxxxxxxx xxxxx xxxxxx xxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxx
 
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x xxxxx x xxxxxxx x xxx xxx xxxxxx xxxxxx xxxxxxxxxxx xxxxxxxxx xxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxx xxxxxxxxxxxxxx xxxx xxxxxxx xxx xxxxx xxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxx xxxxxxxxxxx xxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxx
-        x
 
-        xx xxxxxxx x
-        x
-        xxxx x
-            xxxxxxxxxxxxxxxxxxxxxxxxxx x xxx xxxxxxxxxxxxxxx xxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxx xxxx xxx xxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxxxxx xxxxx xxxxxxxxxx xxxxxxxxx xxxxxxxxxx xxxxxxxxxxxxxxx xxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxx
-        x
 
-        xxxxxxxxxxxxxxxxxxxxxxxxxx x xxx xxxxxxxxxxxxxxx xxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-        xx xxxxxxx x
-            xxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxx x xxxx x xxx xxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x xxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxx
-        x
-        xxxx x
-            xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxx xxxxxx xxx xxxxxxxxxx xxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxx
-        x
 
-        xxxxxxxxxxxxxxxxxxxxxxxxxx x xxx xxxxxxxxxxxxxxx xxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-        xx xxxxxxx x
-        	 xxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxx x xxxx xx xxxx xxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxx
-             xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-             xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-             xxxxxxxxxxxxxxxxxxxxxxxx
-        x
-        xxxx x
-            xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxx xxx xxxxxxxxxxx xxx xxxxxxxxxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxx
-        x
 
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxx
-        xxxxxxxxxxxxxxxxx
-        xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     }
 
     /**
@@ -1745,7 +1819,7 @@ public class JavaGenerator extends AbstractGenerator {
         JavaWriter out = newJavaWriter(getStrategy().getFile(e, Mode.ENUM));
         log.info("Generating ENUM", out.file().getName());
         generateEnum(e, out);
-        out.close();
+        closeJavaWriter(out);
     }
 
     protected void generateEnum(EnumDefinition e, JavaWriter out) {
@@ -1849,36 +1923,36 @@ public class JavaGenerator extends AbstractGenerator {
         }
 
         out.println("}");
-        out.close();
+        closeJavaWriter(out);
 
         watch.splitInfo("Routines generated");
     }
 
     protected void printConstant(JavaWriter out, AttributeDefinition constant) {
-        /* [pro] xx
-        xxxxx xxxxxx xxxxxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxx xxxxxx xxxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-        xxxxxxxxxxxxxxxxxxxxxxx xxxxxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-        xx xxxxxxx x
-            xxxxxxxxxxxxxxxxxxxxxxx xx x xxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxx xxxxxxxxxxxxxxx
-                xxxxxxxxxxx xxxxxxxxxx xxxxxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxx
-                xxxxxxxxxxxxxx
-        x
-        xxxx x
-            xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxx xxxxx xxxxxx xx x xxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxx xxxxxxxxxxxx
-                xxxxxxxxxxxx xxxxxxxxxxxxx xxxxxxxxxxx
-                xxxxxxxxxx xxxxxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxx
-                xxxxxxxxxxxxxx
-        x
-        xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     }
 
     protected void printRoutine(JavaWriter out, RoutineDefinition routine) {
@@ -1907,83 +1981,82 @@ public class JavaGenerator extends AbstractGenerator {
     }
 
     protected void generatePackages(SchemaDefinition schema) {
-        /* [pro] xx
-        xxxxxxxxxxxxxxxxxxxx xxxxxxxxxxx
 
-        xxx xxxxxxxxxxxxxxxxxx xxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxx x
-                xxxxxxxxxxxxxxxxxxxxxxx xxxxx
-            x xxxxx xxxxxxxxxx xx x
-                xxxxxxxxxxxxxxxx xxxxx xxxxxxxxxx xxxxxxx x x xxxx xxx
-            x
-        x
 
-        xxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxx
-        xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
     }
 
     @SuppressWarnings("unused")
     protected void generatePackage(SchemaDefinition schema, PackageDefinition pkg) {
-        /* [pro] xx
-        xxxxxxxxxx xxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxxxxxxxxxxxxxxxx xxxxxxxxx xxxxx
-        xxxxxxxxxxxxxxxxxxxx xxxxx
-        xxxxxxxxxxxx
-        xx [/pro] */
-    }
 
-    protected void generatePackage(PackageDefinition pkg, JavaWriter out) {
-        /* [pro] xx
-        xxxxx xxxxxxxxxxxxxxxx xxxxxx x xxxxxxxxxxxxxxxx
-        xxxxx xxxxxx xxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxx xxxxxx xxxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxx xxxxxx xxxxxxxxxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxx
-        xxxxx xxxxxxxxxxxx xxxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxx
 
-        xx xxxxxx xxxxxxxxxxx xxxxxxx
-        xxxxxxxxxxxxxxxxx xxxxx
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxx
-        xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxx
 
-        xx xxxxxxx x
-            xxxxxxxxxxxxxxxxxxx xx xxxxxxx xxxxxxxxxx xxxxxxxxxxxx xxxx xxxxxxxxxxxx xxxx xxxxxx xxx xxxxxxxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxx
 
-            xxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxx xxxxxxxx xx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxx xx x xxxx xxxxxxxxxxx xxxxxxxxxxx
-        x
-        xxxx x
-        	xxxxxxxxxxxxxxxxxxx xxxxx xx xxxxxxx xxxxxxxxxxx xxxxxxxxxx xxxxxx xxx xxxxxxxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxxxxx
 
-            xxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxx
-        x
 
-        xxx xxxxxxxxxxxxxxxxxxxx xxxxxxxx x xxxxxxxxxxxxxxxxxxx x
-            xxxxxxxxxxxxxxxxxx xxxxxxxxxx
-        x
 
-        xxx xxxxxxxxxxxxxxxxxx xxxxxxx x xxxxxxxxxxxxxxxxxx x
-            xxxxxxxxxxxxxxxxx xxxxxxxxx
 
-            xxx x
-                xxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxx
-            x xxxxx xxxxxxxxxx xx x
-                xxxxxxxxxxxxxxxx xxxxx xxxxxxxxxx xxxxxxx x x xxxxxxxx xxx
-            x
-        x
 
-        xx xxxxxxx x
-        x
-        xxxx x
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxx xxxx xxx xxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxx xxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxx
-        x
 
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxx
-        xxxxxxxxxxxxxxxxx
-        xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     }
 
     /**
@@ -2038,7 +2111,7 @@ public class JavaGenerator extends AbstractGenerator {
         }
 
         out.println("}");
-        out.close();
+        closeJavaWriter(out);
 
         watch.splitInfo("Table refs generated");
     }
@@ -2062,7 +2135,7 @@ public class JavaGenerator extends AbstractGenerator {
         JavaWriter out = newJavaWriter(getStrategy().getFile(table, Mode.DAO));
         log.info("Generating DAO", out.file().getName());
         generateDao(table, out);
-        out.close();
+        closeJavaWriter(out);
     }
 
     protected void generateDao(TableDefinition table, JavaWriter out) {
@@ -2110,6 +2183,9 @@ public class JavaGenerator extends AbstractGenerator {
         generateDaoClassJavadoc(table, out);
         printClassAnnotations(out, table.getSchema());
 
+        if (generateSpringAnnotations())
+            out.println("@%s", out.ref("org.springframework.stereotype.Repository"));
+
         if (scala)
             out.println("class %s(configuration : %s) extends %s[%s, %s, %s](%s, classOf[%s], configuration)[[before= with ][separator= with ][%s]] {",
                     className, Configuration.class, daoImpl, tableRecord, pType, tType, tableIdentifier, pType, interfaces);
@@ -2138,6 +2214,10 @@ public class JavaGenerator extends AbstractGenerator {
         }
         else {
             out.tab(1).javadoc("Create a new %s with an attached configuration", className);
+
+            if (generateSpringAnnotations())
+                out.tab(1).println("@%s", out.ref("org.springframework.beans.factory.annotation.Autowired"));
+
             out.tab(1).println("public %s(%s configuration) {", className, Configuration.class);
             out.tab(2).println("super(%s, %s.class, configuration);", tableIdentifier, pType);
             out.tab(1).println("}");
@@ -2265,14 +2345,14 @@ public class JavaGenerator extends AbstractGenerator {
         JavaWriter out = newJavaWriter(getStrategy().getFile(table, Mode.POJO));
         log.info("Generating POJO", out.file().getName());
         generatePojo(table, out);
-        out.close();
+        closeJavaWriter(out);
     }
 
     protected void generateUDTPojo(UDTDefinition udt) {
         JavaWriter out = newJavaWriter(getStrategy().getFile(udt, Mode.POJO));
         log.info("Generating POJO", out.file().getName());
         generatePojo(udt, out);
-        out.close();
+        closeJavaWriter(out);
     }
 
     protected void generatePojo(TableDefinition table, JavaWriter out) {
@@ -2444,6 +2524,7 @@ public class JavaGenerator extends AbstractGenerator {
             final String columnGetter = getStrategy().getJavaGetterName(column, Mode.POJO);
             final String columnMember = getStrategy().getJavaMemberName(column, Mode.POJO);
             final boolean isUDT = column.getType().isUDT();
+            final boolean isUDTArray = column.getType().isArray() && database.getArray(column.getType().getSchema(), column.getType().getUserType()).getElementType().isUDT();
 
             // Getter
             out.println();
@@ -2467,38 +2548,46 @@ public class JavaGenerator extends AbstractGenerator {
 
             // Setter
             if (!generateImmutablePojos()) {
-                out.println();
 
-                if (scala) {
-                    out.tab(1).println("def %s(%s : %s) : %s = {", columnSetter, columnMember, columnType, columnSetterReturnType);
-                    out.tab(2).println("this.%s = %s", columnMember, columnMember);
-                    if (fluentSetters())
-                        out.tab(2).println("this");
-                    out.tab(1).println("}");
-                }
-                else {
-                    out.tab(1).overrideIf(generateInterfaces() && !isUDT);
-                    out.tab(1).println("public %s %s(%s %s) {", columnSetterReturnType, columnSetter, columnType, columnMember);
-                    out.tab(2).println("this.%s = %s;", columnMember, columnMember);
-                    if (fluentSetters())
-                        out.tab(2).println("return this;");
-                    out.tab(1).println("}");
+                // We cannot have covariant setters for arrays because of type erasure
+                if (!(generateInterfaces() && isUDTArray)) {
+                    out.println();
+
+                    if (scala) {
+                        out.tab(1).println("def %s(%s : %s) : %s = {", columnSetter, columnMember, columnType, columnSetterReturnType);
+                        out.tab(2).println("this.%s = %s", columnMember, columnMember);
+                        if (fluentSetters())
+                            out.tab(2).println("this");
+                        out.tab(1).println("}");
+                    }
+                    else {
+                        out.tab(1).overrideIf(generateInterfaces() && !isUDT);
+                        out.tab(1).println("public %s %s(%s %s) {", columnSetterReturnType, columnSetter, columnType, columnMember);
+                        out.tab(2).println("this.%s = %s;", columnMember, columnMember);
+                        if (fluentSetters())
+                            out.tab(2).println("return this;");
+                        out.tab(1).println("}");
+                    }
                 }
 
                 // [#3117] To avoid covariant setters on POJOs, we need to generate two setter overloads
-                if (generateInterfaces() && isUDT) {
+                if (generateInterfaces() && (isUDT || isUDTArray)) {
                     final String columnTypeInterface = out.ref(getJavaType(column.getType(), Mode.INTERFACE));
 
                     out.println();
 
                     if (scala) {
+                        // [#3082] TODO Handle <interfaces/> + ARRAY also for Scala
+
                         out.tab(1).println("def %s(%s : %s) : %s = {", columnSetter, columnMember, columnTypeInterface, columnSetterReturnType);
                         out.tab(2).println("if (%s == null)", columnMember);
                         out.tab(3).println("this.%s = null", columnMember);
                         out.tab(2).println("else");
                         out.tab(3).println("this.%s = %s.into(new %s)", columnMember, columnMember, columnType);
+
                         if (fluentSetters())
                             out.tab(2).println("this");
+
                         out.tab(1).println("}");
                     }
                     else {
@@ -2506,10 +2595,27 @@ public class JavaGenerator extends AbstractGenerator {
                         out.tab(1).println("public %s %s(%s %s) {", columnSetterReturnType, columnSetter, columnTypeInterface, columnMember);
                         out.tab(2).println("if (%s == null)", columnMember);
                         out.tab(3).println("this.%s = null;", columnMember);
-                        out.tab(2).println("else");
-                        out.tab(3).println("this.%s = %s.into(new %s());", columnMember, columnMember, columnType);
+
+                        if (isUDT) {
+                            out.tab(2).println("else");
+                            out.tab(3).println("this.%s = %s.into(new %s());", columnMember, columnMember, columnType);
+                        }
+                        else if (isUDTArray) {
+                            final ArrayDefinition array = database.getArray(column.getType().getSchema(), column.getType().getUserType());
+                            final String componentType = out.ref(getJavaType(array.getElementType(), Mode.POJO));
+                            final String componentTypeInterface = out.ref(getJavaType(array.getElementType(), Mode.INTERFACE));
+
+                            out.tab(2).println("else {");
+                            out.tab(3).println("this.%s = new %s();", columnMember, ArrayList.class);
+                            out.println();
+                            out.tab(3).println("for (%s i : %s)", componentTypeInterface, columnMember);
+                            out.tab(4).println("this.%s.add(i.into(new %s()));", columnMember, componentType);
+                            out.tab(2).println("}");
+                        }
+
                         if (fluentSetters())
                             out.tab(2).println("return this;");
+
                         out.tab(1).println("}");
                     }
                 }
@@ -2520,6 +2626,9 @@ public class JavaGenerator extends AbstractGenerator {
             generatePojoEqualsAndHashCode(tableOrUDT, out);
         }
 
+        if (generatePojosToString()) {
+            generatePojoToString(tableOrUDT, out);
+        }
 
         if (generateInterfaces() && !generateImmutablePojos()) {
             printFromAndInto(out, tableOrUDT);
@@ -2531,7 +2640,7 @@ public class JavaGenerator extends AbstractGenerator {
             generateUDTPojoClassFooter((UDTDefinition) tableOrUDT, out);
 
         out.println("}");
-        out.close();
+        closeJavaWriter(out);
     }
 
     protected void generatePojoEqualsAndHashCode(Definition tableOrUDT, JavaWriter out) {
@@ -2648,6 +2757,70 @@ public class JavaGenerator extends AbstractGenerator {
         }
     }
 
+    protected void generatePojoToString(Definition tableOrUDT, JavaWriter out) {
+        final String className = getStrategy().getJavaClassName(tableOrUDT, Mode.POJO);
+
+        out.println();
+
+        if (scala) {
+            out.tab(1).println("override def toString : String = {");
+
+            out.tab(2).println("val sb = new %s(\"%s (\")", StringBuilder.class, className);
+            out.tab(2).println();
+
+            String separator = "";
+            for (TypedElementDefinition<?> column : getTypedElements(tableOrUDT)) {
+                final String columnMember = getStrategy().getJavaMemberName(column, Mode.POJO);
+                final String columnType = getJavaType(column.getType());
+
+                if (columnType.equals("scala.Array[scala.Byte]")) {
+                    out.tab(2).println("sb%s.append(\"[binary...]\")", separator);
+                }
+                else {
+                    out.tab(2).println("sb%s.append(%s)", separator, columnMember);
+                }
+
+                separator = ".append(\", \")";
+            }
+
+            out.tab(2).println();
+            out.tab(2).println("sb.append(\")\");");
+
+            out.tab(2).println("return sb.toString");
+            out.tab(1).println("}");
+        }
+        else {
+            out.tab(1).println("@Override");
+            out.tab(1).println("public String toString() {");
+            out.tab(2).println("%s sb = new %s(\"%s (\");", StringBuilder.class, StringBuilder.class, className);
+            out.tab(2).println();
+
+            String separator = "";
+            for (TypedElementDefinition<?> column : getTypedElements(tableOrUDT)) {
+                final String columnMember = getStrategy().getJavaMemberName(column, Mode.POJO);
+                final String columnType = getJavaType(column.getType());
+                final boolean array = columnType.endsWith("[]");
+
+                if (array && columnType.equals("byte[]")) {
+                    out.tab(2).println("sb%s.append(\"[binary...]\");", separator);
+                }
+                else if (array) {
+                    out.tab(2).println("sb%s.append(%s.toString(%s));", separator, Arrays.class, columnMember);
+                }
+                else {
+                    out.tab(2).println("sb%s.append(%s);", separator, columnMember);
+                }
+
+                separator = ".append(\", \")";
+            }
+
+            out.tab(2).println();
+            out.tab(2).println("sb.append(\")\");");
+            out.tab(2).println("return sb.toString();");
+            out.tab(1).println("}");
+        }
+    }
+
     private List<? extends TypedElementDefinition<? extends Definition>> getTypedElements(Definition definition) {
         if (definition instanceof TableDefinition) {
             return ((TableDefinition) definition).getColumns();
@@ -2695,7 +2868,7 @@ public class JavaGenerator extends AbstractGenerator {
     protected void generateTable(SchemaDefinition schema, TableDefinition table) {
         JavaWriter out = newJavaWriter(getStrategy().getFile(table));
         generateTable(table, out);
-        out.close();
+        closeJavaWriter(out);
     }
 
     protected void generateTable(TableDefinition table, JavaWriter out) {
@@ -2731,8 +2904,8 @@ public class JavaGenerator extends AbstractGenerator {
         printClassAnnotations(out, schema);
 
         if (scala) {
-            out.println("class %s(alias : String, aliased : %s[%s], parameters : Array[ %s[_] ]) extends %s[%s](alias, %s, aliased, parameters, \"%s\")[[before= with ][separator= with ][%s]] {",
-                    className, Table.class, recordType, Field.class, TableImpl.class, recordType, schemaId, escapeString(comment), interfaces);
+            out.println("class %s(alias : String, aliased : %s[%s], parameters : %s[ %s[_] ]) extends %s[%s](alias, %s, aliased, parameters, \"%s\")[[before= with ][separator= with ][%s]] {",
+                    className, Table.class, recordType, out.ref("scala.Array"), Field.class, TableImpl.class, recordType, schemaId, escapeString(comment), interfaces);
         }
         else {
             out.println("public class %s extends %s<%s>[[before= implements ][%s]] {",
@@ -2815,7 +2988,7 @@ public class JavaGenerator extends AbstractGenerator {
         if (scala) {
             out.tab(1).println("private def this(alias : %s, aliased : %s[%s]) = {", String.class, Table.class, recordType);
             if (table.isTableValuedFunction())
-                out.tab(2).println("this(alias, aliased, new %s[%s])", Field.class, table.getParameters().size());
+                out.tab(2).println("this(alias, aliased, new %s[ %s[_] ](%s))", out.ref("scala.Array"), Field.class, table.getParameters().size());
             else
                 out.tab(2).println("this(alias, aliased, null)");
 
@@ -3064,7 +3237,7 @@ public class JavaGenerator extends AbstractGenerator {
 
         generateTableClassFooter(table, out);
         out.println("}");
-        out.close();
+        closeJavaWriter(out);
     }
 
     private String escapeString(String comment) {
@@ -3118,7 +3291,7 @@ public class JavaGenerator extends AbstractGenerator {
         }
 
         out.println("}");
-        out.close();
+        closeJavaWriter(out);
 
         watch.splitInfo("Sequences generated");
     }
@@ -3128,7 +3301,7 @@ public class JavaGenerator extends AbstractGenerator {
         log.info("Generating schema", out.file().getName());
         log.info("----------------------------------------------------------");
         generateSchema(schema, out);
-        out.close();
+        closeJavaWriter(out);
     }
 
     protected void generateSchema(SchemaDefinition schema, JavaWriter out) {
@@ -3389,16 +3562,15 @@ public class JavaGenerator extends AbstractGenerator {
         if (generateValidationAnnotations()) {
             DataTypeDefinition type = column.getType();
 
-            if (!column.getType().isNullable()) {
+            // [#5128] defaulted columns are nullable in Java
+            if (!column.getType().isNullable() && !column.getType().isDefaulted())
                 out.tab(1).println("@%s", out.ref("javax.validation.constraints.NotNull"));
-            }
 
             if ("java.lang.String".equals(getJavaType(type))) {
                 int length = type.getLength();
 
-                if (length > 0) {
+                if (length > 0)
                     out.tab(1).println("@%s(max = %s)", out.ref("javax.validation.constraints.Size"), length);
-                }
             }
         }
     }
@@ -3408,7 +3580,7 @@ public class JavaGenerator extends AbstractGenerator {
         JavaWriter out = newJavaWriter(getStrategy().getFile(routine));
         log.info("Generating routine", out.file().getName());
         generateRoutine(routine, out);
-        out.close();
+        closeJavaWriter(out);
     }
 
     protected void generateRoutine(RoutineDefinition routine, JavaWriter out) {
@@ -3542,6 +3714,15 @@ public class JavaGenerator extends AbstractGenerator {
                 out.tab(2).println("setOverloaded(true);");
         }
 
+
+
+
+
+
+
+
+
+
         out.tab(1).println("}");
 
         for (ParameterDefinition parameter : routine.getInParameters()) {
@@ -3644,7 +3825,7 @@ public class JavaGenerator extends AbstractGenerator {
         final String className = out.ref(getStrategy().getFullJavaClassName(function));
         final String localVar = disambiguateJavaMemberName(function.getInParameters(), "f");
 
-        out.tab(1).javadoc("Get <code>%s</code> as a field", function.getQualifiedOutputName());
+        out.tab(1).javadoc("Get <code>%s</code> as a field.", function.getQualifiedOutputName());
 
         if (scala)
             out.tab(1).print("def %s(",
@@ -3728,7 +3909,7 @@ public class JavaGenerator extends AbstractGenerator {
 
         final String className = out.ref(getStrategy().getFullJavaClassName(function));
 
-        out.tab(1).javadoc("Get <code>%s</code> as a field", function.getQualifiedOutputName());
+        out.tab(1).javadoc("Get <code>%s</code> as a table.", function.getQualifiedOutputName());
         out.tab(1).print("public static %s %s(", className, javaMethodName);
 
         printParameterDeclarations(out, function, parametersAsField);
@@ -4079,7 +4260,7 @@ public class JavaGenerator extends AbstractGenerator {
 
             if (useSchemaVersionProvider()) {
             	if (scala)
-                    out.tab(1).println("value = Array(");
+                    out.tab(1).println("value = %s(", out.ref("scala.Array"));
             	else
             	    out.tab(1).println("value = {");
 
@@ -4097,7 +4278,7 @@ public class JavaGenerator extends AbstractGenerator {
             }
             else {
             	if (scala)
-                    out.tab(1).println("value = Array(");
+                    out.tab(1).println("value = %s(", out.ref("scala.Array"));
             	else
             	    out.tab(1).println("value = {");
 
@@ -4149,8 +4330,8 @@ public class JavaGenerator extends AbstractGenerator {
      */
     protected void printJavadocParagraph(JavaWriter out, String comment, String indent) {
 
-        // [#3450] Must not print */ inside Javadoc
-        String escaped = comment.replace("*/", "* /");
+        // [#3450] [#4880] Must not print */ inside Javadoc
+        String escaped = comment.replace("/*", "/ *").replace("*/", "* /");
         printParagraph(out, escaped, indent + " * ");
     }
 
@@ -4251,6 +4432,8 @@ public class JavaGenerator extends AbstractGenerator {
     }
 
     protected String getJavaTypeReference(Database db, DataTypeDefinition type) {
+
+        // [#4388] TODO: Improve array handling
         if (database.isArrayType(type.getType())) {
             String baseType = GenerationUtil.getArrayBaseType(db.getDialect(), type.getType(), type.getUserType());
             return getTypeReference(
@@ -4305,17 +4488,35 @@ public class JavaGenerator extends AbstractGenerator {
 
         // Array types
         if (db.isArrayType(t)) {
+
+            // [#4388] TODO: Improve array handling
             String baseType = GenerationUtil.getArrayBaseType(db.getDialect(), t, u);
 
             if (scala)
-                type = "Array[" + getType(db, schema, baseType, p, s, baseType, defaultType) + "]";
+                type = "scala.Array[" + getType(db, schema, baseType, p, s, baseType, defaultType) + "]";
             else
                 type = getType(db, schema, baseType, p, s, baseType, defaultType) + "[]";
         }
 
         // Check for Oracle-style VARRAY types
         else if (db.getArray(schema, u) != null) {
-            type = getStrategy().getFullJavaClassName(db.getArray(schema, u), Mode.RECORD);
+            boolean udtArray = db.getArray(schema, u).getElementType().isUDT();
+
+            if (udtMode == Mode.POJO || (udtMode == Mode.INTERFACE && !udtArray)) {
+                if (scala)
+                    type = "java.util.List[" + getJavaType(db.getArray(schema, u).getElementType(), udtMode) + "]";
+                else
+                    type = "java.util.List<" + getJavaType(db.getArray(schema, u).getElementType(), udtMode) + ">";
+            }
+            else if (udtMode == Mode.INTERFACE) {
+                if (scala)
+                    type = "java.util.List[_ <:" + getJavaType(db.getArray(schema, u).getElementType(), udtMode) + "]";
+                else
+                    type = "java.util.List<? extends " + getJavaType(db.getArray(schema, u).getElementType(), udtMode) + ">";
+            }
+            else {
+                type = getStrategy().getFullJavaClassName(db.getArray(schema, u), Mode.RECORD);
+            }
         }
 
         // Check for ENUM types
@@ -4498,6 +4699,9 @@ public class JavaGenerator extends AbstractGenerator {
         return getJavaType(type1).equals(getJavaType(type2));
     }
 
+
+    @SafeVarargs
+
     private static final <T> List<T> list(T... objects) {
         List<T> result = new ArrayList<T>();
 
@@ -4509,6 +4713,7 @@ public class JavaGenerator extends AbstractGenerator {
         return result;
     }
 
+    @SuppressWarnings("unchecked")
     private static final <T> List<T> list(T first, List<T> remaining) {
         List<T> result = new ArrayList<T>();
 
@@ -4545,18 +4750,23 @@ public class JavaGenerator extends AbstractGenerator {
     }
 
     private final String classOf(String string) {
-    	if (scala)
-    		return "classOf[" + string + "]";
-    	else
-    		return string + ".class";
+        if (scala)
+            return "classOf[" + string + "]";
+        else
+            return string + ".class";
     }
 
     // [#3880] Users may need to call this method
     protected final JavaWriter newJavaWriter(File file) {
-    	if (scala)
-    		file = new File(file.getParentFile(), file.getName().replace(".java", ".scala"));
+        if (scala)
+            file = new File(file.getParentFile(), file.getName().replace(".java", ".scala"));
 
-        files.add(file);
         return new JavaWriter(file, fullyQualifiedTypes());
+    }
+
+    // [#4626] Users may need to call this method
+    protected final void closeJavaWriter(JavaWriter out) {
+        if (out.close())
+            files.add(out.file());
     }
 }

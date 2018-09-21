@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,20 +53,49 @@ import org.jooq.impl.DSL;
  *
  * @author Lukas Eder
  */
-public interface TableOnStep {
+public interface TableOnStep<R extends Record> {
 
     /**
      * Add an <code>ON</code> clause to the <code>JOIN</code>, connecting them
      * with each other with {@link Operator#AND}.
      */
     @Support
-    TableOnConditionStep on(Condition... conditions);
+    TableOnConditionStep<R> on(Condition... conditions);
 
     /**
      * Add an <code>ON</code> clause to the <code>JOIN</code>.
      */
     @Support
-    TableOnConditionStep on(Field<Boolean> condition);
+    TableOnConditionStep<R> on(Field<Boolean> condition);
+
+    /**
+     * Add an <code>ON</code> clause to the <code>JOIN</code>.
+     *
+     * @deprecated - 3.8.0 - [#4763] - Use {@link #on(Condition...)} or
+     *             {@link #on(Field)} instead. Due to ambiguity between
+     *             calling this method using {@link Field#equals(Object)}
+     *             argument, vs. calling the other method via a
+     *             {@link Field#equal(Object)} argument, this method will be
+     *             removed in the future.
+     */
+    @Deprecated
+    @Support
+    TableOnConditionStep<R> on(Boolean condition);
+
+    /**
+     * Add an <code>ON</code> clause to the <code>JOIN</code>.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#condition(SQL)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    TableOnConditionStep<R> on(SQL sql);
 
     /**
      * Add an <code>ON</code> clause to the <code>JOIN</code>.
@@ -77,10 +106,11 @@ public interface TableOnStep {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String)
+     * @see SQL
      */
     @Support
     @PlainSQL
-    TableOnConditionStep on(String sql);
+    TableOnConditionStep<R> on(String sql);
 
     /**
      * Add an <code>ON</code> clause to the <code>JOIN</code>.
@@ -91,10 +121,11 @@ public interface TableOnStep {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String, Object...)
+     * @see SQL
      */
     @Support
     @PlainSQL
-    TableOnConditionStep on(String sql, Object... bindings);
+    TableOnConditionStep<R> on(String sql, Object... bindings);
 
     /**
      * Add an <code>ON</code> clause to the <code>JOIN</code>.
@@ -105,15 +136,16 @@ public interface TableOnStep {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String, QueryPart...)
+     * @see SQL
      */
     @Support
     @PlainSQL
-    TableOnConditionStep on(String sql, QueryPart... parts);
+    TableOnConditionStep<R> on(String sql, QueryPart... parts);
 
     /**
      * Join a table with the <code>USING(column [, column...])</code> syntax.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      */
     @Support
@@ -122,7 +154,7 @@ public interface TableOnStep {
     /**
      * Join a table with the <code>USING(column [, column...])</code> syntax.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      */
     @Support
@@ -139,7 +171,7 @@ public interface TableOnStep {
      *             known to jOOQ
      */
     @Support
-    TableOnConditionStep onKey() throws DataAccessException;
+    TableOnConditionStep<R> onKey() throws DataAccessException;
 
     /**
      * Join the table on a non-ambiguous foreign key relationship between the
@@ -152,7 +184,7 @@ public interface TableOnStep {
      *             known to jOOQ
      */
     @Support
-    TableOnConditionStep onKey(TableField<?, ?>... keyFields) throws DataAccessException;
+    TableOnConditionStep<R> onKey(TableField<?, ?>... keyFields) throws DataAccessException;
 
     /**
      * Join the table on a non-ambiguous foreign key relationship between the
@@ -175,5 +207,5 @@ public interface TableOnStep {
      * </pre></code>
      */
     @Support
-    TableOnConditionStep onKey(ForeignKey<?, ?> key);
+    TableOnConditionStep<R> onKey(ForeignKey<?, ?> key);
 }

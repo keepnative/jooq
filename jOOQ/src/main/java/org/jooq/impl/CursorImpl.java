@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,8 +41,9 @@
 package org.jooq.impl;
 
 import static java.lang.Boolean.TRUE;
-import static org.jooq.impl.Utils.DATA_LOCK_ROWS_FOR_UPDATE;
-import static org.jooq.impl.Utils.recordFactory;
+// ...
+import static org.jooq.impl.Tools.recordFactory;
+import static org.jooq.impl.Tools.DataKey.DATA_LOCK_ROWS_FOR_UPDATE;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -63,17 +64,24 @@ import java.sql.SQLXML;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.Calendar;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.jooq.BindingGetResultSetContext;
 import org.jooq.Cursor;
 import org.jooq.ExecuteContext;
 import org.jooq.ExecuteListener;
 import org.jooq.Field;
+import org.jooq.Name;
 import org.jooq.Record;
 import org.jooq.RecordHandler;
 import org.jooq.RecordMapper;
@@ -82,6 +90,7 @@ import org.jooq.Result;
 import org.jooq.Row;
 import org.jooq.Table;
 import org.jooq.exception.ControlFlowSignal;
+import org.jooq.exception.DataAccessException;
 import org.jooq.tools.JooqLogger;
 import org.jooq.tools.jdbc.JDBC41ResultSet;
 import org.jooq.tools.jdbc.JDBCUtils;
@@ -99,20 +108,27 @@ class CursorImpl<R extends Record> implements Cursor<R> {
     private final boolean[]                                intern;
     private final boolean                                  keepResultSet;
     private final boolean                                  keepStatement;
+    private final int                                      maxRows;
     private final RecordFactory<? extends R>               factory;
     private boolean                                        isClosed;
 
     private transient CursorResultSet                      rs;
     private transient DefaultBindingGetResultSetContext<?> rsContext;
+
+
+
+
     private transient Iterator<R>                          iterator;
     private transient int                                  rows;
+    private transient boolean                              lockRowsForUpdate;
+
 
     @SuppressWarnings("unchecked")
     CursorImpl(ExecuteContext ctx, ExecuteListener listener, Field<?>[] fields, int[] internIndexes, boolean keepStatement, boolean keepResultSet) {
-        this(ctx, listener, fields, internIndexes, keepStatement, keepResultSet, (Class<? extends R>) RecordImpl.class);
+        this(ctx, listener, fields, internIndexes, keepStatement, keepResultSet, (Class<? extends R>) RecordImpl.class, 0);
     }
 
-    CursorImpl(ExecuteContext ctx, ExecuteListener listener, Field<?>[] fields, int[] internIndexes, boolean keepStatement, boolean keepResultSet, Class<? extends R> type) {
+    CursorImpl(ExecuteContext ctx, ExecuteListener listener, Field<?>[] fields, int[] internIndexes, boolean keepStatement, boolean keepResultSet, Class<? extends R> type, int maxRows) {
         this.ctx = ctx;
         this.listener = (listener != null ? listener : new ExecuteListeners(ctx));
         this.cursorFields = fields;
@@ -121,7 +137,13 @@ class CursorImpl<R extends Record> implements Cursor<R> {
         this.keepResultSet = keepResultSet;
         this.rs = new CursorResultSet();
         this.rsContext = new DefaultBindingGetResultSetContext<Object>(ctx.configuration(), ctx.data(), rs, 0);
+
+
+
+
         this.intern = new boolean[fields.length];
+        this.maxRows = maxRows;
+        this.lockRowsForUpdate = TRUE.equals(ctx.data(DATA_LOCK_ROWS_FOR_UPDATE));
 
         if (internIndexes != null) {
             for (int i : internIndexes) {
@@ -129,6 +151,45 @@ class CursorImpl<R extends Record> implements Cursor<R> {
             }
         }
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
@@ -153,13 +214,38 @@ class CursorImpl<R extends Record> implements Cursor<R> {
     }
 
     @Override
+    public final Field<?> field(Name name) {
+        return fieldsRow().field(name);
+    }
+
+    @Override
     public final Field<?> field(int index) {
         return index >= 0 && index < cursorFields.length ? cursorFields[index] : null;
     }
 
     @Override
     public final Field<?>[] fields() {
-        return cursorFields.clone();
+        return fieldsRow().fields();
+    }
+
+    @Override
+    public final Field<?>[] fields(Field<?>... fields) {
+        return fieldsRow().fields(fields);
+    }
+
+    @Override
+    public final Field<?>[] fields(String... fieldNames) {
+        return fieldsRow().fields(fieldNames);
+    }
+
+    @Override
+    public final Field<?>[] fields(Name... fieldNames) {
+        return fieldsRow().fields(fieldNames);
+    }
+
+    @Override
+    public final Field<?>[] fields(int... fieldIndexes) {
+        return fieldsRow().fields(fieldIndexes);
     }
 
     @Override
@@ -171,6 +257,20 @@ class CursorImpl<R extends Record> implements Cursor<R> {
 
         return iterator;
     }
+
+
+    @Override
+    public final Stream<R> stream() throws DataAccessException {
+        return StreamSupport.stream(
+            Spliterators.spliterator(
+                iterator(),
+                0,
+                Spliterator.ORDERED | Spliterator.NONNULL
+            ),
+            false
+        ).onClose(() -> close());
+    }
+
 
     @Override
     public final boolean hasNext() {
@@ -192,6 +292,28 @@ class CursorImpl<R extends Record> implements Cursor<R> {
 
         return null;
     }
+
+
+    @Override
+    public final Optional<R> fetchOptional() throws DataAccessException {
+        return Optional.ofNullable(fetchOne());
+    }
+
+    @Override
+    public final <E> Optional<E> fetchOptionalInto(Class<? extends E> type) {
+        return Optional.ofNullable(fetchOneInto(type));
+    }
+
+    @Override
+    public final <E> Optional<E> fetchOptional(RecordMapper<? super R, E> mapper) {
+        return Optional.ofNullable(fetchOne(mapper));
+    }
+
+    @Override
+    public final <Z extends Record> Optional<Z> fetchOptionalInto(Table<Z> table) {
+        return Optional.ofNullable(fetchOneInto(table));
+    }
+
 
     @Override
     public final Result<R> fetch(int number) {
@@ -453,7 +575,7 @@ class CursorImpl<R extends Record> implements Cursor<R> {
             // [#1868] If this Result / Cursor was "kept" through a lazy
             // execution, we must assure that the ExecuteListener lifecycle is
             // correctly terminated.
-            Utils.safeClose(listener, ctx, keepStatement, keepResultSet);
+            Tools.safeClose(listener, ctx, keepStatement, keepResultSet);
         }
 
         @Override
@@ -1361,7 +1483,7 @@ class CursorImpl<R extends Record> implements Cursor<R> {
         /**
          * The (potentially) pre-fetched next record
          */
-        private R                             next;
+        private R next;
 
         /**
          * Whether the underlying {@link ResultSet} has a next record. This
@@ -1372,11 +1494,16 @@ class CursorImpl<R extends Record> implements Cursor<R> {
          * <li>false: there aren't any next records</li>
          * </ul>
          */
-        private Boolean                       hasNext;
+        private Boolean hasNext;
 
         @Override
         public final boolean hasNext() {
             if (hasNext == null) {
+
+                // Some databases (e.g. Redshift) do not implement JDBC's maxRows.
+                if (maxRows > 0 && rows >= maxRows)
+                    return false;
+
                 next = fetchOne();
                 hasNext = (next != null);
             }
@@ -1403,13 +1530,13 @@ class CursorImpl<R extends Record> implements Cursor<R> {
                 if (!isClosed && rs.next()) {
 
                     // [#1296] Force a row-lock by updating the row if the
-                    // FOR UPDATE clause is simulated
-                    if (TRUE.equals(ctx.data(DATA_LOCK_ROWS_FOR_UPDATE))) {
+                    // FOR UPDATE clause is emulated
+                    if (lockRowsForUpdate) {
                         rs.updateObject(1, rs.getObject(1));
                         rs.updateRow();
                     }
 
-                    record = Utils.newRecord(true, (RecordFactory<AbstractRecord>) factory, ctx.configuration())
+                    record = Tools.newRecord(true, (RecordFactory<AbstractRecord>) factory, ctx.configuration())
                                   .operate(new CursorRecordInitialiser(cursorFields, 0));
 
                     rows++;
@@ -1448,11 +1575,11 @@ class CursorImpl<R extends Record> implements Cursor<R> {
 
         private class CursorRecordInitialiser implements RecordOperation<AbstractRecord, SQLException> {
 
-            private final Field<?>[] initaliserFields;
+            private final Field<?>[] initialiserFields;
             private int              offset;
 
             CursorRecordInitialiser(Field<?>[] fields, int offset) {
-                this.initaliserFields = fields;
+                this.initialiserFields = fields;
                 this.offset = offset;
             }
 
@@ -1461,13 +1588,31 @@ class CursorImpl<R extends Record> implements Cursor<R> {
                 ctx.record(record);
                 listener.recordStart(ctx);
 
-                for (int i = 0; i < initaliserFields.length; i++) {
-                    setValue(record, initaliserFields[i], i);
 
-                    if (intern[i]) {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                for (int i = 0; i < initialiserFields.length; i++)
+                    setValue(record, initialiserFields[i], i);
+
+                for (int i = 0; i < initialiserFields.length; i++)
+                    if (intern[i])
                         record.intern0(i);
-                    }
-                }
 
                 ctx.record(record);
                 listener.recordEnd(ctx);
@@ -1485,7 +1630,7 @@ class CursorImpl<R extends Record> implements Cursor<R> {
                 if (field instanceof RowField) {
                     Field<?>[] emulatedFields = ((RowField<?, ?>) field).emulatedFields();
 
-                    value = (T) Utils.newRecord(true, RecordImpl.class, emulatedFields, ctx.configuration())
+                    value = (T) Tools.newRecord(true, RecordImpl.class, emulatedFields, ctx.configuration())
                                      .operate(new CursorRecordInitialiser(emulatedFields, offset + index));
 
                     offset += emulatedFields.length - 1;

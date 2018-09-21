@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,12 +53,16 @@ import static org.jooq.Comparator.NOT_LIKE_IGNORE_CASE;
 import static org.jooq.SQLDialect.DERBY;
 // ...
 import static org.jooq.SQLDialect.POSTGRES;
+// ...
+import static org.jooq.conf.ParamType.INLINED;
+import static org.jooq.impl.DSL.inline;
 
 import org.jooq.Clause;
 import org.jooq.Comparator;
 import org.jooq.Context;
 import org.jooq.Field;
 import org.jooq.SQLDialect;
+import org.jooq.conf.ParamType;
 
 /**
  * @author Lukas Eder
@@ -102,7 +106,7 @@ class CompareCondition extends AbstractCondition {
         }
 
         // [#1423] Only Postgres knows a true ILIKE operator. Other dialects
-        // need to simulate this as LOWER(lhs) LIKE LOWER(rhs)
+        // need to emulate this as LOWER(lhs) LIKE LOWER(rhs)
         else if ((op == LIKE_IGNORE_CASE || op == NOT_LIKE_IGNORE_CASE)
                 && POSTGRES != family) {
 
@@ -115,24 +119,32 @@ class CompareCondition extends AbstractCondition {
            .sql(' ');
 
         boolean castRhs = false;
+        ParamType previousParamType = ctx.paramType();
+        ParamType forcedParamType = previousParamType;
 
-        /* [pro] xx
-        xx xxxxxxx xxxx xxxxx xxx xxxxx xxxxx xxxxxx xxxx xxxxxxx xxxx x
-        xx xxxxxxxxxxxx xxxxxx xxxxxxxxxxx xx xxx xxxxxxxxxx xx xxxx xxxx xxxx
-        xx xxxxxxxxxx xxxx
-        xx xxxxxxx xx xxx xx xxx xxxxxxxxxx xxxxxxx
-            xxxxxxx x xxxxx
-        xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
 
                      ctx.keyword(op.toSQL()).sql(' ');
         if (castRhs) ctx.keyword("cast").sql('(');
-                     ctx.visit(rhs);
+                     ctx.paramType(forcedParamType)
+                        .visit(rhs)
+                        .paramType(previousParamType);
         if (castRhs) ctx.sql(' ').keyword("as").sql(' ').keyword("varchar").sql("(4000))");
 
         if (escape != null) {
-            ctx.sql(' ').keyword("escape").sql(" '")
-               .sql(escape)
-               .sql('\'');
+            ctx.sql(' ').keyword("escape").sql(' ')
+               .visit(inline(escape));
         }
     }
 

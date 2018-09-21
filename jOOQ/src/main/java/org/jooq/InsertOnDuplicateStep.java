@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,6 +47,7 @@ import static org.jooq.SQLDialect.HSQLDB;
 import static org.jooq.SQLDialect.MARIADB;
 import static org.jooq.SQLDialect.MYSQL;
 // ...
+import static org.jooq.SQLDialect.POSTGRES_9_5;
 // ...
 // ...
 
@@ -78,8 +79,8 @@ public interface InsertOnDuplicateStep<R extends Record> extends InsertReturning
      * executed instead.
      * <p>
      * MySQL and CUBRID natively implements this type of clause. jOOQ can
-     * simulate this clause using a <code>MERGE</code> statement on some other
-     * databases. The conditions for a RDBMS to simulate this clause are:
+     * emulate this clause using a <code>MERGE</code> statement on some other
+     * databases. The conditions for a RDBMS to emulate this clause are:
      * <ul>
      * <li>The <code>INSERT</code> statement's table is a
      * {@link Table} with a {@link Table#getPrimaryKey()}</li>
@@ -89,7 +90,7 @@ public interface InsertOnDuplicateStep<R extends Record> extends InsertReturning
      * <p>
      * These are the dialects that fulfill the above requirements:
      */
-    @Support({ CUBRID, HSQLDB, MARIADB, MYSQL })
+    @Support({ CUBRID, HSQLDB, MARIADB, MYSQL, POSTGRES_9_5 })
     InsertOnDuplicateSetStep<R> onDuplicateKeyUpdate();
 
     /**
@@ -101,39 +102,49 @@ public interface InsertOnDuplicateStep<R extends Record> extends InsertReturning
      * is ignored.
      * <p>
      * This clause is not actually supported in this form by any database, but
-     * can be simulated as such:
+     * can be emulated as such:
      * <table border="1">
      * <tr>
      * <th>Dialect</th>
-     * <th>Simulation</th>
+     * <th>Emulation</th>
      * </tr>
      * <tr>
-     * <td> {@link SQLDialect#MARIADB}</td>
-     * <td> <code><pre>INSERT IGNORE INTO ..</pre></code></td>
+     * <td>{@link SQLDialect#MYSQL} and {@link SQLDialect#MARIADB}</td>
+     * <td><code><pre>INSERT IGNORE INTO ..</pre></code></td>
      * </tr>
      * <tr>
-     * <td> {@link SQLDialect#MYSQL}</td>
-     * <td> <code><pre>INSERT IGNORE INTO ..</pre></code></td>
+     * <td>{@link SQLDialect#POSTGRES_9_5}</td>
+     * <td><code><pre>INSERT INTO .. ON CONFLICT DO NOTHING</pre></code></td>
      * </tr>
      * <tr>
-     * <td> {@link SQLDialect#CUBRID}</td>
+     * <td>{@link SQLDialect#CUBRID}</td>
      * <td>
      * <code><pre>INSERT INTO .. ON DUPLICATE KEY UPDATE [any-field] = [any-field]</pre></code>
      * </td>
      * </tr>
      * <tr>
-     * <td> {@link SQLDialect#DB2}<br/>
+     * <td>{@link SQLDialect#DB2}<br/>
      * {@link SQLDialect#HSQLDB}<br/>
      * {@link SQLDialect#ORACLE}<br/>
      * {@link SQLDialect#SQLSERVER}<br/>
      * {@link SQLDialect#SYBASE}</td>
      * <td><code><pre>MERGE INTO [dst]
-     * USING ([values]) src
-     * ON [dst.key] = [src.key]
+     * USING ([values])
+     * ON [dst.key] = [values.key]
      * WHEN NOT MATCHED THEN INSERT ..</pre></code></td>
+     * </tr>
+     * <tr>
+     * <td>All the others</td>
+     * <td><code><pre>INSERT INTO [dst] ( ... )
+     * SELECT [values]
+     * WHERE NOT EXISTS (
+     *   SELECT 1
+     *   FROM [dst]
+     *   WHERE [dst.key] = [values.key]
+     * )</pre></code></td>
      * </tr>
      * </table>
      */
-    @Support({ CUBRID, HSQLDB, MARIADB, MYSQL })
+    @Support
     InsertFinalStep<R> onDuplicateKeyIgnore();
 }

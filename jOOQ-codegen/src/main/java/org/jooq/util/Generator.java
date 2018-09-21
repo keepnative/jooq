@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -183,6 +183,18 @@ public interface Generator {
     void setGenerateValidationAnnotations(boolean generateValidationAnnotations);
 
     /**
+     * Whether DAOs should be annotated with useful spring annotations such as
+     * <code>@Repository</code> or <code>@Autowired</code>
+     */
+    boolean generateSpringAnnotations();
+
+    /**
+     * Whether DAOs should be annotated with useful spring annotations such as
+     * <code>@Repository</code> or <code>@Autowired</code>
+     */
+    void setGenerateSpringAnnotations(boolean generateSpringAnnotations);
+
+    /**
      * Whether global object references should be generated
      */
     boolean generateGlobalObjectReferences();
@@ -243,14 +255,26 @@ public interface Generator {
     void setFluentSetters(boolean fluentSetters);
 
     /**
-     * Whether equals and hashCode methods should be generated on POJOs
+     * Whether <code>equals()</code> and <code>hashCode()</code> methods should
+     * be generated on POJOs
      */
     boolean generatePojosEqualsAndHashCode();
 
     /**
-     * Whether equals and hashCode methods should be generated on POJOs
+     * Whether <code>equals()</code> and <code>hashCode()</code> methods should
+     * be generated on POJOs
      */
     void setGeneratePojosEqualsAndHashCode(boolean generatePojosEqualsAndHashCode);
+
+    /**
+     * Whether a <code>toString()</code> method should be generated on POJOs
+     */
+    boolean generatePojosToString();
+
+    /**
+     * Whether a <code>toString()</code> method should be generated on POJOs
+     */
+    void setGeneratePojosToString(boolean generatePojosToString);
 
     /**
      * A regular expression matching all the types in generated code that should

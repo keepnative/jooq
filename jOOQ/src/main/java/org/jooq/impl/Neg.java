@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -79,17 +79,17 @@ class Neg<T> extends AbstractField<T> {
         SQLDialect family = ctx.configuration().dialect().family();
 
         if (operator == BIT_NOT && asList(H2, HSQLDB).contains(family)) {
-            ctx.sql("(0 -")
+            ctx.sql("(0 - ")
                .visit(field)
                .sql(" - 1)");
         }
-        /* [pro] xx
-        xxxx xx xxxxxxxxx xx xxxxxxx xx xxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxxxxxxxxxxxxxxxxxxxxx
-               xxxxxxxxxxxxx
-               xxxxxxxxxx
-        x
-        xx [/pro] */
+
+
+
+
+
+
+
         else if (operator == BIT_NOT && family == FIREBIRD) {
             ctx.keyword("bin_not(")
                .visit(field)

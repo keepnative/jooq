@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -120,42 +120,46 @@ public class GenerationTool {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length < 1) {
+        if (args.length < 1)
             error();
-        }
 
-        InputStream in = GenerationTool.class.getResourceAsStream(args[0]);
+        argsLoop: for (String arg : args) {
+            InputStream in = GenerationTool.class.getResourceAsStream(arg);
+            try {
 
-        // [#2932] Retry loading the file, if it wasn't found. This may be helpful
-        // to some users who were unaware that this file is loaded from the classpath
-        if (in == null && !args[0].startsWith("/"))
-            in = GenerationTool.class.getResourceAsStream("/" + args[0]);
+                // [#2932] Retry loading the file, if it wasn't found. This may be helpful
+                // to some users who were unaware that this file is loaded from the classpath
+                if (in == null && !arg.startsWith("/"))
+                    in = GenerationTool.class.getResourceAsStream("/" + arg);
 
-        // [#3668] Also check the local file system for configuration files
-        if (in == null && new File(args[0]).exists())
-            in = new FileInputStream(new File(args[0]));
+                // [#3668] Also check the local file system for configuration files
+                if (in == null && new File(arg).exists())
+                    in = new FileInputStream(new File(arg));
 
-        if (in == null) {
-            log.error("Cannot find " + args[0] + " on classpath, or in directory " + new File(".").getCanonicalPath());
-            log.error("-----------");
-            log.error("Please be sure it is located");
-            log.error("  - on the classpath and qualified as a classpath location.");
-            log.error("  - in the local directory or at a global path in the file system.");
+                if (in == null) {
+                    log.error("Cannot find " + arg + " on classpath, or in directory " + new File(".").getCanonicalPath());
+                    log.error("-----------");
+                    log.error("Please be sure it is located");
+                    log.error("  - on the classpath and qualified as a classpath location.");
+                    log.error("  - in the local directory or at a global path in the file system.");
 
-            error();
-        }
+                    continue argsLoop;
+                }
 
-        log.info("Initialising properties", args[0]);
+                log.info("Initialising properties", arg);
 
-        try {
-            generate(load(in));
-        } catch (Exception e) {
-            log.error("Cannot read " + args[0] + ". Error : " + e.getMessage());
-            e.printStackTrace();
-            error();
-        } finally {
-            if (in != null) {
-                in.close();
+                generate(load(in));
+            }
+            catch (Exception e) {
+                log.error("Cannot read " + arg + ". Error : " + e.getMessage());
+                e.printStackTrace();
+
+                continue argsLoop;
+            }
+            finally {
+                if (in != null) {
+                    in.close();
+                }
             }
         }
     }
@@ -291,16 +295,16 @@ public class GenerationTool {
                     schema.setOutputSchema(trim(schema.getInputSchema()));
                 }
 
-                /* [pro] xx
-                xx xxxxxxx xxxxxx xxxxxxxx xxxx xxxxx xxxxxxxxxxxxxxxx xxxxxx xxxxxx
-                xx xxxxxxxxx xxxxxxxxxx xxxxxxxxxxxxxxx x
-                    xx xxxxxxxxxxxxxxxxxxxxxxxx xx xxxxx
-                        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-                    xx xxxxxxxxxxxxxxxxxxxxxxxxx xx xxxxx
-                        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                x
-                xx [/pro] */
+
+
+
+
+
+
+
+
+
             }
 
             if (schemata.size() == 1) {
@@ -396,6 +400,8 @@ public class GenerationTool {
                 generator.setGenerateJPAAnnotations(g.getGenerate().isJpaAnnotations());
             if (g.getGenerate().isValidationAnnotations() != null)
                 generator.setGenerateValidationAnnotations(g.getGenerate().isValidationAnnotations());
+            if (g.getGenerate().isSpringAnnotations() != null)
+                generator.setGenerateSpringAnnotations(g.getGenerate().isSpringAnnotations());
             if (g.getGenerate().isGlobalObjectReferences() != null)
                 generator.setGenerateGlobalObjectReferences(g.getGenerate().isGlobalObjectReferences());
             if (g.getGenerate().isGlobalRoutineReferences() != null)
@@ -410,6 +416,8 @@ public class GenerationTool {
                 generator.setFluentSetters(g.getGenerate().isFluentSetters());
             if (g.getGenerate().isPojosEqualsAndHashCode() != null)
                 generator.setGeneratePojosEqualsAndHashCode(g.getGenerate().isPojosEqualsAndHashCode());
+            if (g.getGenerate().isPojosToString() != null)
+                generator.setGeneratePojosToString(g.getGenerate().isPojosToString());
             if (g.getGenerate().getFullyQualifiedTypes() != null)
                 generator.setFullyQualifiedTypes(g.getGenerate().getFullyQualifiedTypes());
 
@@ -499,10 +507,13 @@ public class GenerationTool {
             }
         }
 
-        // [#2801]
+        // [#2801] [#4620]
         catch (ClassNotFoundException e) {
             if (className.startsWith("org.jooq.util.") && className.endsWith("Database")) {
-                log.warn("Licensing", "With jOOQ 3.2, licensing has changed, and your database may no longer be supported with jOOQ Open Source Edition. See http://www.jooq.org/licensing for details");
+                log.warn("Type not found",
+                      "Your configured database type was not found. This can have several reasons:\n"
+                    + "- You want to use a commercial jOOQ Edition, but you pulled the Open Source Edition from Maven Central.\n"
+                    + "- You have mis-typed your class name.");
             }
 
             throw e;

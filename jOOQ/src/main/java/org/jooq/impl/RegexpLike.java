@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,9 +71,9 @@ class RegexpLike extends AbstractCondition {
         switch (ctx.family()) {
 
             // [#620] These databases are compatible with the MySQL syntax
-            /* [pro] xx
-            xxxx xxxxxxx
-            xx [/pro] */
+
+
+
             case CUBRID:
             case H2:
             case MARIADB:
@@ -97,6 +97,9 @@ class RegexpLike extends AbstractCondition {
             }
 
             // [#620] Postgres has its own syntax
+
+
+
             case POSTGRES: {
 
                 // [#1570] TODO: Replace this by SQL.condition(String, QueryPart...)
@@ -104,24 +107,25 @@ class RegexpLike extends AbstractCondition {
                 break;
             }
 
-            /* [pro] xx
-            xx xxxxxx xxxxxx xxx xxx xxx xxxxxx
-            xxxx xxxxxxx x
 
-                xx xxxxxxx xxxxx xxxxxxx xxxx xx xxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxx xxxxxxx xxxxxxxxxx
-                xxxxxx
-            x
 
-            xx [/pro] */
+
+
+
+
+
+
+
+
+
             // Render the SQL standard for those databases that do not support
             // regular expressions
-            /* [pro] xx
-            xxxx xxxx
-            xxxx xxxx
-            xxxx xxxxxxx
-            xxxx xxxxxxxxxx
-            xx [/pro] */
+
+
+
+
+
+
             case DERBY:
             case FIREBIRD:
             default: {

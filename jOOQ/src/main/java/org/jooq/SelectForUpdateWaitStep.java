@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,6 +42,7 @@ package org.jooq;
 
 // ...
 import static org.jooq.SQLDialect.POSTGRES;
+import static org.jooq.SQLDialect.POSTGRES_9_5;
 
 /**
  * This type is used for the {@link Select}'s DSL API when selecting generic
@@ -87,18 +88,18 @@ import static org.jooq.SQLDialect.POSTGRES;
  */
 public interface SelectForUpdateWaitStep<R extends Record> extends SelectOptionStep<R> {
 
-    /* [pro] xx
-    xxx
-     x xxx x xxxxxxxxxxxxxxxxx xxxxxx xx xxx xxxxxxxxx xxxxxxxxxxxxx xxxxxx xx
-     x xxx xxx xx xxx xxxxxx
-     x xxx
-     x xx xxxxxxx xxx xx xxxxxxx xxxx xxxx xxxxxx xxxxxxxxxxxxxxxxxx x
-     x
-     x xxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxx xxxxxxxxxxxx xxx xxxx xxxxxxx
-     xx
-    xxxxxxxxxxxxxxxx
-    xxxxxxxxxxxxxxxxxxx xxxxxxxx xxxxxxxxx
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
 
     /**
      * Add a <code>NOWAIT</code> clause to the <code>FOR UPDATE</code> clause at
@@ -109,15 +110,13 @@ public interface SelectForUpdateWaitStep<R extends Record> extends SelectOptionS
     @Support({ POSTGRES })
     SelectOptionStep<R> noWait();
 
-    /* [pro] xx
-    xxx
-     x xxx x xxxxxxxxxxxxxxxxx xxxxxx xx xxx xxxxxxxxx xxxxxxxxxxxxx xxxxxx xx
-     x xxx xxx xx xxx xxxxxx
-     x
-     x xxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxx xxxxxxxxxxxx xxx xxxx
-     x      xxxxxxx
-     xx
-    xxxxxxxxxxxxxxxx
-    xxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxx
-    xx [/pro] */
+    /**
+     * Add a <code>WAIT</code> clause to the <code>FOR UPDATE</code> clause at
+     * the end of the query.
+     *
+     * @see SelectQuery#setForUpdateSkipLocked() see LockProvider for more
+     *      details
+     */
+    @Support({ POSTGRES_9_5 })
+    SelectOptionStep<R> skipLocked();
 }

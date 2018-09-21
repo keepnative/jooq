@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,14 +38,14 @@
  *
  *
  */
-package org.jooq.example;
+package org.jooq.vertabelo.example;
 
 import static java.util.Arrays.asList;
-import static org.jooq.example.db.h2.Tables.AUTHOR;
-import static org.jooq.example.db.h2.Tables.BOOK;
-import static org.jooq.example.db.h2.Tables.BOOK_STORE;
-import static org.jooq.example.db.h2.Tables.BOOK_TO_BOOK_STORE;
 import static org.jooq.impl.DSL.countDistinct;
+import static org.jooq.vertabelo.example.db.h2.Tables.AUTHOR;
+import static org.jooq.vertabelo.example.db.h2.Tables.BOOK;
+import static org.jooq.vertabelo.example.db.h2.Tables.BOOK_STORE;
+import static org.jooq.vertabelo.example.db.h2.Tables.BOOK_TO_BOOK_STORE;
 import static org.junit.Assert.assertEquals;
 
 import java.sql.Connection;
@@ -54,12 +54,12 @@ import java.util.Properties;
 
 import org.jooq.Record3;
 import org.jooq.Result;
-import org.jooq.example.db.h2.tables.Author;
-import org.jooq.example.db.h2.tables.Book;
-import org.jooq.example.db.h2.tables.BookStore;
-import org.jooq.example.db.h2.tables.BookToBookStore;
-import org.jooq.example.db.h2.tables.records.BookRecord;
 import org.jooq.impl.DSL;
+import org.jooq.vertabelo.example.db.h2.tables.Author;
+import org.jooq.vertabelo.example.db.h2.tables.Book;
+import org.jooq.vertabelo.example.db.h2.tables.BookStore;
+import org.jooq.vertabelo.example.db.h2.tables.BookToBookStore;
+import org.jooq.vertabelo.example.db.h2.tables.records.BookRecord;
 
 import org.junit.BeforeClass;
 import org.junit.Test;

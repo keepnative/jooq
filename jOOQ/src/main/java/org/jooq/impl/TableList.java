@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,6 +43,7 @@ package org.jooq.impl;
 
 import static java.util.Arrays.asList;
 import static org.jooq.SQLDialect.DERBY;
+import static org.jooq.SQLDialect.FIREBIRD;
 import static org.jooq.SQLDialect.H2;
 // ...
 import static org.jooq.SQLDialect.HSQLDB;
@@ -87,7 +88,7 @@ class TableList extends QueryPartList<Table<?>> {
 
         // [#4151] Some databases don't allow for qualifying column
         // names here. Copy also to SelectQueryImpl
-        boolean unqualified = asList(DERBY, H2, HSQLDB).contains(ctx.family());
+        boolean unqualified = asList(DERBY, FIREBIRD, H2, HSQLDB).contains(ctx.family());
         boolean qualify = ctx.qualify();
 
         if (unqualified)

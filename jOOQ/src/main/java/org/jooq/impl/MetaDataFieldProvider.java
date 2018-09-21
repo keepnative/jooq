@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,16 +41,16 @@
 package org.jooq.impl;
 
 import static org.jooq.impl.DSL.field;
+import static org.jooq.impl.DSL.name;
 
 import java.io.Serializable;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.jooq.Configuration;
 import org.jooq.DataType;
 import org.jooq.Field;
+import org.jooq.Name;
 import org.jooq.Record;
 import org.jooq.exception.SQLDialectNotSupportedException;
 import org.jooq.tools.JooqLogger;
@@ -84,30 +84,52 @@ class MetaDataFieldProvider implements Serializable {
     }
 
     private Fields<Record> init(Configuration configuration, ResultSetMetaData meta) {
-        List<Field<?>> fieldList = new ArrayList<Field<?>>();
+        Field<?>[] fields;
         int columnCount = 0;
 
         try {
             columnCount = meta.getColumnCount();
+            fields = new Field[columnCount];
         }
 
         // This happens in Oracle for empty cursors returned from stored
         // procedures / functions
         catch (SQLException e) {
             log.info("Cannot fetch column count for cursor : " + e.getMessage());
-            fieldList.add(field("dummy"));
+            fields = new Field[] { field("dummy") };
         }
 
         try {
             for (int i = 1; i <= columnCount; i++) {
-                String name = meta.getColumnLabel(i);
+                Name name;
+
+                String columnLabel = meta.getColumnLabel(i);
+                String columnName = meta.getColumnName(i);
+
+                if (columnName.equals(columnLabel)) {
+                    try {
+                        String columnSchema = meta.getSchemaName(i);
+                        String columnTable = meta.getTableName(i);
+                        name = name(columnSchema, columnTable, columnName);
+                    }
+
+                    // [#4939] Some JDBC drivers such as Teradata and Cassandra don't implement
+                    // ResultSetMetaData.getSchemaName and/or ResultSetMetaData.getTableName methods
+                    catch (SQLException e) {
+                        name = name(columnLabel);
+                    }
+                }
+                else {
+                    name = name(columnLabel);
+                }
+
                 int precision = meta.getPrecision(i);
                 int scale = meta.getScale(i);
                 DataType<?> dataType = SQLDataType.OTHER;
                 String type = meta.getColumnTypeName(i);
 
                 try {
-                    dataType = DefaultDataType.getDataType(configuration.dialect().family(), type, precision, scale);
+                    dataType = DefaultDataType.getDataType(configuration.family(), type, precision, scale);
 
                     if (dataType.hasPrecision()) {
                         dataType = dataType.precision(precision);
@@ -129,14 +151,14 @@ class MetaDataFieldProvider implements Serializable {
                     log.debug("Not supported by dialect", ignore.getMessage());
                 }
 
-                fieldList.add(field(name, dataType));
+                fields[i - 1] = field(name, dataType);
             }
         }
         catch (SQLException e) {
-            throw Utils.translate(null, e);
+            throw Tools.translate(null, e);
         }
 
-        return new Fields<Record>(fieldList);
+        return new Fields<Record>(fields);
     }
 
     final Field<?>[] getFields() {

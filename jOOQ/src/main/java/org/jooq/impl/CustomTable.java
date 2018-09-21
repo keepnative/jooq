@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -108,7 +108,7 @@ public abstract class CustomTable<R extends TableRecord<R>> extends TableImpl<R>
     // -------------------------------------------------------------------------
 
     @Override
-    public Identity<R, ? extends Number> getIdentity() {
+    public Identity<R, ?> getIdentity() {
         return super.getIdentity();
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,9 +41,9 @@
 package org.jooq.impl;
 
 import static org.jooq.impl.DSL.row;
-import static org.jooq.impl.Utils.filterOne;
-import static org.jooq.impl.Utils.first;
-import static org.jooq.impl.Utils.list;
+import static org.jooq.impl.Tools.filterOne;
+import static org.jooq.impl.Tools.first;
+import static org.jooq.impl.Tools.list;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -73,6 +73,9 @@ class ReferenceImpl<R extends Record, O extends Record> extends AbstractKey<R> i
 
     private final UniqueKey<O> key;
 
+
+    @SafeVarargs
+
     ReferenceImpl(UniqueKey<O> key, Table<R> table, TableField<R, ?>... fields) {
         super(table, fields);
 
@@ -84,24 +87,28 @@ class ReferenceImpl<R extends Record, O extends Record> extends AbstractKey<R> i
         return key;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public final O fetchParent(R record) {
         return filterOne(fetchParents(record));
     }
 
     @Override
+
+    @SafeVarargs
+
     public final Result<O> fetchParents(R... records) {
         return fetchParents(list(records));
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public final Result<R> fetchChildren(O record) {
         return fetchChildren(list(record));
     }
 
     @Override
+
+    @SafeVarargs
+
     public final Result<R> fetchChildren(O... records) {
         return fetchChildren(list(records));
     }
@@ -213,7 +220,7 @@ class ReferenceImpl<R extends Record, O extends Record> extends AbstractKey<R> i
         String s1 = "";
         for (Field<?> field : getFields()) {
             sb.append(s1);
-            sb.append(field);
+            sb.append(DSL.name(field.getName()));
 
             s1 = ", ";
         }
@@ -223,9 +230,9 @@ class ReferenceImpl<R extends Record, O extends Record> extends AbstractKey<R> i
         sb.append("(");
 
         String s2 = "";
-        for (Field<?> field : getFields()) {
+        for (Field<?> field : key.getFields()) {
             sb.append(s2);
-            sb.append(field);
+            sb.append(DSL.name(field.getName()));
 
             s2 = ", ";
         }

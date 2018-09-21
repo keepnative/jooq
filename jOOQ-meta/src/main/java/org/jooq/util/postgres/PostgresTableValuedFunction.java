@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,6 +60,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.jooq.Record;
+import org.jooq.impl.DSL;
 import org.jooq.util.AbstractTableDefinition;
 import org.jooq.util.ColumnDefinition;
 import org.jooq.util.DataTypeDefinition;
@@ -112,6 +113,7 @@ public class PostgresTableValuedFunction extends AbstractTableDefinition {
                 p.NUMERIC_SCALE,
                 inline("true").as(c.IS_NULLABLE),
                 inline(null, String.class).as(c.COLUMN_DEFAULT),
+                p.UDT_SCHEMA,
                 p.UDT_NAME
             )
             .from(r)
@@ -132,13 +134,16 @@ public class PostgresTableValuedFunction extends AbstractTableDefinition {
             // from INFORMATION_SCHEMA.TABLES
              select(
                 nvl(c.COLUMN_NAME               , getName()                   ).as(c.COLUMN_NAME),
-                nvl(c.ORDINAL_POSITION          , 1                           ).as(c.ORDINAL_POSITION),
+
+                // Type inference doesn't seem to be possible here with Java 8... ?
+                nvl(c.ORDINAL_POSITION          , DSL.<Integer>inline(1)      ).as(c.ORDINAL_POSITION),
                 nvl(c.DATA_TYPE                 , r.DATA_TYPE                 ).as(c.DATA_TYPE),
                 nvl(c.CHARACTER_MAXIMUM_LENGTH  , r.CHARACTER_MAXIMUM_LENGTH  ).as(c.CHARACTER_MAXIMUM_LENGTH),
                 nvl(c.NUMERIC_PRECISION         , r.NUMERIC_PRECISION         ).as(c.NUMERIC_PRECISION),
                 nvl(c.NUMERIC_SCALE             , r.NUMERIC_SCALE             ).as(c.NUMERIC_SCALE),
                 nvl(c.IS_NULLABLE               , "true"                      ).as(c.IS_NULLABLE),
-                nvl(c.COLUMN_DEFAULT            , (String) null               ).as(c.COLUMN_DEFAULT),
+                nvl(c.COLUMN_DEFAULT            , inline((String) null)       ).as(c.COLUMN_DEFAULT),
+                nvl(c.UDT_SCHEMA                , inline((String) null)       ).as(c.UDT_SCHEMA),
                 nvl(c.UDT_NAME                  , r.UDT_NAME                  ).as(c.UDT_NAME)
             )
             .from(r)
@@ -164,9 +169,15 @@ public class PostgresTableValuedFunction extends AbstractTableDefinition {
             .orderBy(2)
         ) {
 
+            SchemaDefinition typeSchema = null;
+
+            String schemaName = record.getValue(p.UDT_SCHEMA);
+            if (schemaName != null)
+                typeSchema = getDatabase().getSchema(schemaName);
+
             DataTypeDefinition type = new DefaultDataTypeDefinition(
                 getDatabase(),
-                getSchema(),
+                typeSchema,
                 record.getValue(p.DATA_TYPE),
                 record.getValue(p.CHARACTER_MAXIMUM_LENGTH),
                 record.getValue(p.NUMERIC_PRECISION),

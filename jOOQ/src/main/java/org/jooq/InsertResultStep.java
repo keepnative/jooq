@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,6 +40,8 @@
  */
 package org.jooq;
 
+import java.util.Optional;
+
 import org.jooq.exception.DataAccessException;
 
 /**
@@ -78,7 +80,7 @@ public interface InsertResultStep<R extends Record> extends Insert<R> {
 
     /**
      * The result holding returned values as specified by the
-     * {@link InsertReturningStep}
+     * {@link InsertReturningStep}.
      *
      * @return The returned values as specified by the
      *         {@link InsertReturningStep}. Note:
@@ -96,7 +98,7 @@ public interface InsertResultStep<R extends Record> extends Insert<R> {
 
     /**
      * The record holding returned values as specified by the
-     * {@link InsertReturningStep}
+     * {@link InsertReturningStep}.
      *
      * @return The returned value as specified by the
      *         {@link InsertReturningStep}. This may return <code>null</code> in
@@ -107,4 +109,18 @@ public interface InsertResultStep<R extends Record> extends Insert<R> {
      */
     @Support
     R fetchOne() throws DataAccessException;
+
+
+    /**
+     * The record holding returned values as specified by the
+     * {@link InsertReturningStep}.
+     *
+     * @return The returned value as specified by the
+     *         {@link InsertReturningStep}
+     * @throws DataAccessException if something went wrong executing the query
+     * @see InsertQuery#getReturnedRecord()
+     */
+    @Support
+    Optional<R> fetchOptional() throws DataAccessException;
+
 }

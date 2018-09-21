@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,6 +47,11 @@ import java.sql.ResultSet;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
 import java.util.UUID;
 
 import org.jooq.DataType;
@@ -73,7 +78,9 @@ import org.jooq.util.mariadb.MariaDBDataType;
 import org.jooq.util.mysql.MySQLDataType;
 // ...
 import org.jooq.util.postgres.PostgresDataType;
+// ...
 import org.jooq.util.sqlite.SQLiteDataType;
+// ...
 // ...
 // ...
 
@@ -265,6 +272,51 @@ public final class SQLDataType {
      */
     public static final DataType<DayToSecond> INTERVALDAYTOSECOND = new DefaultDataType<DayToSecond>(null, DayToSecond.class, "interval day to second");
 
+
+    // -------------------------------------------------------------------------
+    // JSR310 types
+    // -------------------------------------------------------------------------
+
+    /**
+     * The {@link Types#DATE} type.
+     */
+    public static final DataType<LocalDate> LOCALDATE = new DefaultDataType<LocalDate>(null, LocalDate.class, "date");
+
+    /**
+     * The {@link Types#TIME} type.
+     */
+    public static final DataType<LocalTime> LOCALTIME = new DefaultDataType<LocalTime>(null, LocalTime.class, "time");
+
+    /**
+     * The {@link Types#TIMESTAMP} type.
+     */
+    public static final DataType<LocalDateTime> LOCALDATETIME = new DefaultDataType<LocalDateTime>(null, LocalDateTime.class, "timestamp");
+
+    /**
+     * The {@link Types#TIME_WITH_TIMEZONE} type.
+     */
+    public static final DataType<OffsetTime> OFFSETTIME = new DefaultDataType<OffsetTime>(null, OffsetTime.class, "time with time zone");
+
+    /**
+     * The {@link Types#TIMESTAMP_WITH_TIMEZONE} type.
+     */
+    public static final DataType<OffsetDateTime> OFFSETDATETIME = new DefaultDataType<OffsetDateTime>(null, OffsetDateTime.class, "timestamp with time zone");
+
+    /**
+     * The {@link Types#TIME_WITH_TIMEZONE} type.
+     * <p>
+     * An alias for {@link #OFFSETTIME}
+     */
+    public static final DataType<OffsetTime> TIMEWITHTIMEZONE = OFFSETTIME;
+
+    /**
+     * The {@link Types#TIMESTAMP_WITH_TIMEZONE} type.
+     * <p>
+     * An alias for {@link #OFFSETDATETIME}
+     */
+    public static final DataType<OffsetDateTime> TIMESTAMPWITHTIMEZONE = OFFSETDATETIME;
+
+
     // -------------------------------------------------------------------------
     // Binary types
     // -------------------------------------------------------------------------
@@ -306,7 +358,7 @@ public final class SQLDataType {
     /**
      * The {@link ResultSet} type.
      * <p>
-     * This is not a SQL or JDBC standard. This type simulates REF CURSOR types
+     * This is not a SQL or JDBC standard. This type emulates REF CURSOR types
      * and similar constructs
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -329,17 +381,19 @@ public final class SQLDataType {
         // TODO [#650] Make this more reliable using a data type registry
 
         try {
-            /* [pro] xx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
             Class.forName(CUBRIDDataType.class.getName());
             Class.forName(DerbyDataType.class.getName());
             Class.forName(FirebirdDataType.class.getName());

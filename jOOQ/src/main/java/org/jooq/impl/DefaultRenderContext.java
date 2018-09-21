@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,12 +51,13 @@ import static org.jooq.impl.Identifiers.QUOTES;
 import static org.jooq.impl.Identifiers.QUOTE_END_DELIMITER;
 import static org.jooq.impl.Identifiers.QUOTE_END_DELIMITER_ESCAPED;
 import static org.jooq.impl.Identifiers.QUOTE_START_DELIMITER;
-import static org.jooq.impl.Utils.DATA_COUNT_BIND_VALUES;
+import static org.jooq.impl.Tools.DataKey.DATA_COUNT_BIND_VALUES;
 
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.Stack;
 import java.util.regex.Pattern;
 
 import org.jooq.BindContext;
@@ -91,7 +92,7 @@ class DefaultRenderContext extends AbstractContext<RenderContext> implements Ren
     private int                      params;
     private int                      alias;
     private int                      indent;
-    private Stack<Integer>           indentLock;
+    private Deque<Integer>           indentLock;
     private int                      printMargin = 80;
 
     // [#1632] Cached values from Settings
@@ -273,9 +274,9 @@ class DefaultRenderContext extends AbstractContext<RenderContext> implements Ren
         return this;
     }
 
-    private Stack<Integer> indentLock() {
+    private Deque<Integer> indentLock() {
         if (indentLock == null) {
-            indentLock = new Stack<Integer>();
+            indentLock = new ArrayDeque<Integer>();
         }
 
         return indentLock;
@@ -348,9 +349,20 @@ class DefaultRenderContext extends AbstractContext<RenderContext> implements Ren
         else {
             String[][] quotes = QUOTES.get(family);
 
-            sql(quotes[QUOTE_START_DELIMITER][0]);
-            sql(StringUtils.replace(literal, quotes[QUOTE_END_DELIMITER][0], quotes[QUOTE_END_DELIMITER_ESCAPED][0]));
-            sql(quotes[QUOTE_END_DELIMITER][0]);
+            char start = quotes[QUOTE_START_DELIMITER][0].charAt(0);
+            char end = quotes[QUOTE_END_DELIMITER][0].charAt(0);
+
+            sql(start);
+
+            // [#4922] This micro optimisation does seem to have a significant
+            //         effect as the replace call can be avoided in almost all
+            //         situations
+            if (literal.indexOf(end) > -1)
+                sql(StringUtils.replace(literal, quotes[QUOTE_END_DELIMITER][0], quotes[QUOTE_END_DELIMITER_ESCAPED][0]));
+            else
+                sql(literal);
+
+            sql(end);
         }
 
         return this;
@@ -377,27 +389,27 @@ class DefaultRenderContext extends AbstractContext<RenderContext> implements Ren
                 return;
 
             switch (configuration().dialect().family()) {
-                /* [pro] xx
-                xxxx xxxxxxx
 
-                    xx xxxxxxxxxxx xxxx xxxxx xxxx xxx xxxxx xxxxx xx xx xxx xxxx xxxxxxxxx xxx xx xxxxxx
-                    xx xxxxx xxxxxxx xxxx xxxxxx xx xxxx xx xxx xxxx xxxx
-                    xxxxxxxxxxxxxxxxxxxxxx
-                    xxxxxxx
 
-                xxxx xxxx
-                    xxxxxxxxxxxxxxxxxxxxxxx
-                    xxxxxxx
 
-                xxxx xxxxxxx
-                    xxxxxxxxxxxxxxxxxxxxxxx
-                    xxxxxxx
 
-                xxxx xxxxxxxxxx
-                    xxxxxxxxxxxxxxxxxxxxxxx
-                    xxxxxxx
 
-                xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 case SQLITE:
                     checkForceInline(999);
                     return;
@@ -630,9 +642,9 @@ class DefaultRenderContext extends AbstractContext<RenderContext> implements Ren
 
             message = "Thank you for using jOOQ " + Constants.FULL_VERSION;
 
-            /* [pro] xx
-            xxxxxxx x xxxxxx xxx xxx xxxxx xxx xx xxx xxxx xxxx x x xxxxxxxxxxxxxxxxxxxxxx x x xxxxx xxxxxxxxx
-            xx [/pro] */
+
+
+
 
 
             l.info("\n                                      " +

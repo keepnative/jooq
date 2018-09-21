@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,21 +57,21 @@ import java.util.Collection;
  *
  * @author Lukas Eder
  */
-public interface TablePartitionByStep extends TableOnStep {
+public interface TablePartitionByStep<R extends Record> extends TableOnStep<R> {
 
-    /* [pro] xx
-    xxx
-     x xxx x xxxxxxxxxxxxxxx xxxxxxxxx xxxxxx xx xxx xxxxx xxxx xxxx xx xxx
-     x xxxxxxxxxxx xxxxxxxxxxx xxxxxxxx
-     xx
-    xxxxxxxxxxxxxxxx
-    xxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxx xxxxxxxx
 
-    xxx
-     x xxx x xxxxxxxxxxxxxxx xxxxxxxxx xxxxxx xx xxx xxxxx xxxx xxxx xx xxx
-     x xxxxxxxxxxx xxxxxxxxxxx xxxxxxxx
-     xx
-    xxxxxxxxxxxxxxxx
-    xxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxx xxxxxxxx
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -112,6 +112,7 @@ import org.jooq.Row6;
 import org.jooq.Row7;
 import org.jooq.Row8;
 import org.jooq.Row9;
+import org.jooq.RowN;
 import org.jooq.Select;
 import org.jooq.Table;
 import org.jooq.TableLike;
@@ -132,8 +133,8 @@ class UpdateQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
     private Row                         multiValue;
     private Select<?>                   multiSelect;
 
-    UpdateQueryImpl(Configuration configuration, Table<R> table) {
-        super(configuration, table);
+    UpdateQueryImpl(Configuration configuration, WithImpl with, Table<R> table) {
+        super(configuration, with, table);
 
         this.updateMap = new FieldMapForUpdate(UPDATE_SET_ASSIGNMENT);
         this.from = new TableList();
@@ -281,6 +282,12 @@ class UpdateQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
+    public final void addValues(RowN row, RowN value) {
+        addValues0(row, value);
+    }
+
+    @Generated("This method was generated using jOOQ-tools")
+    @Override
     public final <T1> void addValues(Row1<T1> row, Select<? extends Record1<T1>> select) {
         addValues0(row, select);
     }
@@ -411,6 +418,12 @@ class UpdateQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
         addValues0(row, select);
     }
 
+    @Generated("This method was generated using jOOQ-tools")
+    @Override
+    public final void addValues(RowN row, Select<?> select) {
+        addValues0(row, select);
+    }
+
 // [jooq-tools] END [addValues]
 
     private final void addValues0(Row row, Row value) {
@@ -483,22 +496,22 @@ class UpdateQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
            .declareTables(declareTables)
            .end(UPDATE_UPDATE);
 
-        /* [pro] xx
-        xx xxxxxxx xxxxxx xxx x xxxxxxx xxxxxxxxxxxxx xx xxx xxxxxx xx xxxx xxxxxx
-        xx xxxxxxxxxxxxx xx xxxxxxx x
-            xxxxxxxxxxxxxxxxxxxxxxx
 
-            xx xxxxxxxxxxxxxxxxx x
-                xxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxxxxxxxxxx xx
-                   xxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxx
-                   xxxxxxxxxxxxxxxxxxxxxx
-            x
 
-            xxxxxxxxxxxxxxxxxxxxx
-        x
-        xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         ctx.formatSeparator()
            .start(UPDATE_SET)
@@ -521,7 +534,7 @@ class UpdateQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
                 ctx.visit(multiValue);
             }
 
-            // Subselects or subselect simulations of row value expressions
+            // Subselects or subselect emulations of row value expressions
             else {
                 Select<?> select = multiSelect;
 
@@ -554,11 +567,11 @@ class UpdateQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
 
         switch (ctx.family()) {
 
-            /* [pro] xx
-            xx xxxxxxx xxxxxx xxx x xxxxxxx xxxxxxxxxxxxx xx xxx xxxxxx xx xxxx xxxxxx
-            xxxx xxxxxxx
-                xxxxxx
-            xx [/pro] */
+
+
+
+
+
 
             default:
                 ctx.start(UPDATE_FROM);

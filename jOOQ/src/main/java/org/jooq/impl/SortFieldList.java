@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,6 +43,7 @@ package org.jooq.impl;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.jooq.Field;
@@ -57,7 +58,7 @@ class SortFieldList extends QueryPartList<SortField<?>> {
     private static final long serialVersionUID = -1825164005148183725L;
 
     SortFieldList() {
-        this(new ArrayList<SortField<?>>());
+        this(Collections.<SortField<?>>emptyList());
     }
 
     SortFieldList(List<SortField<?>> wrappedList) {
@@ -93,7 +94,7 @@ class SortFieldList extends QueryPartList<SortField<?>> {
     final boolean nulls() {
         for (SortField<?> field : this)
             if (((SortFieldImpl<?>) field).getNullsFirst() ||
-                ((SortFieldImpl<?>) field).getNullsFirst())
+                ((SortFieldImpl<?>) field).getNullsLast())
                 return true;
 
         return false;

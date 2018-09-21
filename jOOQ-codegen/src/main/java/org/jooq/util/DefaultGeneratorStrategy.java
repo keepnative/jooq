@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -168,11 +168,11 @@ public class DefaultGeneratorStrategy extends AbstractGeneratorStrategy {
             sb.append(".interfaces");
         }
 
-        /* [pro] xx
-        xxxx xx xxxxxxxxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxx x
-            xxxxxxxxxxxxxxxxx
-        x
-        xx [/pro] */
+
+
+
+
+
 
         return sb.toString();
     }
@@ -190,7 +190,13 @@ public class DefaultGeneratorStrategy extends AbstractGeneratorStrategy {
     private String getJavaClassName0(Definition definition, Mode mode) {
         StringBuilder result = new StringBuilder();
 
-        result.append(StringUtils.toCamelCase(definition.getOutputName()));
+        // [#4562] Some characters should be treated like underscore
+        result.append(StringUtils.toCamelCase(
+            definition.getOutputName()
+                      .replace(' ', '_')
+                      .replace('-', '_')
+                      .replace('.', '_')
+        ));
 
         if (mode == Mode.RECORD) {
             result.append("Record");

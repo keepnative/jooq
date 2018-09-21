@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -94,15 +94,19 @@ class CommonTableExpressionImpl<R extends Record> extends AbstractTable<R> imple
     @Override
     public final void accept(Context<?> ctx) {
         if (ctx.declareCTE()) {
+            boolean subquery = ctx.subquery();
+
             ctx.visit(name)
                .sql(' ')
                .keyword("as")
                .sql(" (")
+               .subquery(true)
                .formatIndentStart()
                .formatNewLine()
                .visit(select)
                .formatIndentEnd()
                .formatNewLine()
+               .subquery(subquery)
                .sql(')');
         }
         else {

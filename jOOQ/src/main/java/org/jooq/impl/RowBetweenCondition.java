@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,7 +59,9 @@ import static org.jooq.SQLDialect.H2;
 import static org.jooq.SQLDialect.MARIADB;
 import static org.jooq.SQLDialect.MYSQL;
 // ...
+// ...
 import static org.jooq.SQLDialect.SQLITE;
+// ...
 // ...
 // ...
 import static org.jooq.impl.DSL.row;
@@ -687,7 +689,7 @@ implements
 
     @Override
     public final Condition and(Record record) {
-        RowN r = new RowImpl(Utils.fields(record.intoArray(), record.fields()));
+        RowN r = new RowImpl(Tools.fields(record.intoArray(), record.fields()));
         return and(r);
     }
 
@@ -712,18 +714,15 @@ implements
         RowN max = (RowN) maxValue;
 
         // These dialects don't support the SYMMETRIC keyword at all
-        if (symmetric && asList(CUBRID, DERBY, FIREBIRD, H2, MARIADB, MYSQL, SQLITE).contains(configuration.dialect().family())) {
-            if (not) {
-                return (QueryPartInternal) r.notBetween(min, max).and(r.notBetween(max, min));
-            }
-            else {
-                return (QueryPartInternal) r.between(min, max).or(r.between(max, min));
-            }
+        if (symmetric && asList(CUBRID, DERBY, FIREBIRD, H2, MARIADB, MYSQL, SQLITE).contains(configuration.family())) {
+            return not
+                ? (QueryPartInternal) r.notBetween(min, max).and(r.notBetween(max, min))
+                : (QueryPartInternal) r.between(min, max).or(r.between(max, min));
         }
 
         // These dialects either don't support row value expressions, or they
         // Can't handle row value expressions with the BETWEEN predicate
-        else if (row.size() > 1 && asList(CUBRID, DERBY, FIREBIRD, MARIADB, MYSQL, SQLITE).contains(configuration.dialect().family())) {
+        else if (row.size() > 1 && asList(CUBRID, DERBY, FIREBIRD, MARIADB, MYSQL, SQLITE).contains(configuration.family())) {
             Condition result = r.ge(min).and(r.le(max));
 
             if (not) {
@@ -747,12 +746,12 @@ implements
         @Override
         public final void toSQL(RenderContext context) {
                            context.visit(row);
-            if (not)       context.sql(' ').keyword("not");
-                           context.sql(' ').keyword("between");
-            if (symmetric) context.sql(' ').keyword("symmetric");
-                           context.sql(' ').visit(minValue);
-                           context.sql(' ').keyword("and");
-                           context.sql(' ').visit(maxValue);
+            if (not)       context.sql(" ").keyword("not");
+                           context.sql(" ").keyword("between");
+            if (symmetric) context.sql(" ").keyword("symmetric");
+                           context.sql(" ").visit(minValue);
+                           context.sql(" ").keyword("and");
+                           context.sql(" ").visit(maxValue);
         }
 
         @Override

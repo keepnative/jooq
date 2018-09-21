@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,6 +43,7 @@ package org.jooq.impl;
 import static java.util.Arrays.asList;
 import static org.jooq.Clause.TABLE;
 import static org.jooq.Clause.TABLE_JOIN;
+import static org.jooq.Clause.TABLE_JOIN_ANTI_LEFT;
 import static org.jooq.Clause.TABLE_JOIN_CROSS;
 import static org.jooq.Clause.TABLE_JOIN_CROSS_APPLY;
 import static org.jooq.Clause.TABLE_JOIN_INNER;
@@ -55,11 +56,14 @@ import static org.jooq.Clause.TABLE_JOIN_OUTER_FULL;
 import static org.jooq.Clause.TABLE_JOIN_OUTER_LEFT;
 import static org.jooq.Clause.TABLE_JOIN_OUTER_RIGHT;
 import static org.jooq.Clause.TABLE_JOIN_PARTITION_BY;
+import static org.jooq.Clause.TABLE_JOIN_SEMI_LEFT;
 import static org.jooq.Clause.TABLE_JOIN_USING;
 import static org.jooq.JoinType.CROSS_APPLY;
 import static org.jooq.JoinType.CROSS_JOIN;
 import static org.jooq.JoinType.JOIN;
+import static org.jooq.JoinType.LEFT_ANTI_JOIN;
 import static org.jooq.JoinType.LEFT_OUTER_JOIN;
+import static org.jooq.JoinType.LEFT_SEMI_JOIN;
 import static org.jooq.JoinType.NATURAL_JOIN;
 import static org.jooq.JoinType.NATURAL_LEFT_OUTER_JOIN;
 import static org.jooq.JoinType.NATURAL_RIGHT_OUTER_JOIN;
@@ -73,11 +77,15 @@ import static org.jooq.SQLDialect.H2;
 // ...
 // ...
 // ...
+import static org.jooq.SQLDialect.POSTGRES;
 // ...
 // ...
 import static org.jooq.impl.DSL.condition;
 import static org.jooq.impl.DSL.exists;
 import static org.jooq.impl.DSL.notExists;
+import static org.jooq.impl.DSL.selectOne;
+import static org.jooq.impl.Tools.DataKey.DATA_COLLECTED_SEMI_ANTI_JOIN;
+import static org.jooq.impl.Tools.DataKey.DATA_COLLECT_SEMI_ANTI_JOIN;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -92,6 +100,7 @@ import org.jooq.JoinType;
 import org.jooq.Operator;
 import org.jooq.QueryPart;
 import org.jooq.Record;
+import org.jooq.SQL;
 import org.jooq.Select;
 import org.jooq.Table;
 import org.jooq.TableField;
@@ -106,7 +115,7 @@ import org.jooq.exception.DataAccessException;
  *
  * @author Lukas Eder
  */
-class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, TableOnConditionStep {
+class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep<Record>, TableOnConditionStep<Record> {
 
     /**
      * Generated UID
@@ -156,20 +165,54 @@ class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, Ta
 
         String keyword = translatedType.toSQL();
 
-        /* [pro] xx
-        xx xx xx xxxxxxx xxx xxxxx xxxxxxx xx xxx xxxxxxxx
-        xx xxxxxxxxxxxxxxx xx xxxx xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xx xxxxxxx x
-            xxxxxxx x xxxxxx xxxxxx
-        x
-        xx [/pro] */
+        if (translatedType == CROSS_APPLY && ctx.family() == POSTGRES) {
+            keyword = "cross join lateral";
+        }
+        else if (translatedType == OUTER_APPLY && ctx.family() == POSTGRES) {
+            keyword = "left outer join lateral";
+        }
+
+
+
+
+
+
+
 
         toSQLTable(ctx, lhs);
 
+        switch (translatedType) {
+            case LEFT_SEMI_JOIN:
+            case LEFT_ANTI_JOIN:
+                if (ctx.data(DATA_COLLECT_SEMI_ANTI_JOIN) != null) {
+
+                    @SuppressWarnings("unchecked")
+                    List<Condition> semiAntiJoinPredicates = (List<Condition>) ctx.data(DATA_COLLECTED_SEMI_ANTI_JOIN);
+
+                    if (semiAntiJoinPredicates == null) {
+                        semiAntiJoinPredicates = new ArrayList<Condition>();
+                        ctx.data(DATA_COLLECTED_SEMI_ANTI_JOIN, semiAntiJoinPredicates);
+                    }
+
+                    switch (translatedType) {
+                        case LEFT_SEMI_JOIN:
+                            semiAntiJoinPredicates.add(exists(selectOne().from(rhs).where(condition)));
+                            break;
+
+                        case LEFT_ANTI_JOIN:
+                            semiAntiJoinPredicates.add(notExists(selectOne().from(rhs).where(condition)));
+                            break;
+                    }
+
+                    return;
+                }
+        }
+
         ctx.formatIndentStart()
-               .formatSeparator()
-               .start(translatedClause)
-               .keyword(keyword)
-               .sql(' ');
+           .formatSeparator()
+           .start(translatedClause)
+           .keyword(keyword)
+           .sql(' ');
 
         toSQLTable(ctx, rhs);
 
@@ -194,9 +237,16 @@ class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, Ta
                     OUTER_APPLY).contains(translatedType)) {
             toSQLJoinCondition(ctx);
         }
+        else if (OUTER_APPLY == translatedType && ctx.family() == POSTGRES) {
+            ctx.formatSeparator()
+               .start(TABLE_JOIN_ON)
+               .keyword("on")
+               .sql(" true")
+               .end(TABLE_JOIN_ON);
+        }
 
         ctx.end(translatedClause)
-               .formatIndentEnd();
+           .formatIndentEnd();
     }
 
     private void toSQLTable(Context<?> ctx, Table<?> table) {
@@ -237,6 +287,8 @@ class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, Ta
             case NATURAL_RIGHT_OUTER_JOIN: return TABLE_JOIN_NATURAL_OUTER_RIGHT;
             case CROSS_APPLY:              return TABLE_JOIN_CROSS_APPLY;
             case OUTER_APPLY:              return TABLE_JOIN_OUTER_APPLY;
+            case LEFT_SEMI_JOIN:           return TABLE_JOIN_SEMI_LEFT;
+            case LEFT_ANTI_JOIN:           return TABLE_JOIN_ANTI_LEFT;
             default: throw new IllegalArgumentException("Bad join type: " + translatedType);
         }
     }
@@ -282,7 +334,7 @@ class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, Ta
         if (!using.isEmpty()) {
 
             // [#582] Some dialects don't explicitly support a JOIN .. USING
-            // syntax. This can be simulated with JOIN .. ON
+            // syntax. This can be emulated with JOIN .. ON
             if (asList(CUBRID, H2).contains(context.family())) {
                 boolean first = true;
                 for (Field<?> field : using) {
@@ -313,13 +365,13 @@ class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, Ta
                        .start(TABLE_JOIN_USING)
                        .keyword("using")
                        .sql('(');
-                Utils.fieldNames(context, using);
+                Tools.fieldNames(context, using);
                 context.sql(')')
                        .end(TABLE_JOIN_USING);
             }
         }
 
-        // [#577] If any NATURAL JOIN syntax needs to be simulated, find out
+        // [#577] If any NATURAL JOIN syntax needs to be emulated, find out
         // common fields in lhs and rhs of the JOIN clause
         else if (emulateNaturalJoin(context) ||
                  emulateNaturalLeftOuterJoin(context) ||
@@ -385,14 +437,19 @@ class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, Ta
 
     @Override
     final Fields<Record> fields0() {
-        Field<?>[] l = lhs.asTable().fields();
-        Field<?>[] r = rhs.asTable().fields();
-        Field<?>[] all = new Field[l.length + r.length];
+        if (type == LEFT_SEMI_JOIN || type == LEFT_ANTI_JOIN) {
+            return new Fields<Record>(lhs.asTable().fields());
+        }
+        else {
+            Field<?>[] l = lhs.asTable().fields();
+            Field<?>[] r = rhs.asTable().fields();
+            Field<?>[] all = new Field[l.length + r.length];
 
-        System.arraycopy(l, 0, all, 0, l.length);
-        System.arraycopy(r, 0, all, l.length, r.length);
+            System.arraycopy(l, 0, all, 0, l.length);
+            System.arraycopy(r, 0, all, l.length, r.length);
 
-        return new Fields<Record>(all);
+            return new Fields<Record>(all);
+        }
     }
 
     @Override
@@ -404,19 +461,19 @@ class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, Ta
     // Join API
     // ------------------------------------------------------------------------
 
-    /* [pro] xx
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxx xxxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxx xxxxxxx x
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxx xxxxx
-    x
 
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
     @Override
     public final JoinTable on(Condition... conditions) {
         condition.addConditions(conditions);
@@ -426,6 +483,17 @@ class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, Ta
     @Override
     public final JoinTable on(Field<Boolean> c) {
         return on(condition(c));
+    }
+
+    @Override
+    public final JoinTable on(Boolean c) {
+        return on(condition(c));
+    }
+
+    @Override
+    public final JoinTable on(SQL sql) {
+        and(sql);
+        return this;
     }
 
     @Override
@@ -464,14 +532,14 @@ class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, Ta
     @Override
     public final JoinTable onKey(TableField<?, ?>... keyFields) throws DataAccessException {
         if (keyFields != null && keyFields.length > 0) {
-            if (keyFields[0].getTable().equals(unaliased(lhs))) {
+            if (search(lhs, keyFields[0].getTable()) != null) {
                 for (ForeignKey<?, ?> key : lhs.getReferences()) {
                     if (key.getFields().containsAll(asList(keyFields))) {
                         return onKey(key);
                     }
                 }
             }
-            else if (keyFields[0].getTable().equals(unaliased(rhs))) {
+            else if (search(rhs, keyFields[0].getTable()) != null) {
                 for (ForeignKey<?, ?> key : rhs.getReferences()) {
                     if (key.getFields().containsAll(asList(keyFields))) {
                         return onKey(key);
@@ -485,21 +553,47 @@ class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, Ta
 
     @Override
     public final JoinTable onKey(ForeignKey<?, ?> key) {
-        if (key.getTable().equals(unaliased(lhs)))
+        if (search(lhs, key.getTable()) != null)
             return onKey(key, lhs, rhs);
-        else if (key.getTable().equals(unaliased(rhs)))
+        else if (search(rhs, key.getTable()) != null)
             return onKey(key, rhs, lhs);
 
         throw onKeyException();
     }
 
-    private final Table<?> unaliased(Table<?> aliased) {
-        return
-            (aliased instanceof TableImpl)
-          ? (((TableImpl<?>) aliased).alias == null ? (TableImpl<?>) aliased : ((TableImpl<?>) aliased).alias.wrapped())
-          : (aliased instanceof TableAlias)
-          ? ((TableAlias<?>) aliased).alias.wrapped()
-          : aliased;
+    private final Table<?> search(Table<?> tree, Table<?> search) {
+
+        // TODO: Another instanceof, and we should probably resort to
+        //       implementing a new org.jooq.Context to traverse the AST
+        if (tree instanceof TableImpl) {
+            TableImpl<?> t = (TableImpl<?>) tree;
+
+            if (t.alias == null && search.equals(t))
+                return t;
+            else if (t.alias != null && search.equals(t.alias.wrapped()))
+                return t;
+            else
+                return null;
+        }
+        else if (tree instanceof TableAlias) {
+            TableAlias<?> t = (TableAlias<?>) tree;
+
+            if (search.equals(t.alias.wrapped()))
+                return t;
+            else
+                return null;
+        }
+        else if (tree instanceof JoinTable) {
+            JoinTable t = (JoinTable) tree;
+
+            Table<?> r = search(t.lhs, search);
+            if (r == null)
+                r = search(t.rhs, search);
+
+            return r;
+        }
+
+        return tree;
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -547,6 +641,16 @@ class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, Ta
     }
 
     @Override
+    public final JoinTable and(Boolean c) {
+        return and(condition(c));
+    }
+
+    @Override
+    public final JoinTable and(SQL sql) {
+        return and(condition(sql));
+    }
+
+    @Override
     public final JoinTable and(String sql) {
         return and(condition(sql));
     }
@@ -572,6 +676,11 @@ class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, Ta
     }
 
     @Override
+    public final JoinTable andNot(Boolean c) {
+        return andNot(condition(c));
+    }
+
+    @Override
     public final JoinTable andExists(Select<?> select) {
         return and(exists(select));
     }
@@ -590,6 +699,16 @@ class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, Ta
     @Override
     public final JoinTable or(Field<Boolean> c) {
         return or(condition(c));
+    }
+
+    @Override
+    public final JoinTable or(Boolean c) {
+        return or(condition(c));
+    }
+
+    @Override
+    public final JoinTable or(SQL sql) {
+        return or(condition(sql));
     }
 
     @Override
@@ -614,6 +733,11 @@ class JoinTable extends AbstractTable<Record> implements TableOptionalOnStep, Ta
 
     @Override
     public final JoinTable orNot(Field<Boolean> c) {
+        return orNot(condition(c));
+    }
+
+    @Override
+    public final JoinTable orNot(Boolean c) {
         return orNot(condition(c));
     }
 

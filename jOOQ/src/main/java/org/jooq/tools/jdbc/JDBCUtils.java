@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,7 +55,9 @@ import static org.jooq.SQLDialect.MARIADB;
 import static org.jooq.SQLDialect.MYSQL;
 // ...
 import static org.jooq.SQLDialect.POSTGRES;
+// ...
 import static org.jooq.SQLDialect.SQLITE;
+// ...
 // ...
 // ...
 
@@ -73,6 +75,7 @@ import java.sql.SQLXML;
 import java.sql.Statement;
 
 import org.jooq.SQLDialect;
+import org.jooq.tools.JooqLogger;
 
 /**
  * JDBC-related utility methods.
@@ -80,6 +83,8 @@ import org.jooq.SQLDialect;
  * @author Lukas Eder
  */
 public class JDBCUtils {
+
+    private static final JooqLogger log = JooqLogger.getLogger(JDBCUtils.class);
 
     /**
      * "Guess" the {@link SQLDialect} from a {@link Connection} instance.
@@ -99,12 +104,12 @@ public class JDBCUtils {
             try {
                 DatabaseMetaData m = connection.getMetaData();
 
-                /* [pro] xx
-                xxxxxx xxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxx
-                xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-                    xxxxxx xxxxxxxxxxxxxxxxxx
-                x
-                xx [/pro] */
+
+
+
+
+
+
 
                 String url = m.getURL();
                 result = dialect(url);
@@ -124,12 +129,22 @@ public class JDBCUtils {
      * "Guess" the {@link SQLDialect} from a connection URL.
      */
     public static final SQLDialect dialect(String url) {
-        if (url == null)
+        if (url == null) {
             return DEFAULT;
+        }
 
         // The below list might not be accurate or complete. Feel free to
-        // contribute fixes related to new / different JDBC driver configuraitons
-        if (url.startsWith("jdbc:cubrid:")) {
+        // contribute fixes related to new / different JDBC driver configurations
+
+
+
+
+
+
+
+
+
+        else if (url.startsWith("jdbc:cubrid:")) {
             return CUBRID;
         }
         else if (url.startsWith("jdbc:derby:")) {
@@ -159,37 +174,40 @@ public class JDBCUtils {
             return SQLITE;
         }
 
-        /* [pro] xx
-        xxxx xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxxxxx xxxx
-        x
-        xxxx xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxxxxx xxxx
-        x
-        xxxx xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxxxxx xxxxx
-        x
-        xxxx xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-              xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxxxxx xxxxxxxxx
-        x
-        xxxx xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxxxxx xxxxxxx
-        x
-        xxxx xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-              xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxxxxx xxxxxxx
-        x
-        xxxx xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-              xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-              xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-              xx xxxxxxxxxxxxxxxxxxxxxxx x
-            xxxxxx xxxxxxxxxx
-        x
-        xxxx xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxxxxx xxxxxxx
-        x
-        xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         return DEFAULT;
     }
@@ -218,26 +236,30 @@ public class JDBCUtils {
             case SQLITE:
                 return "org.sqlite.JDBC";
 
-            /* [pro] xx
-            xxxx xxxxxxx
-                xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxx xxxx
-                xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxx xxxx
-                xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxx xxxxx
-                xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxx xxxxxxxxx
-                xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxx xxxxxxx
-                xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxx xxxxxxx
-                xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxx xxxxxxxxxx
-                xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxx xxxxxxx
-                xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         }
 
         return "java.sql.Driver";
@@ -312,7 +334,9 @@ public class JDBCUtils {
             try {
                 blob.free();
             }
-            catch (Exception ignore) {}
+            catch (Exception ignore) {
+                log.warn("Error while freeing resource", ignore);
+            }
 
             // [#3069] The free() method was added only in JDBC 4.0 / Java 1.6
             catch (AbstractMethodError ignore) {}
@@ -330,7 +354,9 @@ public class JDBCUtils {
             try {
                 clob.free();
             }
-            catch (Exception ignore) {}
+            catch (Exception ignore) {
+                log.warn("Error while freeing resource", ignore);
+            }
 
             // [#3069] The free() method was added only in JDBC 4.0 / Java 1.6
             catch (AbstractMethodError ignore) {}
@@ -348,7 +374,9 @@ public class JDBCUtils {
             try {
                 xml.free();
             }
-            catch (Exception ignore) {}
+            catch (Exception ignore) {
+                log.warn("Error while freeing resource", ignore);
+            }
 
             // [#3069] The free() method was added only in JDBC 4.0 / Java 1.6
             catch (AbstractMethodError ignore) {}
@@ -366,7 +394,9 @@ public class JDBCUtils {
             try {
                 array.free();
             }
-            catch (Exception ignore) {}
+            catch (Exception ignore) {
+                log.warn("Error while freeing resource", ignore);
+            }
 
             // [#3069] The free() method was added only in JDBC 4.0 / Java 1.6
             catch (AbstractMethodError ignore) {}

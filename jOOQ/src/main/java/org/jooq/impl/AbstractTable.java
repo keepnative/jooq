@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,12 +45,16 @@ import static org.jooq.JoinType.CROSS_APPLY;
 import static org.jooq.JoinType.CROSS_JOIN;
 import static org.jooq.JoinType.FULL_OUTER_JOIN;
 import static org.jooq.JoinType.JOIN;
+import static org.jooq.JoinType.LEFT_ANTI_JOIN;
 import static org.jooq.JoinType.LEFT_OUTER_JOIN;
+import static org.jooq.JoinType.LEFT_SEMI_JOIN;
 import static org.jooq.JoinType.NATURAL_JOIN;
 import static org.jooq.JoinType.NATURAL_LEFT_OUTER_JOIN;
 import static org.jooq.JoinType.NATURAL_RIGHT_OUTER_JOIN;
 import static org.jooq.JoinType.OUTER_APPLY;
 import static org.jooq.JoinType.RIGHT_OUTER_JOIN;
+import static org.jooq.JoinType.STRAIGHT_JOIN;
+// ...
 import static org.jooq.impl.DSL.table;
 import static org.jooq.impl.DSL.val;
 
@@ -70,11 +74,14 @@ import org.jooq.Field;
 import org.jooq.ForeignKey;
 import org.jooq.Identity;
 import org.jooq.JoinType;
+// ...
+import org.jooq.Name;
 import org.jooq.PivotForStep;
 import org.jooq.QueryPart;
 import org.jooq.Record;
 import org.jooq.RecordType;
 import org.jooq.Row;
+import org.jooq.SQL;
 import org.jooq.Schema;
 import org.jooq.Table;
 import org.jooq.TableField;
@@ -176,6 +183,21 @@ abstract class AbstractTable<R extends Record> extends AbstractQueryPart impleme
     }
 
     @Override
+    public final Field<?> field(Name name) {
+        return fieldsRow().field(name);
+    }
+
+    @Override
+    public final <T> Field<T> field(Name name, Class<T> type) {
+        return fieldsRow().field(name, type);
+    }
+
+    @Override
+    public final <T> Field<T> field(Name name, DataType<T> dataType) {
+        return fieldsRow().field(name, dataType);
+    }
+
+    @Override
     public final Field<?> field(int index) {
         return fieldsRow().field(index);
     }
@@ -193,6 +215,26 @@ abstract class AbstractTable<R extends Record> extends AbstractQueryPart impleme
     @Override
     public final Field<?>[] fields() {
         return fieldsRow().fields();
+    }
+
+    @Override
+    public final Field<?>[] fields(Field<?>... fields) {
+        return fieldsRow().fields(fields);
+    }
+
+    @Override
+    public final Field<?>[] fields(String... fieldNames) {
+        return fieldsRow().fields(fieldNames);
+    }
+
+    @Override
+    public final Field<?>[] fields(Name... fieldNames) {
+        return fieldsRow().fields(fieldNames);
+    }
+
+    @Override
+    public final Field<?>[] fields(int... fieldIndexes) {
+        return fieldsRow().fields(fieldIndexes);
     }
 
     @Override
@@ -235,7 +277,7 @@ abstract class AbstractTable<R extends Record> extends AbstractQueryPart impleme
      * Subclasses should override this method
      */
     @Override
-    public Identity<R, ? extends Number> getIdentity() {
+    public Identity<R, ?> getIdentity() {
         return null;
     }
 
@@ -521,81 +563,96 @@ abstract class AbstractTable<R extends Record> extends AbstractQueryPart impleme
         return new HintedTable<R>(this, "force index for group by", indexes);
     }
 
-    /* [pro] xx
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxx xxxxxxxxxxx xxxxx x
-        xxxxxx xxx xxxxxxxxxxxxxxxxxx xxxxxx
-    x
 
-    xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    xx xxxx xxxxx xxx
-    xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxx x
-        xxxxxx xxx xxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxx xxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxx xxxxxxxxxxxxxxxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxx
-    x
 
-    xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    xx xxxx xxxxxxxxx xxxxx xxx
-    xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxx xxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxx xxxx x
-        xxxxxx xxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxx xxxxx xxxx xxxxxxxxxxxxxxxxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-        xxxxxx xxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxx xxxxx xxxxx xxxxxxxxxxxxxxxxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxx x
-        xxxxxx xxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxx xxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-        xxxxxx xxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxx xxxxx xxxxx xxxxxxxxxxxxxxxxxxxxxxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxx xxxxxxxxxxxxxx xxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxx xxxxxxxxxxxxxxx xxxxxxx xxxxxxx xxxx x
-        xxxxxx xxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxx xxxx xxxxx xxxxxxxxxxxxxxxxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxx xxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxx x
-        xxxxxx xxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxx xxxxxxxxxx xxxxx xxxxxxxxxxxxxxxxxxxxxxxxx
-    x
 
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // ------------------------------------------------------------------------
     // XXX: DIVISION API
     // ------------------------------------------------------------------------
@@ -605,98 +662,210 @@ abstract class AbstractTable<R extends Record> extends AbstractQueryPart impleme
         return new DivideBy(this, divisor);
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Override
+    public final TableOnStep<R> leftSemiJoin(TableLike<?> table) {
+        return (TableOnStep) join(table, LEFT_SEMI_JOIN);
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Override
+    public final TableOnStep<R> leftAntiJoin(TableLike<?> table) {
+        return (TableOnStep) join(table, LEFT_ANTI_JOIN);
+    }
+
     // ------------------------------------------------------------------------
     // XXX: JOIN API
     // ------------------------------------------------------------------------
 
     @Override
-    public final TableOptionalOnStep join(TableLike<?> table, JoinType type) {
+    public final TableOptionalOnStep<Record> join(TableLike<?> table, JoinType type) {
         return new JoinTable(this, table, type);
     }
 
     @Override
-    public final TableOnStep join(TableLike<?> table) {
+    public final TableOnStep<Record> join(TableLike<?> table) {
+        return innerJoin(table);
+    }
+
+    @Override
+    public final TableOnStep<Record> join(SQL sql) {
+        return innerJoin(sql);
+    }
+
+    @Override
+    public final TableOnStep<Record> join(String sql) {
+        return innerJoin(sql);
+    }
+
+    @Override
+    public final TableOnStep<Record> join(String sql, Object... bindings) {
+        return innerJoin(sql, bindings);
+    }
+
+    @Override
+    public final TableOnStep<Record> join(String sql, QueryPart... parts) {
+        return innerJoin(sql, parts);
+    }
+
+    @Override
+    public final TableOnStep<Record> innerJoin(TableLike<?> table) {
         return join(table, JOIN);
     }
 
     @Override
-    public final TableOnStep join(String sql) {
-        return join(table(sql));
+    public final TableOnStep<Record> innerJoin(SQL sql) {
+        return innerJoin(table(sql));
     }
 
     @Override
-    public final TableOnStep join(String sql, Object... bindings) {
-        return join(table(sql, bindings));
+    public final TableOnStep<Record> innerJoin(String sql) {
+        return innerJoin(table(sql));
     }
 
     @Override
-    public final TableOnStep join(String sql, QueryPart... parts) {
-        return join(table(sql, parts));
+    public final TableOnStep<Record> innerJoin(String sql, Object... bindings) {
+        return innerJoin(table(sql, bindings));
     }
 
     @Override
-    public final TablePartitionByStep leftOuterJoin(TableLike<?> table) {
+    public final TableOnStep<Record> innerJoin(String sql, QueryPart... parts) {
+        return innerJoin(table(sql, parts));
+    }
+
+    @Override
+    public final TablePartitionByStep<Record> leftJoin(TableLike<?> table) {
+        return leftOuterJoin(table);
+    }
+
+    @Override
+    public final TablePartitionByStep<Record> leftJoin(SQL sql) {
+        return leftOuterJoin(sql);
+    }
+
+    @Override
+    public final TablePartitionByStep<Record> leftJoin(String sql) {
+        return leftOuterJoin(sql);
+    }
+
+    @Override
+    public final TablePartitionByStep<Record> leftJoin(String sql, Object... bindings) {
+        return leftOuterJoin(sql, bindings);
+    }
+
+    @Override
+    public final TablePartitionByStep<Record> leftJoin(String sql, QueryPart... parts) {
+        return leftOuterJoin(sql, parts);
+    }
+
+    @Override
+    public final TablePartitionByStep<Record> leftOuterJoin(TableLike<?> table) {
         return join(table, LEFT_OUTER_JOIN);
     }
 
     @Override
-    public final TablePartitionByStep leftOuterJoin(String sql) {
+    public final TablePartitionByStep<Record> leftOuterJoin(SQL sql) {
         return leftOuterJoin(table(sql));
     }
 
     @Override
-    public final TablePartitionByStep leftOuterJoin(String sql, Object... bindings) {
+    public final TablePartitionByStep<Record> leftOuterJoin(String sql) {
+        return leftOuterJoin(table(sql));
+    }
+
+    @Override
+    public final TablePartitionByStep<Record> leftOuterJoin(String sql, Object... bindings) {
         return leftOuterJoin(table(sql, bindings));
     }
 
     @Override
-    public final TablePartitionByStep leftOuterJoin(String sql, QueryPart... parts) {
+    public final TablePartitionByStep<Record> leftOuterJoin(String sql, QueryPart... parts) {
         return leftOuterJoin(table(sql, parts));
     }
 
     @Override
-    public final TablePartitionByStep rightOuterJoin(TableLike<?> table) {
+    public final TablePartitionByStep<Record> rightJoin(TableLike<?> table) {
+        return rightOuterJoin(table);
+    }
+
+    @Override
+    public final TablePartitionByStep<Record> rightJoin(SQL sql) {
+        return rightOuterJoin(sql);
+    }
+
+    @Override
+    public final TablePartitionByStep<Record> rightJoin(String sql) {
+        return rightOuterJoin(sql);
+    }
+
+    @Override
+    public final TablePartitionByStep<Record> rightJoin(String sql, Object... bindings) {
+        return rightOuterJoin(sql, bindings);
+    }
+
+    @Override
+    public final TablePartitionByStep<Record> rightJoin(String sql, QueryPart... parts) {
+        return rightOuterJoin(sql, parts);
+    }
+
+    @Override
+    public final TablePartitionByStep<Record> rightOuterJoin(TableLike<?> table) {
         return join(table, RIGHT_OUTER_JOIN);
     }
 
     @Override
-    public final TablePartitionByStep rightOuterJoin(String sql) {
+    public final TablePartitionByStep<Record> rightOuterJoin(SQL sql) {
         return rightOuterJoin(table(sql));
     }
 
     @Override
-    public final TablePartitionByStep rightOuterJoin(String sql, Object... bindings) {
+    public final TablePartitionByStep<Record> rightOuterJoin(String sql) {
+        return rightOuterJoin(table(sql));
+    }
+
+    @Override
+    public final TablePartitionByStep<Record> rightOuterJoin(String sql, Object... bindings) {
         return rightOuterJoin(table(sql, bindings));
     }
 
     @Override
-    public final TablePartitionByStep rightOuterJoin(String sql, QueryPart... parts) {
+    public final TablePartitionByStep<Record> rightOuterJoin(String sql, QueryPart... parts) {
         return rightOuterJoin(table(sql, parts));
     }
 
     @Override
-    public final TableOnStep fullOuterJoin(TableLike<?> table) {
+    public final TableOnStep<Record> fullOuterJoin(TableLike<?> table) {
         return join(table, FULL_OUTER_JOIN);
     }
 
     @Override
-    public final TableOnStep fullOuterJoin(String sql) {
+    public final TableOnStep<Record> fullOuterJoin(SQL sql) {
         return fullOuterJoin(table(sql));
     }
 
     @Override
-    public final TableOnStep fullOuterJoin(String sql, Object... bindings) {
+    public final TableOnStep<Record> fullOuterJoin(String sql) {
+        return fullOuterJoin(table(sql));
+    }
+
+    @Override
+    public final TableOnStep<Record> fullOuterJoin(String sql, Object... bindings) {
         return fullOuterJoin(table(sql, bindings));
     }
 
     @Override
-    public final TableOnStep fullOuterJoin(String sql, QueryPart... parts) {
+    public final TableOnStep<Record> fullOuterJoin(String sql, QueryPart... parts) {
         return fullOuterJoin(table(sql, parts));
     }
 
     @Override
     public final Table<Record> crossJoin(TableLike<?> table) {
         return join(table, CROSS_JOIN);
+    }
+
+    @Override
+    public final Table<Record> crossJoin(SQL sql) {
+        return crossJoin(table(sql));
     }
 
     @Override
@@ -720,6 +889,11 @@ abstract class AbstractTable<R extends Record> extends AbstractQueryPart impleme
     }
 
     @Override
+    public final Table<Record> naturalJoin(SQL sql) {
+        return naturalJoin(table(sql));
+    }
+
+    @Override
     public final Table<Record> naturalJoin(String sql) {
         return naturalJoin(table(sql));
     }
@@ -737,6 +911,11 @@ abstract class AbstractTable<R extends Record> extends AbstractQueryPart impleme
     @Override
     public final Table<Record> naturalLeftOuterJoin(TableLike<?> table) {
         return join(table, NATURAL_LEFT_OUTER_JOIN);
+    }
+
+    @Override
+    public final Table<Record> naturalLeftOuterJoin(SQL sql) {
+        return naturalLeftOuterJoin(table(sql));
     }
 
     @Override
@@ -760,6 +939,11 @@ abstract class AbstractTable<R extends Record> extends AbstractQueryPart impleme
     }
 
     @Override
+    public final Table<Record> naturalRightOuterJoin(SQL sql) {
+        return naturalRightOuterJoin(table(sql));
+    }
+
+    @Override
     public final Table<Record> naturalRightOuterJoin(String sql) {
         return naturalRightOuterJoin(table(sql));
     }
@@ -774,49 +958,80 @@ abstract class AbstractTable<R extends Record> extends AbstractQueryPart impleme
         return naturalRightOuterJoin(table(sql, parts));
     }
 
-    /* [pro] xx
+    @Override
+    public final Table<Record> crossApply(TableLike<?> table) {
+        return join(table, CROSS_APPLY);
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxx xxxxxx x
-        xxxxxx xxxxxxxxxxx xxxxxxxxxxxxx
-    x
+    @Override
+    public final Table<Record> crossApply(SQL sql) {
+        return crossApply(table(sql));
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxx
-    x
+    @Override
+    public final Table<Record> crossApply(String sql) {
+        return crossApply(table(sql));
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx xxxxxxxxx xxxxxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxx
-    x
+    @Override
+    public final Table<Record> crossApply(String sql, Object... bindings) {
+        return crossApply(table(sql, bindings));
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx xxxxxxxxxxxx xxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxx xxxxxxxx
-    x
+    @Override
+    public final Table<Record> crossApply(String sql, QueryPart... parts) {
+        return crossApply(table(sql, parts));
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxx xxxxxx x
-        xxxxxx xxxxxxxxxxx xxxxxxxxxxxxx
-    x
+    @Override
+    public final Table<Record> outerApply(TableLike<?> table) {
+        return join(table, OUTER_APPLY);
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxx
-    x
+    @Override
+    public final Table<Record> outerApply(SQL sql) {
+        return outerApply(table(sql));
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx xxxxxxxxx xxxxxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxx
-    x
+    @Override
+    public final Table<Record> outerApply(String sql) {
+        return outerApply(table(sql));
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx xxxxxxxxxxxx xxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxx xxxxxxxx
-    x
+    @Override
+    public final Table<Record> outerApply(String sql, Object... bindings) {
+        return outerApply(table(sql, bindings));
+    }
 
-    xx [/pro] */
+    @Override
+    public final Table<Record> outerApply(String sql, QueryPart... parts) {
+        return outerApply(table(sql, parts));
+    }
+
+    @Override
+    public final TableOptionalOnStep<Record> straightJoin(TableLike<?> table) {
+        return join(table, STRAIGHT_JOIN);
+    }
+
+    @Override
+    public final TableOptionalOnStep<Record> straightJoin(SQL sql) {
+        return straightJoin(table(sql));
+    }
+
+    @Override
+    public final TableOptionalOnStep<Record> straightJoin(String sql) {
+        return straightJoin(table(sql));
+    }
+
+    @Override
+    public final TableOptionalOnStep<Record> straightJoin(String sql, Object... bindings) {
+        return straightJoin(table(sql, bindings));
+    }
+
+    @Override
+    public final TableOptionalOnStep<Record> straightJoin(String sql, QueryPart... parts) {
+        return straightJoin(table(sql, parts));
+    }
 
     // ------------------------------------------------------------------------
     // XXX: Object API

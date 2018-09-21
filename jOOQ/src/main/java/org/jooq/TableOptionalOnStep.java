@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,6 +48,6 @@ package org.jooq;
  *
  * @author Lukas Eder
  */
-public interface TableOptionalOnStep extends TablePartitionByStep, Table<Record> {
+public interface TableOptionalOnStep<R extends Record> extends TablePartitionByStep<R>, Table<R> {
 
 }

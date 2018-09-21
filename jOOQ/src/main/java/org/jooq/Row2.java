@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,6 +55,7 @@ import static org.jooq.SQLDialect.MYSQL;
 import static org.jooq.SQLDialect.POSTGRES;
 // ...
 // ...
+// ...
 
 import org.jooq.Comparator;
 import org.jooq.impl.DSL;
@@ -92,7 +93,7 @@ public interface Row2<T1, T2> extends Row {
     // ------------------------------------------------------------------------
     // Generic comparison predicates
     // ------------------------------------------------------------------------
-    
+
     /**
      * Compare this row value expression with another row value expression
      * using a dynamic comparator.
@@ -1269,7 +1270,7 @@ public interface Row2<T1, T2> extends Row {
      * </ul>
      * <p>
      * jOOQ also supports arbitrary 2-degree row value expression comparisons,
-     * by simulating them as such <code><pre>
+     * by emulating them as such <code><pre>
      * -- This predicate
      * (A, B) OVERLAPS (C, D)
      *
@@ -1291,7 +1292,7 @@ public interface Row2<T1, T2> extends Row {
      * </ul>
      * <p>
      * jOOQ also supports arbitrary 2-degree row value expression comparisons,
-     * by simulating them as such <code><pre>
+     * by emulating them as such <code><pre>
      * -- This predicate
      * (A, B) OVERLAPS (C, D)
      *
@@ -1313,7 +1314,7 @@ public interface Row2<T1, T2> extends Row {
      * </ul>
      * <p>
      * jOOQ also supports arbitrary 2-degree row value expression comparisons,
-     * by simulating them as such <code><pre>
+     * by emulating them as such <code><pre>
      * -- This predicate
      * (A, B) OVERLAPS (C, D)
      *

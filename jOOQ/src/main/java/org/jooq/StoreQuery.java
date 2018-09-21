@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -106,7 +106,7 @@ public interface StoreQuery<R extends Record> extends Query {
      * @see #getReturnedRecords()
      */
     @Support
-    void setReturning(Identity<R, ? extends Number> identity);
+    void setReturning(Identity<R, ?> identity);
 
     /**
      * Configure the <code>INSERT</code> or <code>UPDATE</code> statement to return a list of fields in

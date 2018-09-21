@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,6 +41,7 @@
 
 package org.jooq;
 
+import static org.jooq.SQLDialect.MYSQL;
 // ...
 // ...
 // ...
@@ -112,6 +113,24 @@ public enum JoinType {
      */
     @Support({})
     OUTER_APPLY("outer apply"),
+
+    /**
+     * <code>STRAIGHT_JOIN</code> two tables.
+     */
+    @Support({ MYSQL })
+    STRAIGHT_JOIN("straight_join"),
+
+    /**
+     * <code>LEFT SEMI JOIN</code> two tables.
+     */
+    @Support
+    LEFT_SEMI_JOIN("left semi join"),
+
+    /**
+     * <code>LEFT ANTI JOIN</code> two tables.
+     */
+    @Support
+    LEFT_ANTI_JOIN("left anti join")
 
     ;
 

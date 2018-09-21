@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,6 +41,8 @@
 package org.jooq.util.postgres;
 
 
+import static org.jooq.impl.DSL.falseCondition;
+import static org.jooq.impl.DSL.inline;
 import static org.jooq.util.postgres.information_schema.Tables.PARAMETERS;
 import static org.jooq.util.postgres.information_schema.Tables.ROUTINES;
 import static org.jooq.util.postgres.pg_catalog.Tables.PG_PROC;
@@ -49,6 +51,7 @@ import java.sql.SQLException;
 import java.util.Arrays;
 
 import org.jooq.Record;
+import org.jooq.exception.DataAccessException;
 import org.jooq.util.AbstractRoutineDefinition;
 import org.jooq.util.DataTypeDefinition;
 import org.jooq.util.Database;
@@ -56,6 +59,7 @@ import org.jooq.util.DefaultDataTypeDefinition;
 import org.jooq.util.DefaultParameterDefinition;
 import org.jooq.util.InOutDefinition;
 import org.jooq.util.ParameterDefinition;
+import org.jooq.util.SchemaDefinition;
 
 /**
  * Postgres implementation of {@link AbstractRoutineDefinition}
@@ -64,7 +68,8 @@ import org.jooq.util.ParameterDefinition;
  */
 public class PostgresRoutineDefinition extends AbstractRoutineDefinition {
 
-    private final String specificName;
+    private static Boolean is94;
+    private final String   specificName;
 
     public PostgresRoutineDefinition(Database database, Record record) {
         super(database.getSchema(record.getValue(ROUTINES.ROUTINE_SCHEMA)),
@@ -75,9 +80,17 @@ public class PostgresRoutineDefinition extends AbstractRoutineDefinition {
             record.getValue(PG_PROC.PROISAGG, boolean.class));
 
         if (!Arrays.asList("void", "record").contains(record.getValue("data_type"))) {
+            SchemaDefinition typeSchema = null;
+
+            String schemaName = record.getValue(ROUTINES.TYPE_UDT_SCHEMA);
+            if (schemaName != null)
+                typeSchema = getDatabase().getSchema(schemaName);
+
             DataTypeDefinition type = new DefaultDataTypeDefinition(
                 getDatabase(),
-                database.getSchema(record.getValue(ROUTINES.ROUTINE_SCHEMA)),
+                typeSchema == null
+                    ? database.getSchema(record.getValue(ROUTINES.ROUTINE_SCHEMA))
+                    : typeSchema,
                 record.getValue("data_type", String.class),
                 record.getValue(ROUTINES.CHARACTER_MAXIMUM_LENGTH),
                 record.getValue(ROUTINES.NUMERIC_PRECISION),
@@ -110,7 +123,10 @@ public class PostgresRoutineDefinition extends AbstractRoutineDefinition {
                 PARAMETERS.NUMERIC_SCALE,
                 PARAMETERS.UDT_NAME,
                 PARAMETERS.ORDINAL_POSITION,
-                PARAMETERS.PARAMETER_MODE)
+                PARAMETERS.PARAMETER_MODE,
+                is94()
+                    ? PARAMETERS.PARAMETER_DEFAULT
+                    : inline((String) null).as(PARAMETERS.PARAMETER_DEFAULT))
             .from(PARAMETERS)
             .where(PARAMETERS.SPECIFIC_SCHEMA.equal(getSchema().getName()))
             .and(PARAMETERS.SPECIFIC_NAME.equal(specificName))
@@ -127,7 +143,7 @@ public class PostgresRoutineDefinition extends AbstractRoutineDefinition {
                 record.getValue(PARAMETERS.NUMERIC_PRECISION),
                 record.getValue(PARAMETERS.NUMERIC_SCALE),
                 null,
-                null,
+                record.getValue(PARAMETERS.PARAMETER_DEFAULT) != null,
                 record.getValue(PARAMETERS.UDT_NAME)
             );
 
@@ -135,10 +151,32 @@ public class PostgresRoutineDefinition extends AbstractRoutineDefinition {
                 this,
                 record.getValue(PARAMETERS.PARAMETER_NAME),
                 record.getValue(PARAMETERS.ORDINAL_POSITION),
-                type
+                type,
+                record.getValue(PARAMETERS.PARAMETER_DEFAULT) != null
             );
 
             addParameter(InOutDefinition.getFromString(inOut), parameter);
         }
+    }
+
+    private boolean is94() {
+        if (is94 == null) {
+
+            // [#4254] INFORMATION_SCHEMA.PARAMETERS.PARAMETER_DEFAULT was added
+            // in PostgreSQL 9.4 only
+            try {
+                create().select(PARAMETERS.PARAMETER_DEFAULT)
+                        .from(PARAMETERS)
+                        .where(falseCondition())
+                        .fetch();
+
+                is94 = true;
+            }
+            catch (DataAccessException e) {
+                is94 = false;
+            }
+        }
+
+        return is94;
     }
 }

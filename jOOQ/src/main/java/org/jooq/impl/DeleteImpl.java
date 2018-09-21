@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,6 +45,7 @@ import static org.jooq.impl.DSL.exists;
 import static org.jooq.impl.DSL.notExists;
 
 import java.util.Collection;
+import java.util.Optional;
 
 import org.jooq.Condition;
 import org.jooq.Configuration;
@@ -56,6 +57,7 @@ import org.jooq.Operator;
 import org.jooq.QueryPart;
 import org.jooq.Record;
 import org.jooq.Result;
+import org.jooq.SQL;
 import org.jooq.Select;
 import org.jooq.Table;
 
@@ -76,8 +78,8 @@ class DeleteImpl<R extends Record>
      */
     private static final long        serialVersionUID = 2747566322757517382L;
 
-    DeleteImpl(Configuration configuration, Table<R> table) {
-        super(new DeleteQueryImpl<R>(configuration, table));
+    DeleteImpl(Configuration configuration, WithImpl with, Table<R> table) {
+        super(new DeleteQueryImpl<R>(configuration, with, table));
     }
 
     @Override
@@ -95,6 +97,16 @@ class DeleteImpl<R extends Record>
     @Override
     public final DeleteImpl<R> where(Field<Boolean> condition) {
         return where(condition(condition));
+    }
+
+    @Override
+    public final DeleteImpl<R> where(Boolean condition) {
+        return where(condition(condition));
+    }
+
+    @Override
+    public final DeleteImpl<R> where(SQL sql) {
+        return where(condition(sql));
     }
 
     @Override
@@ -134,6 +146,16 @@ class DeleteImpl<R extends Record>
     }
 
     @Override
+    public final DeleteImpl<R> and(Boolean condition) {
+        return and(condition(condition));
+    }
+
+    @Override
+    public final DeleteImpl<R> and(SQL sql) {
+        return and(condition(sql));
+    }
+
+    @Override
     public final DeleteImpl<R> and(String sql) {
         return and(condition(sql));
     }
@@ -159,6 +181,11 @@ class DeleteImpl<R extends Record>
     }
 
     @Override
+    public final DeleteImpl<R> andNot(Boolean condition) {
+        return andNot(condition(condition));
+    }
+
+    @Override
     public final DeleteImpl<R> andExists(Select<?> select) {
         return and(exists(select));
     }
@@ -177,6 +204,16 @@ class DeleteImpl<R extends Record>
     @Override
     public final DeleteImpl<R> or(Field<Boolean> condition) {
         return or(condition(condition));
+    }
+
+    @Override
+    public final DeleteImpl<R> or(Boolean condition) {
+        return or(condition(condition));
+    }
+
+    @Override
+    public final DeleteImpl<R> or(SQL sql) {
+        return or(condition(sql));
     }
 
     @Override
@@ -201,6 +238,11 @@ class DeleteImpl<R extends Record>
 
     @Override
     public final DeleteImpl<R> orNot(Field<Boolean> condition) {
+        return orNot(condition(condition));
+    }
+
+    @Override
+    public final DeleteImpl<R> orNot(Boolean condition) {
         return orNot(condition(condition));
     }
 
@@ -243,4 +285,11 @@ class DeleteImpl<R extends Record>
         getDelegate().execute();
         return getDelegate().getReturnedRecord();
     }
+
+
+    @Override
+    public final Optional<R> fetchOptional() {
+        return Optional.ofNullable(fetchOne());
+    }
+
 }

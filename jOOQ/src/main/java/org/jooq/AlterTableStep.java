@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,6 +55,8 @@ import static org.jooq.SQLDialect.MARIADB;
 import static org.jooq.SQLDialect.MYSQL;
 // ...
 import static org.jooq.SQLDialect.POSTGRES;
+// ...
+// ...
 // ...
 // ...
 
@@ -126,18 +128,18 @@ public interface AlterTableStep {
     <T> AlterTableFinalStep addColumn(Field<T> field, DataType<T> type);
 
     /**
-     * Add an <code>ADD CONSTRAINT</code> clause to the <code>ALTER TABLE</code>
-     * statement.
-     */
-    @Support
-    AlterTableFinalStep add(Constraint constraint);
-
-    /**
      * Add an <code>ADD COLUMN</code> clause to the <code>ALTER TABLE</code>
      * statement.
      */
     @Support
     AlterTableFinalStep addColumn(String field, DataType<?> type);
+
+    /**
+     * Add an <code>ADD CONSTRAINT</code> clause to the <code>ALTER TABLE</code>
+     * statement.
+     */
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
+    AlterTableFinalStep add(Constraint constraint);
 
     /**
      * Add an <code>DROP COLUMN</code> clause to the <code>ALTER TABLE</code>
@@ -175,7 +177,7 @@ public interface AlterTableStep {
      * Add a <code>DROP CONSTRAINT</code> clause to the <code>ALTER TABLE</code>
      * statement.
      */
-    @Support
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
     AlterTableFinalStep drop(Constraint constraint);
 
     /**
@@ -184,7 +186,7 @@ public interface AlterTableStep {
      *
      * @see DSL#constraint(String)
      */
-    @Support
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
     AlterTableFinalStep dropConstraint(String constraint);
 
     @Support

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -125,6 +125,14 @@ abstract class AbstractQueryPart implements QueryPartInternal {
         return false;
     }
 
+    /**
+     * Subclasses may override this
+     */
+    @Override
+    public boolean generatesCast() {
+        return false;
+    }
+
     // -------------------------------------------------------------------------
     // The Object API
     // -------------------------------------------------------------------------
@@ -194,6 +202,6 @@ abstract class AbstractQueryPart implements QueryPartInternal {
      * Internal convenience method
      */
     protected final DataAccessException translate(String sql, SQLException e) {
-        return Utils.translate(sql, e);
+        return Tools.translate(sql, e);
     }
 }

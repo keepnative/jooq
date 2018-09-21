@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -85,6 +85,13 @@ class FunctionTable<R extends Record> extends AbstractTable<R> {
         switch (ctx.configuration().dialect()) {
             case HSQLDB: {
                 ctx.keyword("table(").visit(function).sql(')');
+                break;
+            }
+
+            // [#4254] This is required to enable using PostgreSQL functions
+            // with defaulted parameters.
+            case POSTGRES: {
+                ctx.visit(function);
                 break;
             }
 

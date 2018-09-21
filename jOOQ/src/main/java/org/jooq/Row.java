@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,12 +45,12 @@ package org.jooq;
  * A model type for a row value expression.
  * <p>
  * Note: Not all databases support row value expressions, but many row value
- * expression operations can be simulated on all databases. See relevant row
+ * expression operations can be emulated on all databases. See relevant row
  * value expression method Javadocs for details.
  *
  * @author Lukas Eder
  */
-public interface Row extends QueryPart {
+public interface Row extends FieldOrRow {
 
     /**
      * Get the degree of this row value expression.
@@ -94,6 +94,32 @@ public interface Row extends QueryPart {
      * @return The field with the given name
      */
     <T> Field<T> field(String fieldName, DataType<T> dataType);
+
+    /**
+     * Get a specific field from this row.
+     *
+     * @param fieldName The field to fetch
+     * @return The field with the given name
+     */
+    Field<?> field(Name fieldName);
+
+    /**
+     * Get a specific field from this row and coerce it to <code>type</code>.
+     *
+     * @param fieldName The field to fetch
+     * @param type The type to coerce the resulting field to
+     * @return The field with the given name
+     */
+    <T> Field<T> field(Name fieldName, Class<T> type);
+
+    /**
+     * Get a specific field from this row and coerce it to <code>dataType</code>.
+     *
+     * @param fieldName The field to fetch
+     * @param dataType The type to coerce the resulting field to
+     * @return The field with the given name
+     */
+    <T> Field<T> field(Name fieldName, DataType<T> dataType);
 
     /**
      * Get a specific field from this row.
@@ -145,6 +171,14 @@ public interface Row extends QueryPart {
     Field<?>[] fields(String... fieldNames);
 
     /**
+     * Get all fields from this row, providing some field names.
+     *
+     * @return All available fields
+     * @see #field(Name)
+     */
+    Field<?>[] fields(Name... fieldNames);
+
+    /**
      * Get all fields from this row, providing some field indexes.
      *
      * @return All available fields
@@ -171,6 +205,15 @@ public interface Row extends QueryPart {
     int indexOf(String fieldName);
 
     /**
+     * Get a field's index from this row.
+     *
+     * @param fieldName The field name to look for
+     * @return The field's index or <code>-1</code> if the field is not
+     *         contained in this <code>Row</code>
+     */
+    int indexOf(Name fieldName);
+
+    /**
      * Get an array of types for this row.
      * <p>
      * Entries in the resulting array correspond to {@link Field#getType()} for
@@ -193,6 +236,14 @@ public interface Row extends QueryPart {
      * @return The field's type
      */
     Class<?> type(String fieldName);
+
+    /**
+     * Get the type for a given field name.
+     *
+     * @param fieldName The field's name of the field's type to fetch
+     * @return The field's type
+     */
+    Class<?> type(Name fieldName);
 
     /**
      * Get an array of data types for this row.
@@ -218,6 +269,14 @@ public interface Row extends QueryPart {
      */
     DataType<?> dataType(String fieldName);
 
+    /**
+     * Get the data type for a given field name.
+     *
+     * @param fieldName The field's name of the field's data type to fetch
+     * @return The field's data type
+     */
+    DataType<?> dataType(Name fieldName);
+
     // ------------------------------------------------------------------------
     // [NOT] NULL predicates
     // ------------------------------------------------------------------------
@@ -226,7 +285,7 @@ public interface Row extends QueryPart {
      * Check if this row value expression contains only <code>NULL</code>
      * values.
      * <p>
-     * Row NULL predicates can be simulated in those databases that do not
+     * Row NULL predicates can be emulated in those databases that do not
      * support such predicates natively: <code>(A, B) IS NULL</code> is
      * equivalent to <code>A IS NULL AND B IS NULL</code>
      */
@@ -236,7 +295,7 @@ public interface Row extends QueryPart {
     /**
      * Check if this row value expression contains no <code>NULL</code> values.
      * <p>
-     * Row NOT NULL predicates can be simulated in those databases that do not
+     * Row NOT NULL predicates can be emulated in those databases that do not
      * support such predicates natively: <code>(A, B) IS NOT NULL</code> is
      * equivalent to <code>A IS NOT NULL AND B IS NOT NULL</code>
      * <p>

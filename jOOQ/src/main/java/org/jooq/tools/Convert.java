@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,6 +40,9 @@
  */
 package org.jooq.tools;
 
+import static java.time.temporal.ChronoField.INSTANT_SECONDS;
+import static java.time.temporal.ChronoField.MILLI_OF_DAY;
+import static java.time.temporal.ChronoField.MILLI_OF_SECOND;
 import static org.jooq.types.Unsigned.ubyte;
 import static org.jooq.types.Unsigned.uint;
 import static org.jooq.types.Unsigned.ulong;
@@ -55,6 +58,14 @@ import java.net.URL;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.Temporal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -63,6 +74,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -120,6 +132,8 @@ public final class Convert {
         trueValues.add("YES");
         trueValues.add("true");
         trueValues.add("TRUE");
+        trueValues.add("t");
+        trueValues.add("T");
         trueValues.add("on");
         trueValues.add("ON");
         trueValues.add("enabled");
@@ -133,6 +147,8 @@ public final class Convert {
         falseValues.add("NO");
         falseValues.add("false");
         falseValues.add("FALSE");
+        falseValues.add("f");
+        falseValues.add("F");
         falseValues.add("off");
         falseValues.add("OFF");
         falseValues.add("disabled");
@@ -336,7 +352,11 @@ public final class Convert {
      * </ul>
      * <p>
      * All other values evaluate to <code>null</code></li>
-     * <li>All <code>Date</code> types can be converted into each other</li>
+     * <li>All {@link java.util.Date} subtypes ({@link Date}, {@link Time},
+     * {@link Timestamp}), as well as most {@link Temporal} subtypes (
+     * {@link LocalDate}, {@link LocalTime}, {@link LocalDateTime},
+     * {@link OffsetTime}, {@link OffsetDateTime}, as well as {@link Instant})
+     * can be converted into each other.</li>
      * <li>All <code>String</code> types can be converted into {@link URI},
      * {@link URL} and {@link File}</li>
      * <li>Primitive target types behave like their wrapper types, except that
@@ -442,6 +462,13 @@ public final class Convert {
                         return convert(0, toClass);
                     }
                 }
+
+
+                else if (toClass == Optional.class) {
+                    return (U) Optional.empty();
+                }
+
+
                 else {
                     return null;
                 }
@@ -476,6 +503,12 @@ public final class Convert {
                         return (U) convertArray((Object[]) from, toClass);
                     }
                 }
+
+
+                else if (toClass == Optional.class) {
+                    return (U) Optional.of(from);
+                }
+
 
                 // All types can be converted into String
                 else if (toClass == String.class) {
@@ -548,6 +581,12 @@ public final class Convert {
                         return (U) Long.valueOf(((java.util.Date) from).getTime());
                     }
 
+
+                    if (Temporal.class.isAssignableFrom(fromClass)) {
+                        return (U) Long.valueOf(millis((Temporal) from));
+                    }
+
+
                     try {
                         return (U) Long.valueOf(new BigDecimal(from.toString().trim()).longValue());
                     }
@@ -613,6 +652,12 @@ public final class Convert {
                     if (java.util.Date.class.isAssignableFrom(fromClass)) {
                         return (U) ulong(((java.util.Date) from).getTime());
                     }
+
+
+                    if (Temporal.class.isAssignableFrom(fromClass)) {
+                        return (U) ulong(millis((Temporal) from));
+                    }
+
 
                     try {
                         return (U) ulong(new BigDecimal(from.toString().trim()).toBigInteger().toString());
@@ -739,10 +784,22 @@ public final class Convert {
                     return toDate(((java.util.Date) from).getTime(), toClass);
                 }
 
+
+                else if (Temporal.class.isAssignableFrom(fromClass)) {
+                    return toDate(convert(from, Long.class), toClass);
+                }
+
+
                 // Long may also be converted into a date type
                 else if ((fromClass == Long.class || fromClass == long.class) && java.util.Date.class.isAssignableFrom(toClass)) {
                     return toDate((Long) from, toClass);
                 }
+
+
+                else if ((fromClass == Long.class || fromClass == long.class) && Temporal.class.isAssignableFrom(toClass)) {
+                    return toDate((Long) from, toClass);
+                }
+
 
                 // [#1501] Strings can be converted to java.sql.Date
                 else if ((fromClass == String.class) && toClass == java.sql.Date.class) {
@@ -774,6 +831,104 @@ public final class Convert {
                     }
                 }
 
+
+                else if ((fromClass == String.class) && toClass == LocalDate.class) {
+
+                    // Try "lenient" ISO date formats first
+                    try {
+                        return (U) java.sql.Date.valueOf((String) from).toLocalDate();
+                    }
+                    catch (IllegalArgumentException e1) {
+                        try {
+                            return (U) LocalDate.parse((String) from);
+                        }
+                        catch (DateTimeParseException e2) {
+                            return null;
+                        }
+                    }
+                }
+
+                else if ((fromClass == String.class) && toClass == LocalTime.class) {
+
+                    // Try "lenient" ISO date formats first
+                    try {
+                        return (U) java.sql.Time.valueOf((String) from).toLocalTime();
+                    }
+                    catch (IllegalArgumentException e1) {
+                        try {
+                            return (U) LocalTime.parse((String) from);
+                        }
+                        catch (DateTimeParseException e2) {
+                            return null;
+                        }
+                    }
+                }
+
+                else if ((fromClass == String.class) && toClass == OffsetTime.class) {
+
+                    // Try "local" ISO date formats first
+                    try {
+                        return (U) java.sql.Time.valueOf((String) from).toLocalTime().atOffset(OffsetTime.now().getOffset());
+                    }
+                    catch (IllegalArgumentException e1) {
+                        try {
+                            return (U) OffsetTime.parse((String) from);
+                        }
+                        catch (DateTimeParseException e2) {
+                            return null;
+                        }
+                    }
+                }
+
+                else if ((fromClass == String.class) && toClass == LocalDateTime.class) {
+
+                    // Try "lenient" ISO date formats first
+                    try {
+                        return (U) java.sql.Timestamp.valueOf((String) from).toLocalDateTime();
+                    }
+                    catch (IllegalArgumentException e1) {
+                        try {
+                            return (U) LocalDateTime.parse((String) from);
+                        }
+                        catch (DateTimeParseException e2) {
+                            return null;
+                        }
+                    }
+                }
+
+                else if ((fromClass == String.class) && toClass == OffsetDateTime.class) {
+
+                    // Try "local" ISO date formats first
+                    try {
+                        return (U) java.sql.Timestamp.valueOf((String) from).toLocalDateTime().atOffset(OffsetDateTime.now().getOffset());
+                    }
+                    catch (IllegalArgumentException e1) {
+                        try {
+                            return (U) OffsetDateTime.parse((String) from);
+                        }
+                        catch (DateTimeParseException e2) {
+                            return null;
+                        }
+                    }
+                }
+
+                else if ((fromClass == String.class) && toClass == Instant.class) {
+
+                    // Try "local" ISO date formats first
+                    try {
+                        return (U) java.sql.Timestamp.valueOf((String) from).toLocalDateTime().atOffset(OffsetDateTime.now().getOffset()).toInstant();
+                    }
+                    catch (IllegalArgumentException e1) {
+                        try {
+                            return (U) Instant.parse((String) from);
+                        }
+                        catch (DateTimeParseException e2) {
+                            return null;
+                        }
+                    }
+                }
+
+
                 // [#1448] Some users may find it useful to convert string
                 // literals to Enum values without a Converter
                 else if ((fromClass == String.class) && java.lang.Enum.class.isAssignableFrom(toClass)) {
@@ -802,44 +957,44 @@ public final class Convert {
                     return record.into(toClass);
                 }
 
-                /* [pro] xx
-                xx xxxxxxx xxxxxx xxxxxx x xxxxx xxxxx xxxxxx xx xxxxxxxxxxx xxxx xxxxxx xxx xxxxxxxxxxx
-                xxxx xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-                    xxxxxxxxxxxxxx xxxxxx x xxxxxxxxxxxxxxxx xxxxx
 
-                    xx xxxxxxx xxxxx xxxx xxxxxxxxxx xxxxxxxxxx xxxx xxxxxxxxx xxx xxxxxxxxx
-                    xx xxxx xxx xxxxx xxxxx xxxx xxxxxx xxxxxx x xxxxx xxxxx
-                    xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-                        xxx x
-                            xxxxxxxxxxxxxxxxxx xx
 
-                            xx xxxxxxxxxxxxxxxxxxxxxxxx x
-                                x x xxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxx
-                            x
-                            xxxx xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-                                x x xxx xxxxxxxxxxxxxxxxxxxxxxxx
-                            x
-                            xxxx x
-                                x x xxx xxxxxxxxxxxxxxxxxxxx
-                            x
 
-                            xxxxxxxxxxxxxxxxxxxxxxxxxxx
-                            xxxxxx xxx xx
-                        x
-                        xxxxx xxxxxxxxxx xx x
-                            xxxxx xxx xxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxx x x xxxxxxxxx x x xx x x xxxxxxxx xxx
-                        x
-                    x
 
-                    xx xxxxxxx xxxxxxxxxx xx xxxxxxxxxxx xx xxxx xxxxx
-                    xxxx xx xxxxxxxx xx xxxxxxxxxxxxxxxxxxxxx x
-                        xxxxxx xxx xxx xxxxxxxxxxxxxxx xxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                    x
-                    xxxx x
-                        xxxxxx xxx xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxx
-                    x
-                x
-                xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
                 // TODO [#2520] When RecordUnmappers are supported, they should also be considered here
             }
@@ -886,8 +1041,57 @@ public final class Convert {
                 return (X) calendar;
             }
 
+
+            else if (toClass == LocalDate.class) {
+                return (X) new Date(time).toLocalDate();
+            }
+            else if (toClass == LocalTime.class) {
+                return (X) new Time(time).toLocalTime();
+            }
+            else if (toClass == OffsetTime.class) {
+                return (X) new Time(time).toLocalTime().atOffset(OffsetTime.now().getOffset());
+            }
+            else if (toClass == LocalDateTime.class) {
+                return (X) new Timestamp(time).toLocalDateTime();
+            }
+            else if (toClass == OffsetDateTime.class) {
+                return (X) new Timestamp(time).toLocalDateTime().atOffset(OffsetDateTime.now().getOffset());
+            }
+            else if (toClass == Instant.class) {
+                return (X) Instant.ofEpochMilli(time);
+            }
+
+
             throw fail(time, toClass);
         }
+
+
+        private static final long millis(Temporal temporal) {
+
+            // java.sql.* temporal types:
+            if (temporal instanceof LocalDate) {
+                return Date.valueOf((LocalDate) temporal).getTime();
+            }
+            else if (temporal instanceof LocalTime) {
+                return Time.valueOf((LocalTime) temporal).getTime();
+            }
+            else if (temporal instanceof LocalDateTime) {
+                return Timestamp.valueOf((LocalDateTime) temporal).getTime();
+            }
+
+            // OffsetDateTime
+            else if (temporal.isSupported(INSTANT_SECONDS)) {
+                return 1000 * temporal.getLong(INSTANT_SECONDS) + temporal.getLong(MILLI_OF_SECOND);
+            }
+
+            // OffsetTime
+            else if (temporal.isSupported(MILLI_OF_DAY)) {
+                return temporal.getLong(MILLI_OF_DAY);
+            }
+
+            throw fail(temporal, Long.class);
+        }
+
 
         /**
          * Some databases do not implement the standard very well. Specifically,

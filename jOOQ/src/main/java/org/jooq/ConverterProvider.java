@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,6 +48,9 @@ package org.jooq;
  * @deprecated - This API is still EXPERIMENTAL. Do not use yet
  */
 @Deprecated
+
+@FunctionalInterface
+
 public interface ConverterProvider {
 
     /**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -104,6 +104,35 @@ public interface SelectOnStep<R extends Record> {
 
     /**
      * Add an <code>ON</code> clause to the previous <code>JOIN</code>.
+     *
+     * @deprecated - 3.8.0 - [#4763] - Use {@link #on(Condition...)} or
+     *             {@link #on(Field)} instead. Due to ambiguity between
+     *             calling this method using {@link Field#equals(Object)}
+     *             argument, vs. calling the other method via a
+     *             {@link Field#equal(Object)} argument, this method will be
+     *             removed in the future.
+     */
+    @Deprecated
+    @Support
+    SelectOnConditionStep<R> on(Boolean condition);
+
+    /**
+     * Add an <code>ON</code> clause to the previous <code>JOIN</code>.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#condition(SQL)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    SelectOnConditionStep<R> on(SQL sql);
+
+    /**
+     * Add an <code>ON</code> clause to the previous <code>JOIN</code>.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
      * guarantee syntax integrity. You may also create the possibility of
@@ -111,6 +140,7 @@ public interface SelectOnStep<R extends Record> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -125,6 +155,7 @@ public interface SelectOnStep<R extends Record> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String, Object...)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -139,6 +170,7 @@ public interface SelectOnStep<R extends Record> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String, QueryPart...)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -185,7 +217,7 @@ public interface SelectOnStep<R extends Record> {
      * Join the previous table with the <code>USING(column [, column...])</code>
      * syntax.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      */
     @Support
@@ -195,7 +227,7 @@ public interface SelectOnStep<R extends Record> {
      * Join the previous table with the <code>USING(column [, column...])</code>
      * syntax.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      */
     @Support

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,12 +40,14 @@
  */
 package org.jooq.impl;
 
+import static java.util.Arrays.asList;
 import static org.jooq.Clause.ALTER_TABLE;
 import static org.jooq.Clause.ALTER_TABLE_ADD;
 import static org.jooq.Clause.ALTER_TABLE_ALTER;
 import static org.jooq.Clause.ALTER_TABLE_ALTER_DEFAULT;
 import static org.jooq.Clause.ALTER_TABLE_DROP;
 import static org.jooq.Clause.ALTER_TABLE_TABLE;
+import static org.jooq.SQLDialect.DERBY;
 import static org.jooq.SQLDialect.FIREBIRD;
 // ...
 // ...
@@ -53,8 +55,8 @@ import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.inline;
 import static org.jooq.impl.DSL.name;
 import static org.jooq.impl.DSL.sql;
-import static org.jooq.impl.Utils.DATA_DROP_CONSTRAINT;
-import static org.jooq.impl.Utils.toSQLDDLTypeDeclaration;
+import static org.jooq.impl.Tools.DataKey.DATA_DROP_CONSTRAINT;
+import static org.jooq.impl.Tools.toSQLDDLTypeDeclaration;
 
 import org.jooq.AlterTableAlterStep;
 import org.jooq.AlterTableDropStep;
@@ -166,7 +168,7 @@ class AlterTableImpl extends AbstractQuery implements
 
     @Override
     public final AlterTableImpl defaultValue(Object literal) {
-        return defaultValue(inline(literal));
+        return defaultValue(Tools.field(literal));
     }
 
     @Override
@@ -233,13 +235,13 @@ class AlterTableImpl extends AbstractQuery implements
     public final void accept(Context<?> ctx) {
         SQLDialect family = ctx.configuration().dialect().family();
 
-        /* [pro] xx
-        xx xxx xxxxxx xxxxxxx xxxxxx xxxxx xx xxxxx xxxxxxx xxxxxxx xxx xx xxx xxx x xxxxx xxxxxx xx xx xxxx
-        xx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxxxxxxxxxx xx xxxxx x
-            xxxxxxxxxxxxxxxxxxxxxxxxxxx
-        x
-        xxxx
-        xx [/pro] */
+
+
+
+
+
+
+
         {
             accept0(ctx);
         }
@@ -256,10 +258,10 @@ class AlterTableImpl extends AbstractQuery implements
             ctx.start(ALTER_TABLE_ADD)
                .sql(' ').keyword("add").sql(' ');
 
-            /* [pro] xx
-            xx xxxxxxx xx xxxxx
-                xxxxxxxxxxxxx
-            xx [/pro] */
+
+
+
+
 
             ctx.qualify(false)
                .visit(addColumn).sql(' ')
@@ -272,15 +274,15 @@ class AlterTableImpl extends AbstractQuery implements
             }
 
             // Some databases default to NOT NULL, so explicitly setting columns to NULL is mostly required here
-            // [#3400] ... but not in Firebird
-//            else if (family != FIREBIRD) {
-//                ctx.sql(' ').keyword("null");
-//            }
+            // [#3400] [#4321] ... but not in Derby, Firebird
+            else if (!asList(DERBY, FIREBIRD).contains(family)) {
+                ctx.sql(' ').keyword("null");
+            }
 
-            /* [pro] xx
-            xx xxxxxxx xx xxxxx
-                xxxxxxxxxxxxx
-            xx [/pro] */
+
+
+
+
 
             ctx.end(ALTER_TABLE_ADD);
         }
@@ -298,17 +300,19 @@ class AlterTableImpl extends AbstractQuery implements
             ctx.start(ALTER_TABLE_ALTER);
 
             switch (family) {
-                /* [pro] xx
-                xxxx xxxxxxxxx
-                xxxx xxxxxxx
-                    xxxxxxxxx xxxxxxxxxxxxxxxxxxxxx
-                    xxxxxx
 
-                xxxx xxxxxxxxxx
-                    xxxxxxxxx xxxxxxxxxxxxxxxxx xxxxxxxxx
-                    xxxxxx
-                xx [/pro] */
 
+
+
+
+
+
+
+
+
+
+
+                case CUBRID:
                 case MARIADB:
                 case MYSQL: {
 
@@ -344,11 +348,15 @@ class AlterTableImpl extends AbstractQuery implements
 
             if (alterColumnType != null) {
                 switch (family) {
-                    /* [pro] xx
-                    xxxx xxxx
-                    xx [/pro] */
+
+
+
+
 
                     case DERBY:
+                        ctx.sql(' ').keyword("set data type");
+                        break;
+
                     case DB2:
                         ctx.sql(' ').keyword("set data type");
                         break;
@@ -369,11 +377,11 @@ class AlterTableImpl extends AbstractQuery implements
                 ctx.start(ALTER_TABLE_ALTER_DEFAULT);
 
                 switch (family) {
-                    /* [pro] xx
-                    xxxx xxxxxxx
-                        xxxxxxxxx xxxxxxxxxxxxxxxxxxxxxx
-                        xxxxxx
-                    xx [/pro] */
+
+
+
+
+
 
                     default:
                         ctx.sql(' ').keyword("set default");
@@ -390,6 +398,17 @@ class AlterTableImpl extends AbstractQuery implements
             ctx.start(ALTER_TABLE_DROP);
 
             switch (family) {
+
+
+
+
+
+
+
+
+
+
+
                 case SQL_SERVER:
                 case ORACLE:
                     ctx.sql(' ').keyword("drop column");
@@ -405,11 +424,11 @@ class AlterTableImpl extends AbstractQuery implements
                .qualify(true);
 
             switch (family) {
-                /* [pro] xx
-                xxxx xxxxx
-                    xxxxxxxxxxxxx
-                    xxxxxx
-                xx [/pro] */
+
+
+
+
+
 
                 default:
                     break;
@@ -459,46 +478,46 @@ class AlterTableImpl extends AbstractQuery implements
         }
     }
 
-    /* [pro] xx
-    xxxxxxx xxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxx x
-        xxxxxxxxxx xxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-        xxxxxx xxxxxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxx xxxxxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxx xxxxxxxxxxxxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-        xx xxxxxxx xxxxx xxxxxxxxxxx xxxx xxx xxxxxx xx x xxxxxxxxxxx xxxx xxx xxx xxxxxx
-        xx               xxxxxxxxxx xxxxxxxxx xx xxxx xx
 
-        xxxxxxxxxxxxxx
-                xxxxxxxx xxxxxxxxxxx xxxxxxxxxxxxxxx
-            x xxxxxxxxxx xxxxxxxx xxxxxxxxxxxxxxx
-            x xxxx
-            x xxxxxxxxx xxxxxxxxxxx x xxxxx
-            x xxxxxxx xxxxxxxxxxxxxxxxxxxxxxxx
-            x xxxxxxxx xxxxxxxxxxxxxxxx x xxxxxxxxxxxxxxx
-            x xxxxxx xxxxxxxxxxxxxxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxx xxxxxxxxxxxxx
-            x xxxx
-            x xxxxx xxxxxxxxxxx xx xxx xxxxx
-            x xxxxxxxxx
-            x xxx  xxx xxxxxxxx x xxxxxx xxxxx x x xxx x x xxxx xxxxxxxxxx x x xxxxxxxxxxxx
-            x xxx  xxxxxxx xxxxxxxxxxxxx xxxxxxxxx
-            x xxxx
-            x xxx  xxx xxxxxxxx x xxxxxx xxxxx x x xxx x x xxx xxxxxxxxxx x x xxxxxxxxxxx x x xxxxxxx x x xxx x x xxx x x xxxx
-            x xxx  xxxxxxx xxxxxxxxxxxxx xxxxxxxxx
-            x xxxxxxx
-            x xxxxxxxx
-            x xxxxxxxxx
-            x xxx  xxx xxxxxxxx x xxxxxx xxxxx x x xxx x x xxx xxxxxxx x x xxx x x xxx x x xxxx
-            x xxx  xxxxxxx xxxxxxxxxxxxx xxxxxxxxx
-            x xxxxxxx
 
-            x xxxxxxxxxxxxxxxxxxxx
-            x xxxxxxxxxxxxxxxxxxxx
-            x xxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxx
-    x
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     @Override
     public final Clause[] clauses(Context<?> ctx) {

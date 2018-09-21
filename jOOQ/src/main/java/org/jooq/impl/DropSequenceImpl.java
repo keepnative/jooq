@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -93,15 +93,15 @@ class DropSequenceImpl extends AbstractQuery implements
     // ------------------------------------------------------------------------
 
     private final boolean supportsIfExists(Context<?> ctx) {
-        return !asList(CUBRID, DERBY, FIREBIRD).contains(ctx.family());
+        return !asList(DERBY, FIREBIRD).contains(ctx.family());
     }
 
     @Override
     public final void accept(Context<?> ctx) {
         if (ifExists && !supportsIfExists(ctx)) {
-            Utils.executeImmediateBegin(ctx, SEQUENCE);
+            Tools.executeImmediateBegin(ctx, SEQUENCE);
             accept0(ctx);
-            Utils.executeImmediateEnd(ctx, SEQUENCE);
+            Tools.executeImmediateEnd(ctx, SEQUENCE);
         }
         else {
             accept0(ctx);
@@ -110,7 +110,10 @@ class DropSequenceImpl extends AbstractQuery implements
 
     private void accept0(Context<?> ctx) {
         ctx.start(DROP_SEQUENCE_SEQUENCE)
-           .keyword("drop sequence").sql(' ');
+           .keyword("drop")
+           .sql(' ')
+           .keyword(ctx.family() == CUBRID ? "serial" : "sequence")
+           .sql(' ');
 
         if (ifExists && supportsIfExists(ctx))
             ctx.keyword("if exists").sql(' ');

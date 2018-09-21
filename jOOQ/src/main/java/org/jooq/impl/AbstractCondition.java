@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,6 +50,7 @@ import org.jooq.Condition;
 import org.jooq.Context;
 import org.jooq.Field;
 import org.jooq.QueryPart;
+import org.jooq.SQL;
 import org.jooq.Select;
 
 /**
@@ -85,6 +86,11 @@ abstract class AbstractCondition extends AbstractQueryPart implements Condition 
     }
 
     @Override
+    public Condition and(Boolean other) {
+        return and(condition(other));
+    }
+
+    @Override
     public final Condition or(Condition other) {
         return DSL.or(this, other);
     }
@@ -92,6 +98,16 @@ abstract class AbstractCondition extends AbstractQueryPart implements Condition 
     @Override
     public final Condition or(Field<Boolean> other) {
         return or(condition(other));
+    }
+
+    @Override
+    public final Condition or(Boolean other) {
+        return or(condition(other));
+    }
+
+    @Override
+    public final Condition and(SQL sql) {
+        return and(condition(sql));
     }
 
     @Override
@@ -107,6 +123,11 @@ abstract class AbstractCondition extends AbstractQueryPart implements Condition 
     @Override
     public final Condition and(String sql, QueryPart... parts) {
         return and(condition(sql, parts));
+    }
+
+    @Override
+    public final Condition or(SQL sql) {
+        return or(condition(sql));
     }
 
     @Override
@@ -135,12 +156,22 @@ abstract class AbstractCondition extends AbstractQueryPart implements Condition 
     }
 
     @Override
+    public final Condition andNot(Boolean other) {
+        return andNot(condition(other));
+    }
+
+    @Override
     public final Condition orNot(Condition other) {
         return or(other.not());
     }
 
     @Override
     public final Condition orNot(Field<Boolean> other) {
+        return orNot(condition(other));
+    }
+
+    @Override
+    public final Condition orNot(Boolean other) {
         return orNot(condition(other));
     }
 

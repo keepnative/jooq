@@ -33,8 +33,8 @@ public class JavaWriter extends GeneratorWriter<JavaWriter> {
     private final String              className;
     private final boolean             isJava;
     private final boolean             isScala;
-    private final Pattern             REF_PATTERN      = Pattern
-                                                           .compile("((?:[\\p{L}_$][\\p{L}\\p{N}_$]*\\.)*[\\p{L}_$][\\p{L}\\p{N}_$]*)((?:<.*>|\\[.*\\])*)"); ;
+    private final Pattern             REF_PATTERN                = Pattern.compile("((?:[\\p{L}_$][\\p{L}\\p{N}_$]*\\.)*[\\p{L}_$][\\p{L}\\p{N}_$]*)((?:<.*>|\\[.*\\])*)");
+    private final Pattern             PLAIN_GENERIC_TYPE_PATTERN = Pattern.compile("[<\\[]((?:[\\p{L}_$][\\p{L}\\p{N}_$]*\\.)*[\\p{L}_$][\\p{L}\\p{N}_$]*)[>\\]]");
 
     public JavaWriter(File file, String fullyQualifiedTypes) {
         super(file);
@@ -74,7 +74,9 @@ public class JavaWriter extends GeneratorWriter<JavaWriter> {
     }
 
     private String escapeJavadoc(String string) {
-        return string.replace("*/", "* /");
+
+        // [#3450] [#4880] Must not print */ inside Javadoc
+        return string.replace("/*", "/ *").replace("*/", "* /");
     }
 
     public JavaWriter header(String header, Object... args) {
@@ -198,7 +200,13 @@ public class JavaWriter extends GeneratorWriter<JavaWriter> {
 
                                 unqualifiedTypes.put(unqualifiedType, qualifiedType);
                                 qualifiedTypes.add(qualifiedType);
-                                c = remainder + m.group(2);
+                                String generic = m.group(2);
+
+                                // Consider importing generic type arguments, recursively
+                                c = remainder
+                                  + (PLAIN_GENERIC_TYPE_PATTERN.matcher(generic).matches()
+                                  ?  generic.substring(0, 1) + ref(generic.substring(1, generic.length() - 1)) + generic.substring(generic.length() - 1)
+                                  :  generic);
                             }
                         }
                     }

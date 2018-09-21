@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -79,21 +79,21 @@ class Concat extends AbstractFunction<String> {
         Field<String>[] others = new Field[cast.length - 1];
         System.arraycopy(cast, 1, others, 0, others.length);
 
-        switch (configuration.dialect().family()) {
+        switch (configuration.family()) {
             case MARIADB:
             case SQL_SERVER:
             case MYSQL:
                 return function("concat", SQLDataType.VARCHAR, cast);
 
-            /* [pro] xx
-            xxxx xxxxxxx
-                xx xxx xxxxxx x xxxxxxx xxxxxxxxxx xxx xxxxx xxx xxxxxxxxxx
-                xxxxxx xxx xxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxx xxxxxxxx
 
-            xxxx xxxxxxxxxx
-                xxxxxx xxx xxxxxxxxxxxxxxxxxxxxxxx xxxxxx xxxxxxxx
 
-            xx [/pro] */
+
+
+
+
+
+
+
             default:
                 return new Expression<String>(CONCAT, first, others);
         }

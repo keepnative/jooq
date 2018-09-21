@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,11 +60,13 @@ abstract class AbstractGenerator implements Generator {
     boolean                            generateRecords                  = true;
     boolean                            generatePojos                    = false;
     boolean                            generatePojosEqualsAndHashCode   = false;
+    boolean                            generatePojosToString            = true;
     boolean                            generateImmutablePojos           = false;
     boolean                            generateInterfaces               = false;
     boolean                            generateDaos                     = false;
     boolean                            generateJPAAnnotations           = false;
     boolean                            generateValidationAnnotations    = false;
+    boolean                            generateSpringAnnotations        = false;
     boolean                            generateGlobalObjectReferences   = true;
     boolean                            generateGlobalRoutineReferences  = true;
     boolean                            generateGlobalSequenceReferences = true;
@@ -224,6 +226,16 @@ abstract class AbstractGenerator implements Generator {
     }
 
     @Override
+    public boolean generateSpringAnnotations() {
+        return generateSpringAnnotations;
+    }
+
+    @Override
+    public void setGenerateSpringAnnotations(boolean generateSpringAnnotations) {
+        this.generateSpringAnnotations = generateSpringAnnotations;
+    }
+
+    @Override
     public boolean generateGlobalObjectReferences() {
         return generateGlobalObjectReferences;
     }
@@ -291,6 +303,16 @@ abstract class AbstractGenerator implements Generator {
     @Override
     public void setGeneratePojosEqualsAndHashCode(boolean generatePojosEqualsAndHashCode) {
         this.generatePojosEqualsAndHashCode = generatePojosEqualsAndHashCode;
+    }
+
+    @Override
+    public boolean generatePojosToString() {
+        return generatePojosToString;
+    }
+
+    @Override
+    public void setGeneratePojosToString(boolean generatePojosToString) {
+        this.generatePojosToString = generatePojosToString;
     }
 
     @Override

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,6 +58,7 @@ import org.jooq.Field;
 import org.jooq.Operator;
 import org.jooq.QueryPart;
 import org.jooq.Record;
+import org.jooq.SQL;
 import org.jooq.Select;
 import org.jooq.Table;
 
@@ -119,7 +120,7 @@ implements
 
         // Apply relational division using double-nested NOT EXISTS clauses
         // There are more efficient ways to express division in SQL, but those
-        // are hard to simulate with jOOQ
+        // are hard to emulate with jOOQ
         return selectDistinct(select)
               .from(outer)
               .whereNotExists(
@@ -165,6 +166,17 @@ implements
     }
 
     @Override
+    public final DivideByOnConditionStep on(Boolean c) {
+        return on(condition(c));
+    }
+
+    @Override
+    public final DivideByOnConditionStep on(SQL sql) {
+        and(sql);
+        return this;
+    }
+
+    @Override
     public final DivideByOnConditionStep on(String sql) {
         and(sql);
         return this;
@@ -205,6 +217,16 @@ implements
     }
 
     @Override
+    public final DivideByOnConditionStep and(Boolean c) {
+        return and(condition(c));
+    }
+
+    @Override
+    public final DivideByOnConditionStep and(SQL sql) {
+        return and(condition(sql));
+    }
+
+    @Override
     public final DivideByOnConditionStep and(String sql) {
         return and(condition(sql));
     }
@@ -230,6 +252,11 @@ implements
     }
 
     @Override
+    public final DivideByOnConditionStep andNot(Boolean c) {
+        return andNot(condition(c));
+    }
+
+    @Override
     public final DivideByOnConditionStep andExists(Select<?> select) {
         return and(exists(select));
     }
@@ -248,6 +275,16 @@ implements
     @Override
     public final DivideByOnConditionStep or(Field<Boolean> c) {
         return or(condition(c));
+    }
+
+    @Override
+    public final DivideByOnConditionStep or(Boolean c) {
+        return or(condition(c));
+    }
+
+    @Override
+    public final DivideByOnConditionStep or(SQL sql) {
+        return or(condition(sql));
     }
 
     @Override
@@ -272,6 +309,11 @@ implements
 
     @Override
     public final DivideByOnConditionStep orNot(Field<Boolean> c) {
+        return orNot(condition(c));
+    }
+
+    @Override
+    public final DivideByOnConditionStep orNot(Boolean c) {
         return orNot(condition(c));
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,15 +67,42 @@ public interface AggregateFilterStep<T> extends WindowBeforeOverStep<T> {
     WindowBeforeOverStep<T> filterWhere(Collection<? extends Condition> conditions);
 
     /**
-     * Add a <code>FILTER clause</code> to the aggregate function, connecting
-     * conditions with each other with {@link Operator#AND}.
+     * Add a <code>FILTER clause</code> to the aggregate function.
      */
     @Support
     WindowBeforeOverStep<T> filterWhere(Field<Boolean> field);
 
     /**
-     * Add a <code>FILTER clause</code> to the aggregate function, connecting
-     * conditions with each other with {@link Operator#AND}.
+     * Add a <code>FILTER clause</code> to the aggregate function.
+     *
+     * @deprecated - 3.8.0 - [#4763] - Use {@link #filterWhere(Condition...)} or
+     *             {@link #filterWhere(Field)} instead. Due to ambiguity between
+     *             calling this method using {@link Field#equals(Object)}
+     *             argument, vs. calling the other method via a
+     *             {@link Field#equal(Object)} argument, this method will be
+     *             removed in the future.
+     */
+    @Deprecated
+    @Support
+    WindowBeforeOverStep<T> filterWhere(Boolean field);
+
+    /**
+     * Add a <code>FILTER clause</code> to the aggregate function.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#condition(SQL)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    WindowBeforeOverStep<T> filterWhere(SQL sql);
+
+    /**
+     * Add a <code>FILTER clause</code> to the aggregate function.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
      * guarantee syntax integrity. You may also create the possibility of
@@ -83,14 +110,14 @@ public interface AggregateFilterStep<T> extends WindowBeforeOverStep<T> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String)
+     * @see SQL
      */
     @Support
     @PlainSQL
     WindowBeforeOverStep<T> filterWhere(String sql);
 
     /**
-     * Add a <code>FILTER clause</code> to the aggregate function, connecting
-     * conditions with each other with {@link Operator#AND}.
+     * Add a <code>FILTER clause</code> to the aggregate function.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
      * guarantee syntax integrity. You may also create the possibility of
@@ -98,14 +125,14 @@ public interface AggregateFilterStep<T> extends WindowBeforeOverStep<T> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String, Object...)
+     * @see SQL
      */
     @Support
     @PlainSQL
     WindowBeforeOverStep<T> filterWhere(String sql, Object... bindings);
 
     /**
-     * Add a <code>FILTER clause</code> to the aggregate function, connecting
-     * conditions with each other with {@link Operator#AND}.
+     * Add a <code>FILTER clause</code> to the aggregate function.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
      * guarantee syntax integrity. You may also create the possibility of
@@ -113,6 +140,7 @@ public interface AggregateFilterStep<T> extends WindowBeforeOverStep<T> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String, QueryPart...)
+     * @see SQL
      */
     @Support
     @PlainSQL

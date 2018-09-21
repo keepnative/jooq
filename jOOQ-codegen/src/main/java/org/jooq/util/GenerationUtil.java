@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -205,7 +205,7 @@ class GenerationUtil {
     }
 
     private static String escape(char c) {
-        if (c == ' ' || c == '-')
+        if (c == ' ' || c == '-' || c == '.')
             return "_";
         else
             return "_" + Integer.toHexString(c);
@@ -228,7 +228,12 @@ class GenerationUtil {
      * Gets the base type for an array type, depending on the RDBMS dialect
      */
     static String getArrayBaseType(SQLDialect dialect, String t, String u) {
+
+        // [#4388] TODO: Improve array handling
         switch (dialect.family()) {
+
+
+
             case POSTGRES: {
 
                 // The convention is to prepend a "_" to a type to get an array type
@@ -246,9 +251,9 @@ class GenerationUtil {
                 return H2DataType.OTHER.getTypeName();
             }
 
-            /* [pro] xx
-            xxxx xxxxx
-            xx [/pro] */
+
+
+
             case HSQLDB: {
 
                 // In HSQLDB 2.2.5, there has been an incompatible INFORMATION_SCHEMA change around the

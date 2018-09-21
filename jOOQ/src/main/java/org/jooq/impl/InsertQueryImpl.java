@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,11 +47,13 @@ import static org.jooq.Clause.INSERT_INSERT_INTO;
 import static org.jooq.Clause.INSERT_ON_DUPLICATE_KEY_UPDATE;
 import static org.jooq.Clause.INSERT_ON_DUPLICATE_KEY_UPDATE_ASSIGNMENT;
 import static org.jooq.Clause.INSERT_RETURNING;
+import static org.jooq.Clause.INSERT_SELECT;
 import static org.jooq.SQLDialect.MARIADB;
 import static org.jooq.SQLDialect.MYSQL;
+import static org.jooq.impl.DSL.select;
+import static org.jooq.impl.DSL.selectOne;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
 
 import org.jooq.Clause;
@@ -63,7 +65,10 @@ import org.jooq.InsertQuery;
 import org.jooq.Merge;
 import org.jooq.MergeNotMatchedStep;
 import org.jooq.MergeOnConditionStep;
+import org.jooq.QueryPart;
 import org.jooq.Record;
+import org.jooq.SQLDialect;
+import org.jooq.Select;
 import org.jooq.Table;
 import org.jooq.exception.SQLDialectNotSupportedException;
 
@@ -77,15 +82,16 @@ class InsertQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
 
     private final FieldMapForUpdate  updateMap;
     private final FieldMapsForInsert insertMaps;
+    private Select<?>                select;
     private boolean                  defaultValues;
     private boolean                  onDuplicateKeyUpdate;
     private boolean                  onDuplicateKeyIgnore;
 
-    InsertQueryImpl(Configuration configuration, Table<R> into) {
-        super(configuration, into);
+    InsertQueryImpl(Configuration configuration, WithImpl with, Table<R> into) {
+        super(configuration, with, into);
 
-        updateMap = new FieldMapForUpdate(INSERT_ON_DUPLICATE_KEY_UPDATE_ASSIGNMENT);
-        insertMaps = new FieldMapsForInsert();
+        this.updateMap = new FieldMapForUpdate(INSERT_ON_DUPLICATE_KEY_UPDATE_ASSIGNMENT);
+        this.insertMaps = new FieldMapsForInsert();
     }
 
     @Override
@@ -118,12 +124,12 @@ class InsertQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
 
     @Override
     public final <T> void addValueForUpdate(Field<T> field, T value) {
-        updateMap.put(field, Utils.field(value, field));
+        updateMap.put(field, Tools.field(value, field));
     }
 
     @Override
     public final <T> void addValueForUpdate(Field<T> field, Field<T> value) {
-        updateMap.put(field, Utils.field(value, field));
+        updateMap.put(field, Tools.field(value, field));
     }
 
     @Override
@@ -137,6 +143,12 @@ class InsertQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
     }
 
     @Override
+    public final void setSelect(Field<?>[] f, Select<?> s) {
+        insertMaps.getMap().putFields(Arrays.asList(f));
+        select = s;
+    }
+
+    @Override
     public final void addValues(Map<? extends Field<?>, ?> map) {
         insertMaps.getMap().set(map);
     }
@@ -147,7 +159,7 @@ class InsertQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
         // ON DUPLICATE KEY UPDATE clause
         // ------------------------------
         if (onDuplicateKeyUpdate) {
-            switch (ctx.configuration().dialect().family()) {
+            switch (ctx.family()) {
 
                 // MySQL has a nice syntax for this
                 case CUBRID:
@@ -164,44 +176,85 @@ class InsertQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
                     break;
                 }
 
+                case POSTGRES: {
+                    toSQLInsert(ctx);
+                    ctx.formatSeparator()
+                       .start(INSERT_ON_DUPLICATE_KEY_UPDATE)
+                       .keyword("on conflict")
+                       .sql(" (");
+
+                    if (table.getPrimaryKey() == null) {
+                        ctx.sql("[unknown primary key]");
+                    }
+                    else {
+                        boolean qualify = ctx.qualify();
+
+                        ctx.qualify(false)
+                           .visit(new Fields<Record>(table.getPrimaryKey().getFields()))
+                           .qualify(qualify);
+                    }
+
+                    ctx.sql(") ")
+                       .keyword("do update")
+                       .formatSeparator()
+                       .keyword("set")
+                       .sql(' ')
+                       .formatIndentLockStart()
+                       .visit(updateMap)
+                       .formatIndentLockEnd()
+                       .end(INSERT_ON_DUPLICATE_KEY_UPDATE);
+
+                    break;
+                }
+
                 // Some dialects can't really handle this clause. Emulation should be done in two steps
                 case H2: {
-                    throw new SQLDialectNotSupportedException("The ON DUPLICATE KEY UPDATE clause cannot be emulated for " + ctx.configuration().dialect());
+                    throw new SQLDialectNotSupportedException("The ON DUPLICATE KEY UPDATE clause cannot be emulated for " + ctx.dialect());
                 }
 
                 // Some databases allow for emulating this clause using a MERGE statement
-                /* [pro] xx
-                xxxx xxxx
-                xxxx xxxxxxxxx
-                xxxx xxxxxxx
-                xxxx xxxxxxxxxx
-                xxxx xxxxxxx
-                xx [/pro] */
+
+
+
+
+
+
+
                 case HSQLDB: {
                     ctx.visit(toMerge(ctx.configuration()));
                     break;
                 }
 
                 default:
-                    throw new SQLDialectNotSupportedException("The ON DUPLICATE KEY UPDATE clause cannot be emulated for " + ctx.configuration().dialect());
+                    throw new SQLDialectNotSupportedException("The ON DUPLICATE KEY UPDATE clause cannot be emulated for " + ctx.dialect());
             }
         }
 
         // ON DUPLICATE KEY IGNORE clause
         // ------------------------------
         else if (onDuplicateKeyIgnore) {
-            switch (ctx.configuration().dialect().family()) {
+            switch (ctx.dialect()) {
 
                 // MySQL has a nice, native syntax for this
                 case MARIADB:
-                case MYSQL: {
+                case MYSQL:
+                case SQLITE: {
                     toSQLInsert(ctx);
                     ctx.start(INSERT_ON_DUPLICATE_KEY_UPDATE)
                        .end(INSERT_ON_DUPLICATE_KEY_UPDATE);
                     break;
                 }
 
-                // CUBRID can simulate this using ON DUPLICATE KEY UPDATE
+                case POSTGRES_9_5: {
+                    toSQLInsert(ctx);
+                    ctx.formatSeparator()
+                       .start(INSERT_ON_DUPLICATE_KEY_UPDATE)
+                       .keyword("on conflict do nothing")
+                       .end(INSERT_ON_DUPLICATE_KEY_UPDATE);
+                    break;
+                }
+
+                // CUBRID can emulate this using ON DUPLICATE KEY UPDATE
                 case CUBRID: {
                     FieldMapForUpdate update = new FieldMapForUpdate(INSERT_ON_DUPLICATE_KEY_UPDATE_ASSIGNMENT);
                     Field<?> field = table.field(0);
@@ -218,26 +271,35 @@ class InsertQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
                     break;
                 }
 
-                // Some dialects can't really handle this clause. Emulation should be done in two steps
-                case H2: {
-                    throw new SQLDialectNotSupportedException("The ON DUPLICATE KEY IGNORE clause cannot be emulated for " + ctx.configuration().dialect());
-                }
-
                 // Some databases allow for emulating this clause using a MERGE statement
-                /* [pro] xx
-                xxxx xxxx
-                xxxx xxxxxxxxx
-                xxxx xxxxxxx
-                xxxx xxxxxxxxxx
-                xxxx xxxxxxx
-                xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 case HSQLDB: {
                     ctx.visit(toMerge(ctx.configuration()));
                     break;
                 }
 
-                default:
-                    throw new SQLDialectNotSupportedException("The ON DUPLICATE KEY IGNORE clause cannot be emulated for " + ctx.configuration().dialect());
+                default: {
+                    ctx.visit(toInsertSelect(ctx.configuration()));
+                    break;
+                }
             }
         }
 
@@ -265,8 +327,14 @@ class InsertQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
         ctx.start(INSERT_INSERT_INTO)
            .keyword("insert")
            .sql(' ')
-           // [#1295] MySQL natively supports the IGNORE keyword
-           .keyword((onDuplicateKeyIgnore && asList(MARIADB, MYSQL).contains(ctx.configuration().dialect())) ? "ignore " : "")
+           // [#1295] [#4376] MySQL and SQLite have native syntaxes for
+           //                 INSERT [ OR ] IGNORE
+           .keyword((onDuplicateKeyIgnore && asList(MARIADB, MYSQL).contains(ctx.family()))
+                  ? "ignore "
+                  : (onDuplicateKeyIgnore && SQLDialect.SQLITE == ctx.family())
+                  ? "or ignore "
+                  : ""
+           )
            .keyword("into")
            .sql(' ')
            .declareTables(true)
@@ -281,18 +349,26 @@ class InsertQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
 
         ctx.end(INSERT_INSERT_INTO);
 
-        if (defaultValues) {
-            switch (ctx.configuration().dialect().family()) {
-                /* [pro] xx
-                xxxx xxxxxxx
-                xxxx xxxx
-                xxxx xxxxxxx
-                xx [/pro] */
+        if (select != null) {
+            ctx.formatSeparator()
+               .start(INSERT_SELECT)
+               .visit(select)
+               .end(INSERT_SELECT);
+        }
+        else if (defaultValues) {
+            switch (ctx.family()) {
+
+
+
+
+
 
                 case DERBY:
                 case MARIADB:
                 case MYSQL:
-                    ctx.sql(' ').keyword("values").sql('(');
+                    ctx.formatSeparator()
+                       .keyword("values")
+                       .sql('(');
 
                     int count = table.fields().length;
                     String separator = "";
@@ -307,7 +383,8 @@ class InsertQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
                     break;
 
                 default:
-                    ctx.sql(' ').keyword("default values");
+                    ctx.formatSeparator()
+                       .keyword("default values");
                     break;
             }
         }
@@ -316,31 +393,31 @@ class InsertQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
         }
     }
 
-    @SuppressWarnings("unchecked")
+    private final QueryPart toInsertSelect(Configuration configuration) {
+        if (table.getPrimaryKey() != null) {
+            return create(configuration)
+                .insertInto(table)
+                .columns(insertMaps.getMap().keySet())
+                .select(
+                    select(insertMaps.getMap().values())
+                    .whereNotExists(
+                        selectOne()
+                        .from(table)
+                        .where(matchByPrimaryKey())
+                    )
+                );
+        }
+        else {
+            throw new IllegalStateException("The ON DUPLICATE KEY IGNORE/UPDATE clause cannot be emulated when inserting into non-updatable tables : " + table);
+        }
+    }
+
     private final Merge<R> toMerge(Configuration configuration) {
         if (table.getPrimaryKey() != null) {
-            Condition condition = null;
-            List<Field<?>> key = new ArrayList<Field<?>>();
-
-            for (Field<?> f : table.getPrimaryKey().getFields()) {
-                Field<Object> field = (Field<Object>) f;
-                Field<Object> value = (Field<Object>) insertMaps.getMap().get(field);
-
-                key.add(value);
-                Condition other = field.equal(value);
-
-                if (condition == null) {
-                    condition = other;
-                }
-                else {
-                    condition = condition.and(other);
-                }
-            }
-
             MergeOnConditionStep<R> on =
             create(configuration).mergeInto(table)
                                  .usingDual()
-                                 .on(condition);
+                                 .on(matchByPrimaryKey());
 
             // [#1295] Use UPDATE clause only when with ON DUPLICATE KEY UPDATE,
             // not with ON DUPLICATE KEY IGNORE
@@ -354,12 +431,37 @@ class InsertQueryImpl<R extends Record> extends AbstractStoreQuery<R> implements
                              .values(insertMaps.getMap().values());
         }
         else {
-            throw new IllegalStateException("The ON DUPLICATE KEY IGNORE/UPDATE clause cannot be simulated when inserting into non-updatable tables : " + table);
+            throw new IllegalStateException("The ON DUPLICATE KEY IGNORE/UPDATE clause cannot be emulated when inserting into non-updatable tables : " + table);
         }
+    }
+
+    /**
+     * Produce a {@link Condition} that matches existing rows by the inserted or
+     * updated primary key values.
+     */
+    @SuppressWarnings("unchecked")
+    private final Condition matchByPrimaryKey() {
+        Condition condition = null;
+
+        for (Field<?> f : table.getPrimaryKey().getFields()) {
+            Field<Object> field = (Field<Object>) f;
+            Field<Object> value = (Field<Object>) insertMaps.getMap().get(field);
+
+            Condition other = field.equal(value);
+
+            if (condition == null) {
+                condition = other;
+            }
+            else {
+                condition = condition.and(other);
+            }
+        }
+
+        return condition;
     }
 
     @Override
     public final boolean isExecutable() {
-        return insertMaps.isExecutable() || defaultValues;
+        return insertMaps.isExecutable() || defaultValues || select != null;
     }
 }

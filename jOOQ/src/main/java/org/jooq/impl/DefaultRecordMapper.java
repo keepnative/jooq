@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,25 +43,28 @@ package org.jooq.impl;
 import static java.util.Collections.nCopies;
 import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.name;
-import static org.jooq.impl.Utils.getAnnotatedGetter;
-import static org.jooq.impl.Utils.getAnnotatedMembers;
-import static org.jooq.impl.Utils.getAnnotatedSetters;
-import static org.jooq.impl.Utils.getMatchingGetter;
-import static org.jooq.impl.Utils.getMatchingMembers;
-import static org.jooq.impl.Utils.getMatchingSetters;
-import static org.jooq.impl.Utils.getPropertyName;
-import static org.jooq.impl.Utils.hasColumnAnnotations;
+import static org.jooq.impl.Tools.getAnnotatedGetter;
+import static org.jooq.impl.Tools.getAnnotatedMembers;
+import static org.jooq.impl.Tools.getAnnotatedSetters;
+import static org.jooq.impl.Tools.getMatchingGetter;
+import static org.jooq.impl.Tools.getMatchingMembers;
+import static org.jooq.impl.Tools.getMatchingSetters;
+import static org.jooq.impl.Tools.getPropertyName;
+import static org.jooq.impl.Tools.hasColumnAnnotations;
 import static org.jooq.tools.reflect.Reflect.accessible;
 
 import java.beans.ConstructorProperties;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -175,7 +178,8 @@ import org.jooq.tools.reflect.Reflect;
  * <li>The standard JavaBeans {@link ConstructorProperties} annotation is used
  * to match constructor arguments against POJO members or getters.</li>
  * <li>If the property names provided to the constructor match the record's
- * columns via the aforementioned naming conventions, that information is used.</li>
+ * columns via the aforementioned naming conventions, that information is used.
+ * </li>
  * <li>If those POJO members or getters have JPA annotations, those will be used
  * according to the aforementioned rules, in order to map <code>Record</code>
  * values onto constructor arguments.</li>
@@ -250,11 +254,6 @@ public class DefaultRecordMapper<R extends Record, E> implements RecordMapper<R,
     private final Configuration      configuration;
 
     /**
-     * An optional target instance to use instead of creating new instances.
-     */
-    private transient E              instance;
-
-    /**
      * A delegate mapper created from type information in <code>type</code>.
      */
     private RecordMapper<R, E>       delegate;
@@ -274,17 +273,16 @@ public class DefaultRecordMapper<R extends Record, E> implements RecordMapper<R,
     DefaultRecordMapper(RecordType<R> rowType, Class<? extends E> type, E instance, Configuration configuration) {
         this.fields = rowType.fields();
         this.type = type;
-        this.instance = instance;
         this.configuration = configuration;
 
-        init();
+        init(instance);
     }
 
-    private final void init() {
+    private final void init(E instance) {
 
         // Arrays can be mapped easily
         if (type.isArray()) {
-            delegate = new ArrayMapper();
+            delegate = new ArrayMapper(instance);
             return;
         }
 
@@ -308,7 +306,7 @@ public class DefaultRecordMapper<R extends Record, E> implements RecordMapper<R,
 
         // [#1340] Allow for using non-public default constructors
         try {
-            delegate = new MutablePOJOMapper(type.getDeclaredConstructor());
+            delegate = new MutablePOJOMapper(type.getDeclaredConstructor(), instance);
             return;
         }
         catch (NoSuchMethodException ignore) {}
@@ -374,6 +372,12 @@ public class DefaultRecordMapper<R extends Record, E> implements RecordMapper<R,
      */
     private class ArrayMapper implements RecordMapper<R, E> {
 
+        private final E instance;
+
+        ArrayMapper(E instance) {
+            this.instance = instance;
+        }
+
         @Override
         public final E map(R record) {
             int size = record.size();
@@ -415,23 +419,38 @@ public class DefaultRecordMapper<R extends Record, E> implements RecordMapper<R,
      */
     private class ProxyMapper implements RecordMapper<R, E> {
 
-        private final MutablePOJOMapper localDelegate;
-
-        ProxyMapper() {
-            this.localDelegate = new MutablePOJOMapper(null);
-        }
-
         @Override
         public final E map(R record) {
-            E previous = instance;
+            return new MutablePOJOMapper(null, proxy()).map(record);
+        }
 
-            try {
-                instance = Reflect.on(HashMap.class).create().as(type);
-                return localDelegate.map(record);
-            }
-            finally {
-                instance = previous;
-            }
+        private E proxy() {
+            final Map<String, Object> map = new HashMap<String, Object>();
+            final InvocationHandler handler = new InvocationHandler() {
+
+                @SuppressWarnings("null")
+                @Override
+                public Object invoke(Object proxy, Method method, Object[] args) {
+                    String name = method.getName();
+
+                    int length = (args == null ? 0 : args.length);
+
+                    if (length == 0 && name.startsWith("get")) {
+                        return map.get(name.substring(3));
+                    }
+                    else if (length == 0 && name.startsWith("is")) {
+                        return map.get(name.substring(2));
+                    }
+                    else if (length == 1 && name.startsWith("set")) {
+                        map.put(name.substring(3), args[0]);
+                        return null;
+                    }
+
+                    return null;
+                }
+            };
+
+            return (E) Proxy.newProxyInstance(type.getClassLoader(), new Class[] { type }, handler);
         }
     }
 
@@ -499,13 +518,15 @@ public class DefaultRecordMapper<R extends Record, E> implements RecordMapper<R,
         private final List<java.lang.reflect.Field>[]            members;
         private final List<java.lang.reflect.Method>[]           methods;
         private final Map<String, List<RecordMapper<R, Object>>> nested;
+        private final E                                          instance;
 
-        MutablePOJOMapper(Constructor<? extends E> constructor) {
+        MutablePOJOMapper(Constructor<? extends E> constructor, E instance) {
             this.constructor = accessible(constructor);
             this.useAnnotations = hasColumnAnnotations(configuration, type);
             this.members = new List[fields.length];
             this.methods = new List[fields.length];
             this.nested = new HashMap<String, List<RecordMapper<R, Object>>>();
+            this.instance = instance;
 
             Map<String, Field<?>[]> nestedFields = new HashMap<String, Field<?>[]>();
             for (int i = 0; i < fields.length; i++) {
@@ -555,7 +576,7 @@ public class DefaultRecordMapper<R extends Record, E> implements RecordMapper<R,
                         new DefaultRecordMapper<R, Object>(
                             new Fields<R>(entry.getValue()),
                             member.getType(),
-                            instance,
+                            null,
                             configuration
                         ), fields, prefix
                     ));
@@ -566,7 +587,7 @@ public class DefaultRecordMapper<R extends Record, E> implements RecordMapper<R,
                         new DefaultRecordMapper<R, Object>(
                             new Fields<R>(entry.getValue()),
                             method.getParameterTypes()[0],
-                            instance,
+                            null,
                             configuration
                         ), fields, prefix
                     ));
@@ -576,6 +597,7 @@ public class DefaultRecordMapper<R extends Record, E> implements RecordMapper<R,
             }
         }
 
+        @SuppressWarnings("rawtypes")
         @Override
         public final E map(R record) {
             try {
@@ -591,7 +613,19 @@ public class DefaultRecordMapper<R extends Record, E> implements RecordMapper<R,
                     }
 
                     for (java.lang.reflect.Method method : methods[i]) {
-                        method.invoke(result, record.getValue(i, method.getParameterTypes()[0]));
+                        Class<?> mType = method.getParameterTypes()[0];
+                        Object value = record.getValue(i, mType);
+
+                        // [#3082] Map nested collection types
+                        if (value instanceof Collection && List.class.isAssignableFrom(mType)) {
+                            Class componentType = (Class) ((ParameterizedType) method.getGenericParameterTypes()[0]).getActualTypeArguments()[0];
+                            method.invoke(result, Convert.convert((Collection) value, componentType));
+                        }
+
+                        // Default reference types (including arrays)
+                        else {
+                            method.invoke(result, record.getValue(i, mType));
+                        }
                     }
                 }
 
@@ -622,6 +656,7 @@ public class DefaultRecordMapper<R extends Record, E> implements RecordMapper<R,
             }
         }
 
+        @SuppressWarnings("rawtypes")
         private final void map(Record record, Object result, java.lang.reflect.Field member, int index) throws IllegalAccessException {
             Class<?> mType = member.getType();
 
@@ -651,8 +686,20 @@ public class DefaultRecordMapper<R extends Record, E> implements RecordMapper<R,
                     map(record.getValue(index, char.class), result, member);
                 }
             }
+
             else {
-                map(record.getValue(index, mType), result, member);
+                Object value = record.getValue(index, mType);
+
+                // [#3082] Map nested collection types
+                if (value instanceof Collection && List.class.isAssignableFrom(mType)) {
+                    Class componentType = (Class) ((ParameterizedType) member.getGenericType()).getActualTypeArguments()[0];
+                    member.set(result, Convert.convert((Collection) value, componentType));
+                }
+
+                // Default reference types (including arrays)
+                else {
+                    map(value, result, member);
+                }
             }
         }
 
@@ -814,7 +861,7 @@ public class DefaultRecordMapper<R extends Record, E> implements RecordMapper<R,
             Attachable a = (Attachable) attachable;
             AttachableInternal r = (AttachableInternal) record;
 
-            if (Utils.attachRecords(r.configuration())) {
+            if (Tools.attachRecords(r.configuration())) {
                 a.attach(r.configuration());
             }
         }

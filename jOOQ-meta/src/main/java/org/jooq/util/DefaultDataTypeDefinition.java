@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -141,6 +141,11 @@ public class DefaultDataTypeDefinition implements DataTypeDefinition {
     }
 
     @Override
+    public final boolean isArray() {
+        return getDatabase().getArray(schema, udtName) != null;
+    }
+
+    @Override
     public final String getType() {
         return typeName;
     }
@@ -177,16 +182,16 @@ public class DefaultDataTypeDefinition implements DataTypeDefinition {
 
     @Override
     public final boolean isGenericNumberType() {
-        /* [pro] xx
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxx x
-            xxxx xxxxxxx x
-                xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                    xx xxxxxxxxx xx x
-                    xx xxxxx xx xxx
-            x
-        x
 
-        xx [/pro] */
+
+
+
+
+
+
+
+
+
         return false;
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -93,13 +93,13 @@ abstract class AbstractParam<T> extends AbstractField<T> implements Param<T> {
         return paramName != null
              ? paramName
 
-             /* [pro] xx
-             xx xxxxxxx xxxxxxx xxxxxxxxxxxxxx xxxx xxx xxxxxxx xxxx xxxxxx
-             x xxxxx xxxxxxxxxx xxxxxxxxx
-             x xxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxx
-             x xxxxx xxxxxxxxxx xxxxxxxxxxx
-             x xxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxx
-             xx [/pro] */
+             // [#3707] Protect value.toString call for certain jOOQ types.
+             : value instanceof UDTRecord
+             ? ((UDTRecord<?>) value).getUDT().getName()
+
+
+
+
 
              : String.valueOf(value);
     }
@@ -111,6 +111,11 @@ abstract class AbstractParam<T> extends AbstractField<T> implements Param<T> {
     @Override
     public final Clause[] clauses(Context<?> ctx) {
         return CLAUSES;
+    }
+
+    @Override
+    public final boolean generatesCast() {
+        return true;
     }
 
     // ------------------------------------------------------------------------

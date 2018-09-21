@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,6 +67,36 @@ public interface DivideByOnConditionStep extends DivideByReturningStep {
     /**
      * Combine the currently assembled conditions with another one using the
      * {@link Operator#AND} operator.
+     *
+     * @deprecated - 3.8.0 - [#4763] - Use {@link #and(Condition)} or
+     *             {@link #and(Field)} instead. Due to ambiguity between calling
+     *             this method using {@link Field#equals(Object)} argument, vs.
+     *             calling the other method via a {@link Field#equal(Object)}
+     *             argument, this method will be removed in the future.
+     */
+    @Deprecated
+    @Support
+    DivideByOnConditionStep and(Boolean condition);
+
+    /**
+     * Combine the currently assembled conditions with another one using the
+     * {@link Operator#AND} operator.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#condition(SQL)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    DivideByOnConditionStep and(SQL sql);
+
+    /**
+     * Combine the currently assembled conditions with another one using the
+     * {@link Operator#AND} operator.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
      * guarantee syntax integrity. You may also create the possibility of
@@ -74,6 +104,7 @@ public interface DivideByOnConditionStep extends DivideByReturningStep {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -89,6 +120,7 @@ public interface DivideByOnConditionStep extends DivideByReturningStep {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String, Object...)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -104,6 +136,7 @@ public interface DivideByOnConditionStep extends DivideByReturningStep {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String, QueryPart...)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -122,6 +155,21 @@ public interface DivideByOnConditionStep extends DivideByReturningStep {
      */
     @Support
     DivideByOnConditionStep andNot(Field<Boolean> condition);
+
+    /**
+     * Combine the currently assembled conditions with a negated other one using
+     * the {@link Operator#AND} operator.
+     *
+     * @deprecated - 3.8.0 - [#4763] - Use {@link #andNot(Condition)} or
+     *             {@link #andNot(Field)} instead. Due to ambiguity between
+     *             calling this method using {@link Field#equals(Object)}
+     *             argument, vs. calling the other method via a
+     *             {@link Field#equal(Object)} argument, this method will be
+     *             removed in the future.
+     */
+    @Deprecated
+    @Support
+    DivideByOnConditionStep andNot(Boolean condition);
 
     /**
      * Combine the currently assembled conditions with an <code>EXISTS</code>
@@ -154,6 +202,36 @@ public interface DivideByOnConditionStep extends DivideByReturningStep {
     /**
      * Combine the currently assembled conditions with another one using the
      * {@link Operator#OR} operator.
+     *
+     * @deprecated - 3.8.0 - [#4763] - Use {@link #or(Condition)} or
+     *             {@link #or(Field)} instead. Due to ambiguity between calling
+     *             this method using {@link Field#equals(Object)} argument, vs.
+     *             calling the other method via a {@link Field#equal(Object)}
+     *             argument, this method will be removed in the future.
+     */
+    @Deprecated
+    @Support
+    DivideByOnConditionStep or(Boolean condition);
+
+    /**
+     * Combine the currently assembled conditions with another one using the
+     * {@link Operator#OR} operator.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#condition(SQL)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    DivideByOnConditionStep or(SQL sql);
+
+    /**
+     * Combine the currently assembled conditions with another one using the
+     * {@link Operator#OR} operator.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
      * guarantee syntax integrity. You may also create the possibility of
@@ -161,6 +239,7 @@ public interface DivideByOnConditionStep extends DivideByReturningStep {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -176,6 +255,7 @@ public interface DivideByOnConditionStep extends DivideByReturningStep {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String, Object...)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -191,6 +271,7 @@ public interface DivideByOnConditionStep extends DivideByReturningStep {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String, QueryPart...)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -209,6 +290,21 @@ public interface DivideByOnConditionStep extends DivideByReturningStep {
      */
     @Support
     DivideByOnConditionStep orNot(Field<Boolean> condition);
+
+    /**
+     * Combine the currently assembled conditions with a negated other one using
+     * the {@link Operator#OR} operator.
+     *
+     * @deprecated - 3.8.0 - [#4763] - Use {@link #orNot(Condition)} or
+     *             {@link #orNot(Field)} instead. Due to ambiguity between
+     *             calling this method using {@link Field#equals(Object)}
+     *             argument, vs. calling the other method via a
+     *             {@link Field#equal(Object)} argument, this method will be
+     *             removed in the future.
+     */
+    @Deprecated
+    @Support
+    DivideByOnConditionStep orNot(Boolean condition);
 
     /**
      * Combine the currently assembled conditions with an <code>EXISTS</code>

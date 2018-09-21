@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,14 +40,16 @@
  */
 package org.jooq.impl;
 
+import static java.util.Arrays.asList;
+// ...
+// ...
 // ...
 // ...
 import static org.jooq.conf.RenderNameStyle.LOWER;
 import static org.jooq.conf.RenderNameStyle.UPPER;
 import static org.jooq.impl.DSL.select;
-// ...
-import static org.jooq.impl.Utils.fieldArray;
-import static org.jooq.impl.Utils.unqualify;
+import static org.jooq.impl.Tools.fieldArray;
+import static org.jooq.impl.Tools.unqualify;
 import static org.jooq.util.sqlite.SQLiteDSL.rowid;
 
 import java.sql.Connection;
@@ -71,6 +73,7 @@ import org.jooq.Result;
 import org.jooq.SQLDialect;
 import org.jooq.Table;
 import org.jooq.conf.RenderNameStyle;
+import org.jooq.impl.Tools.DataKey;
 import org.jooq.tools.jdbc.JDBCUtils;
 
 /**
@@ -81,15 +84,17 @@ abstract class AbstractDMLQuery<R extends Record> extends AbstractQuery {
     /**
      * Generated UID
      */
-    private static final long serialVersionUID = -7438014075226919192L;
+    private static final long     serialVersionUID = -7438014075226919192L;
 
+    final WithImpl                with;
     final Table<R>                table;
     final QueryPartList<Field<?>> returning;
     Result<R>                     returned;
 
-    AbstractDMLQuery(Configuration configuration, Table<R> table) {
+    AbstractDMLQuery(Configuration configuration, WithImpl with, Table<R> table) {
         super(configuration);
 
+        this.with = with;
         this.table = table;
         this.returning = new QueryPartList<Field<?>>();
     }
@@ -100,7 +105,7 @@ abstract class AbstractDMLQuery<R extends Record> extends AbstractQuery {
     }
 
     // @Override
-    public final void setReturning(Identity<R, ? extends Number> identity) {
+    public final void setReturning(Identity<R, ?> identity) {
         if (identity != null) {
             setReturning(identity.getField());
         }
@@ -137,17 +142,19 @@ abstract class AbstractDMLQuery<R extends Record> extends AbstractQuery {
 
     @Override
     public final void accept(Context<?> ctx) {
+        if (with != null)
+            ctx.visit(with).formatSeparator();
 
-        /* [pro] xx
-        xx xxxxxxxxxxxxx xx xxx
-                xx xxxxxxxxxxxxxxxxxxxx
-                xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xx xxxxx x
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxx xxxxxxxxxxxxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxx
-        x
-        xxxx
-        xx [/pro] */
+
+
+
+
+
+
+
+
+
+
         {
             accept0(ctx);
         }
@@ -179,39 +186,39 @@ abstract class AbstractDMLQuery<R extends Record> extends AbstractQuery {
     protected final void prepare(ExecuteContext ctx) throws SQLException {
         Connection connection = ctx.connection();
 
-        /* [pro] xx
-        xx xxxx xx xxxxx xxxxxx xxx xxxxxx xxx xxxxxxxxx xxxx xx xxxxxx
-        xx xxxxxxxxx xxxx xx xxxxxx xxxx xxxxx xx xxxxxx xxxxxxxxxx xxxxxxxxxx
-        xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xx xxxxxxxxxxxxxxx x
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            xxxxxxx
-        x
 
-        xx xxxxxx xxxxxxxxx xxxxxxxxx xx xx xxxxxx xxxxxx xx xxxxxxxx
-        xxxx xx [/pro] */if (returning.isEmpty()) {
+
+
+
+
+
+
+
+
+                         if (returning.isEmpty()) {
             super.prepare(ctx);
             return;
         }
 
-        /* [pro] xx
-        xx xxxx xxxxxxx xxxxxxx xxxxxxxx xxxxxxxxx xxxx
-        xxxx xx xxxxxxxxxxxxx xx xxxxx x
-            xxxxxxxxxxxxxxxxxxx
-            xxxxxxx
-        x
-        xx [/pro] */
+
+
+
+
+
+
+
 
         // Values should be returned from the INSERT
         else {
             switch (ctx.family()) {
 
-                /* [pro] xx
-                xxxx xxxxxxx
-                xx xxxxxxx xxx xxxxx xxx xxxxxx xx xxxx xxxxx xxxxx xxxxxxx xxx xxxxxx
-                xxxx xxxx
-                xx xxxxxx xxxx xxxxxx xxxxxxxxxx xxxxx xxx xxxxxx
-                xxxx xxxxxxx
-                xx [/pro] */
+
+
+
+
+
+
+
 
                 // Postgres uses the RETURNING clause in SQL
                 case FIREBIRD:
@@ -226,12 +233,13 @@ abstract class AbstractDMLQuery<R extends Record> extends AbstractQuery {
                 // Some dialects can only return AUTO_INCREMENT values
                 // Other values have to be fetched in a second step
                 // [#1260] TODO CUBRID supports this, but there's a JDBC bug
-                /* [pro] xx
-                xxxx xxxx
-                xxxx xxxxxxxxx
-                xxxx xxxxxxx
-                xxxx xxxxxxxxxx
-                xx [/pro] */
+
+
+
+
+
+
+
                 case DERBY:
                 case H2:
                 case MARIADB:
@@ -240,9 +248,9 @@ abstract class AbstractDMLQuery<R extends Record> extends AbstractQuery {
                     return;
 
                 // The default is to return all requested fields directly
-                /* [pro] xx
-                xxxx xxxxxxx
-                xx [/pro] */
+
+
+
                 case HSQLDB:
                 default: {
                     List<String> names = new ArrayList<String>();
@@ -275,12 +283,12 @@ abstract class AbstractDMLQuery<R extends Record> extends AbstractQuery {
         if (returning.isEmpty()) {
             return super.execute(ctx, listener);
         }
-        /* [pro] xx
-        xx xxxx xxxxxxx xxxxxxx xxxxxxxx xxxxxxxxx xxxx
-        xxxx xx xxxxxxxxxxxxx xx xxxxx x
-            xxxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxxx
-        x
-        xx [/pro] */
+
+
+
+
+
+
         else {
             int result = 1;
             ResultSet rs;
@@ -303,15 +311,15 @@ abstract class AbstractDMLQuery<R extends Record> extends AbstractQuery {
                     return result;
                 }
 
-                /* [pro] xx
-                xxxx xxxxxxx
 
-                xx xxxxxx xxx xxxxxx xxxxxxxxxx xxxxx xxx xxxxxx
-                xx xxxx xxxxxx xxx xxxxx xxxx xxxxx xx x xxxxxx xxxxxx xxxx
-                xx xxxxxxxxx xxxx xxxxx xxxx xxxx xxxxxxx xxx xxxx xxxx xx xxxx
-                xx xxxx xxxx xxxxxx xx xxxx xxx xxxxxx xxx xxxxxxxxxxxx
-                xxxx xxxxxxx
-                xx [/pro] */
+
+
+
+
+
+
+
+
 
                 case CUBRID: {
                     listener.executeStart(ctx);
@@ -326,12 +334,13 @@ abstract class AbstractDMLQuery<R extends Record> extends AbstractQuery {
                 // Some dialects can only retrieve "identity" (AUTO_INCREMENT) values
                 // Additional values have to be fetched explicitly
                 // [#1260] TODO CUBRID supports this, but there's a JDBC bug
-                /* [pro] xx
-                xxxx xxxx
-                xxxx xxxxxxxxx
-                xxxx xxxxxxx
-                xxxx xxxxxxxxxx
-                xx [/pro] */
+
+
+
+
+
+
+
                 case DERBY:
                 case H2:
                 case MARIADB:
@@ -362,10 +371,10 @@ abstract class AbstractDMLQuery<R extends Record> extends AbstractQuery {
                     }
                 }
 
-                /* [pro] xx
-                xx xxxxxxx xxx xxxxx xxx xxxxxx xx xxxx xxxxx xxxxx xxxxxxx xxx xxxxxx
-                xxxx xxxx
-                xx [/pro] */
+
+
+
+
 
                 // Firebird and Postgres can execute the INSERT .. RETURNING
                 // clause like a select clause. JDBC support is not implemented
@@ -379,9 +388,9 @@ abstract class AbstractDMLQuery<R extends Record> extends AbstractQuery {
                 }
 
                 // These dialects have full JDBC support
-                /* [pro] xx
-                xxxx xxxxxxx
-                xx [/pro] */
+
+
+
                 case HSQLDB:
                 default: {
                     listener.executeStart(ctx);
@@ -419,8 +428,8 @@ abstract class AbstractDMLQuery<R extends Record> extends AbstractQuery {
             // This shouldn't be null, as relevant dialects should
             // return empty generated keys ResultSet
             if (table.getIdentity() != null) {
-                final Field<Number> field = (Field<Number>) table.getIdentity().getField();
-                Number[] ids = new Number[values.length];
+                final Field<Object> field = (Field<Object>) table.getIdentity().getField();
+                Object[] ids = new Object[values.length];
                 for (int i = 0; i < values.length; i++) {
                     ids[i] = field.getDataType().convert(values[i]);
                 }
@@ -428,9 +437,9 @@ abstract class AbstractDMLQuery<R extends Record> extends AbstractQuery {
                 // Only the IDENTITY value was requested. No need for an
                 // additional query
                 if (returning.size() == 1 && new Fields<Record>(returning).field(field) != null) {
-                    for (final Number id : ids) {
+                    for (final Object id : ids) {
                         getReturnedRecords().add(
-                        Utils.newRecord(true, table, configuration)
+                        Tools.newRecord(true, table, configuration)
                              .operate(new RecordOperation<R, RuntimeException>() {
 
                                 @Override

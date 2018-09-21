@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,14 +40,15 @@
  */
 package org.jooq.impl;
 
-import static org.jooq.impl.Utils.DATA_DEFAULT_TRANSACTION_PROVIDER_AUTOCOMMIT;
-import static org.jooq.impl.Utils.DATA_DEFAULT_TRANSACTION_PROVIDER_CONNECTION;
-import static org.jooq.impl.Utils.DATA_DEFAULT_TRANSACTION_PROVIDER_SAVEPOINTS;
+import static org.jooq.impl.Tools.DataKey.DATA_DEFAULT_TRANSACTION_PROVIDER_AUTOCOMMIT;
+import static org.jooq.impl.Tools.DataKey.DATA_DEFAULT_TRANSACTION_PROVIDER_CONNECTION;
+import static org.jooq.impl.Tools.DataKey.DATA_DEFAULT_TRANSACTION_PROVIDER_SAVEPOINTS;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Savepoint;
-import java.util.Stack;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 import org.jooq.Configuration;
 import org.jooq.ConnectionProvider;
@@ -60,32 +61,56 @@ import org.jooq.exception.DataAccessException;
  * <p>
  * This implementation is entirely based on JDBC transactions and is intended to
  * work with {@link DefaultConnectionProvider} (which is implicitly created when
- * using {@link DSL#using(Connection)}). It supports nested transactions by
- * modeling them implicitly with JDBC {@link Savepoint}s, if supported by the
- * underlying JDBC driver.
+ * using {@link DSL#using(Connection)}).
+ * <p>
+ * <h3>Nesting of transactions</h3> By default, nested transactions are
+ * supported by modeling them implicitly with JDBC {@link Savepoint}s, if
+ * supported by the underlying JDBC driver, and if {@link #nested()} is
+ * <code>true</code>. To deactivate nested transactions, use
+ * {@link #DefaultTransactionProvider(ConnectionProvider, boolean)}.
  *
  * @author Lukas Eder
  */
 public class DefaultTransactionProvider implements TransactionProvider {
 
     /**
-     * This dummy {@link Savepoint} serves as a marker for top level
+     * This {@link Savepoint} serves as a marker for top level
      * transactions in dialects that do not support Savepoints.
      */
-    private static final Savepoint   DUMMY_SAVEPOINT = new DefaultSavepoint();
+    private static final Savepoint UNSUPPORTED_SAVEPOINT = new DefaultSavepoint();
+
+    /**
+     * This {@link Savepoint} serves as a marker for top level
+     * transactions if {@link #nested()} transactions are deactivated.
+     */
+    private static final Savepoint IGNORED_SAVEPOINT     = new DefaultSavepoint();
 
     private final ConnectionProvider provider;
+    private final boolean            nested;
 
     public DefaultTransactionProvider(ConnectionProvider provider) {
+        this(provider, true);
+    }
+
+    /**
+     * @param nested Whether nested transactions via {@link Savepoint}s are
+     *            supported.
+     */
+    public DefaultTransactionProvider(ConnectionProvider provider, boolean nested) {
         this.provider = provider;
+        this.nested = nested;
+    }
+
+    public final boolean nested() {
+        return nested;
     }
 
     @SuppressWarnings("unchecked")
-    private final Stack<Savepoint> savepoints(Configuration configuration) {
-        Stack<Savepoint> savepoints = (Stack<Savepoint>) configuration.data(DATA_DEFAULT_TRANSACTION_PROVIDER_SAVEPOINTS);
+    private final Deque<Savepoint> savepoints(Configuration configuration) {
+        Deque<Savepoint> savepoints = (Deque<Savepoint>) configuration.data(DATA_DEFAULT_TRANSACTION_PROVIDER_SAVEPOINTS);
 
         if (savepoints == null) {
-            savepoints = new Stack<Savepoint>();
+            savepoints = new ArrayDeque<Savepoint>();
             configuration.data(DATA_DEFAULT_TRANSACTION_PROVIDER_SAVEPOINTS, savepoints);
         }
 
@@ -116,28 +141,30 @@ public class DefaultTransactionProvider implements TransactionProvider {
 
     @Override
     public final void begin(TransactionContext ctx) {
-        Stack<Savepoint> savepoints = savepoints(ctx.configuration());
+        Deque<Savepoint> savepoints = savepoints(ctx.configuration());
 
         // This is the top-level transaction
-        if (savepoints.isEmpty()) {
+        if (savepoints.isEmpty())
             brace(ctx.configuration(), true);
-        }
 
         Savepoint savepoint = setSavepoint(ctx.configuration());
 
-        if (savepoint == DUMMY_SAVEPOINT && savepoints.size() > 0)
+        if (savepoint == UNSUPPORTED_SAVEPOINT && !savepoints.isEmpty())
             throw new DataAccessException("Cannot nest transactions because Savepoints are not supported");
 
         savepoints.push(savepoint);
     }
 
     private Savepoint setSavepoint(Configuration configuration) {
+        if (!nested())
+            return IGNORED_SAVEPOINT;
+
         switch (configuration.family()) {
-            /* [pro] xx
-            xxxx xxxxx
-            xx [/pro] */
+
+
+
             case CUBRID:
-                return DUMMY_SAVEPOINT;
+                return UNSUPPORTED_SAVEPOINT;
             default:
                 return connection(configuration).setSavepoint();
         }
@@ -145,11 +172,11 @@ public class DefaultTransactionProvider implements TransactionProvider {
 
     @Override
     public final void commit(TransactionContext ctx) {
-        Stack<Savepoint> savepoints = savepoints(ctx.configuration());
+        Deque<Savepoint> savepoints = savepoints(ctx.configuration());
         Savepoint savepoint = savepoints.pop();
 
         // [#3489] Explicitly release savepoints prior to commit
-        if (savepoint != null && savepoint != DUMMY_SAVEPOINT)
+        if (savepoint != null && savepoint != UNSUPPORTED_SAVEPOINT && savepoint != IGNORED_SAVEPOINT)
             try {
                 connection(ctx.configuration()).releaseSavepoint(savepoint);
             }
@@ -171,7 +198,7 @@ public class DefaultTransactionProvider implements TransactionProvider {
 
     @Override
     public final void rollback(TransactionContext ctx) {
-        Stack<Savepoint> savepoints = savepoints(ctx.configuration());
+        Deque<Savepoint> savepoints = savepoints(ctx.configuration());
         Savepoint savepoint = null;
 
         // [#3537] If something went wrong with the savepoints per se
@@ -179,10 +206,19 @@ public class DefaultTransactionProvider implements TransactionProvider {
             savepoint = savepoints.pop();
 
         try {
-            if (savepoint == null || savepoint == DUMMY_SAVEPOINT)
+            if (savepoint == null || savepoint == UNSUPPORTED_SAVEPOINT) {
                 connection(ctx.configuration()).rollback();
-            else
+            }
+
+            // [#3955] ROLLBACK is only effective if an exception reaches the
+            //         top-level transaction.
+            else if (savepoint == IGNORED_SAVEPOINT) {
+                if (savepoints.isEmpty())
+                    connection(ctx.configuration()).rollback();
+            }
+            else {
                 connection(ctx.configuration()).rollback(savepoint);
+            }
         }
 
         finally {

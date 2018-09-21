@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,6 +74,41 @@ public interface Condition extends QueryPart {
     /**
      * Combine this condition with another one using the {@link Operator#AND}
      * operator.
+     *
+     * @param other The other condition
+     * @return The combined condition
+     *
+     * @deprecated - 3.8.0 - [#4763] - Use {@link #and(Condition)} or
+     *             {@link #and(Field)} instead. Due to ambiguity between calling
+     *             this method using {@link Field#equals(Object)} argument, vs.
+     *             calling the other method via a {@link Field#equal(Object)}
+     *             argument, this method will be removed in the future.
+     */
+    @Deprecated
+    @Support
+    Condition and(Boolean other);
+
+    /**
+     * Combine this condition with another one using the {@link Operator#AND}
+     * operator.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The other condition
+     * @return The combined condition
+     * @see DSL#condition(SQL)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Condition and(SQL sql);
+
+    /**
+     * Combine this condition with another one using the {@link Operator#AND}
+     * operator.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
      * guarantee syntax integrity. You may also create the possibility of
@@ -83,6 +118,7 @@ public interface Condition extends QueryPart {
      * @param sql The other condition
      * @return The combined condition
      * @see DSL#condition(String)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -101,6 +137,7 @@ public interface Condition extends QueryPart {
      * @param bindings The bindings
      * @return The combined condition
      * @see DSL#condition(String, Object...)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -121,6 +158,7 @@ public interface Condition extends QueryPart {
      *            {numbered placeholder} locations
      * @return The combined condition
      * @see DSL#condition(String, QueryPart...)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -145,6 +183,24 @@ public interface Condition extends QueryPart {
      */
     @Support
     Condition andNot(Field<Boolean> other);
+
+    /**
+     * Combine this condition with a negated other one using the
+     * {@link Operator#AND} operator.
+     *
+     * @param other The other condition
+     * @return The combined condition
+     *
+     * @deprecated - 3.8.0 - [#4763] - Use {@link #andNot(Condition)} or
+     *             {@link #andNot(Field)} instead. Due to ambiguity between
+     *             calling this method using {@link Field#equals(Object)}
+     *             argument, vs. calling the other method via a
+     *             {@link Field#equal(Object)} argument, this method will be
+     *             removed in the future.
+     */
+    @Deprecated
+    @Support
+    Condition andNot(Boolean other);
 
     /**
      * Combine this condition with an EXISTS clause using the
@@ -189,6 +245,41 @@ public interface Condition extends QueryPart {
     /**
      * Combine this condition with another one using the {@link Operator#OR}
      * operator.
+     *
+     * @param other The other condition
+     * @return The combined condition
+     *
+     * @deprecated - 3.8.0 - [#4763] - Use {@link #or(Condition)} or
+     *             {@link #or(Field)} instead. Due to ambiguity between calling
+     *             this method using {@link Field#equals(Object)} argument, vs.
+     *             calling the other method via a {@link Field#equal(Object)}
+     *             argument, this method will be removed in the future.
+     */
+    @Deprecated
+    @Support
+    Condition or(Boolean other);
+
+    /**
+     * Combine this condition with another one using the {@link Operator#OR}
+     * operator.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The other condition
+     * @return The combined condition
+     * @see DSL#condition(SQL)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Condition or(SQL sql);
+
+    /**
+     * Combine this condition with another one using the {@link Operator#OR}
+     * operator.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
      * guarantee syntax integrity. You may also create the possibility of
@@ -198,6 +289,7 @@ public interface Condition extends QueryPart {
      * @param sql The other condition
      * @return The combined condition
      * @see DSL#condition(String)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -216,6 +308,7 @@ public interface Condition extends QueryPart {
      * @param bindings The bindings
      * @return The combined condition
      * @see DSL#condition(String, Object...)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -236,6 +329,7 @@ public interface Condition extends QueryPart {
      *            {numbered placeholder} locations
      * @return The combined condition
      * @see DSL#condition(String, Object...)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -260,6 +354,24 @@ public interface Condition extends QueryPart {
      */
     @Support
     Condition orNot(Field<Boolean> other);
+
+    /**
+     * Combine this condition with a negated other one using the
+     * {@link Operator#OR} operator.
+     *
+     * @param other The other condition
+     * @return The combined condition
+     *
+     * @deprecated - 3.8.0 - [#4763] - Use {@link #orNot(Condition)} or
+     *             {@link #orNot(Boolean)} instead. Due to ambiguity between
+     *             calling this method using {@link Field#equals(Object)}
+     *             argument, vs. calling the other method via a
+     *             {@link Field#equal(Object)} argument, this method will be
+     *             removed in the future.
+     */
+    @Deprecated
+    @Support
+    Condition orNot(Boolean other);
 
     /**
      * Combine this condition with an EXISTS clause using the

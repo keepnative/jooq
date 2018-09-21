@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,8 +51,10 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.Stream;
 
 import javax.annotation.Generated;
 
@@ -65,6 +67,7 @@ import org.jooq.Field;
 import org.jooq.ForeignKey;
 import org.jooq.GroupField;
 import org.jooq.JoinType;
+import org.jooq.Name;
 import org.jooq.Operator;
 import org.jooq.Param;
 import org.jooq.QueryPart;
@@ -73,7 +76,9 @@ import org.jooq.RecordHandler;
 import org.jooq.RecordMapper;
 import org.jooq.Result;
 import org.jooq.ResultQuery;
+import org.jooq.Results;
 import org.jooq.Row;
+import org.jooq.SQL;
 import org.jooq.Select;
 import org.jooq.SelectConditionStep;
 import org.jooq.SelectConnectByConditionStep;
@@ -118,6 +123,7 @@ import org.jooq.Table;
 import org.jooq.TableField;
 import org.jooq.TableLike;
 import org.jooq.WindowDefinition;
+import org.jooq.exception.MappingException;
 
 /**
  * A wrapper for a {@link SelectQuery}
@@ -200,12 +206,12 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     private transient Integer               limit;
     private transient Param<Integer>        limitParam;
 
-    SelectImpl(WithImpl with, Configuration configuration) {
-        this(with, configuration, false);
+    SelectImpl(Configuration configuration, WithImpl with) {
+        this(configuration, with, false);
     }
 
-    SelectImpl(WithImpl with, Configuration configuration, boolean distinct) {
-        this(new SelectQueryImpl<R>(with, configuration, distinct));
+    SelectImpl(Configuration configuration, WithImpl with, boolean distinct) {
+        this(new SelectQueryImpl<R>(configuration, with, distinct));
     }
 
     SelectImpl(Select<R> query) {
@@ -302,6 +308,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final SelectImpl from(SQL sql) {
+        return from(table(sql));
+    }
+
+    @Override
     public final SelectImpl from(String sql) {
         return from(table(sql));
     }
@@ -333,6 +344,16 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     @Override
     public final SelectImpl where(Field<Boolean> condition) {
         return where(condition(condition));
+    }
+
+    @Override
+    public final SelectImpl where(Boolean condition) {
+        return where(condition(condition));
+    }
+
+    @Override
+    public final SelectImpl where(SQL sql) {
+        return where(condition(sql));
     }
 
     @Override
@@ -388,6 +409,16 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final SelectImpl and(Boolean condition) {
+        return and(condition(condition));
+    }
+
+    @Override
+    public final SelectImpl and(SQL sql) {
+        return and(condition(sql));
+    }
+
+    @Override
     public final SelectImpl and(String sql) {
         return and(condition(sql));
     }
@@ -409,6 +440,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
 
     @Override
     public final SelectImpl andNot(Field<Boolean> condition) {
+        return andNot(condition(condition));
+    }
+
+    @Override
+    public final SelectImpl andNot(Boolean condition) {
         return andNot(condition(condition));
     }
 
@@ -447,6 +483,16 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final SelectImpl or(Boolean condition) {
+        return or(condition(condition));
+    }
+
+    @Override
+    public final SelectImpl or(SQL sql) {
+        return or(condition(sql));
+    }
+
+    @Override
     public final SelectImpl or(String sql) {
         return or(condition(sql));
     }
@@ -472,6 +518,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final SelectImpl orNot(Boolean condition) {
+        return orNot(condition(condition));
+    }
+
+    @Override
     public final SelectImpl orExists(Select<?> select) {
         return or(exists(select));
     }
@@ -491,6 +542,16 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     @Override
     public final SelectImpl connectBy(Field<Boolean> condition) {
         return connectBy(condition(condition));
+    }
+
+    @Override
+    public final SelectImpl connectBy(Boolean condition) {
+        return connectBy(condition(condition));
+    }
+
+    @Override
+    public final SelectImpl connectBy(SQL sql) {
+        return connectBy(condition(sql));
     }
 
     @Override
@@ -521,6 +582,16 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final SelectImpl connectByNoCycle(Boolean condition) {
+        return connectByNoCycle(condition(condition));
+    }
+
+    @Override
+    public final SelectImpl connectByNoCycle(SQL sql) {
+        return connectByNoCycle(condition(sql));
+    }
+
+    @Override
     public final SelectImpl connectByNoCycle(String sql) {
         return connectByNoCycle(condition(sql));
     }
@@ -544,6 +615,16 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     @Override
     public final SelectImpl startWith(Field<Boolean> condition) {
         return startWith(condition(condition));
+    }
+
+    @Override
+    public final SelectImpl startWith(Boolean condition) {
+        return startWith(condition(condition));
+    }
+
+    @Override
+    public final SelectImpl startWith(SQL sql) {
+        return startWith(condition(sql));
     }
 
     @Override
@@ -1695,7 +1776,7 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
 
     @Override
     public final SelectSeekLimitStep<R> seek(Object... values) {
-        getQuery().addSeekAfter(Utils.fields(values));
+        getQuery().addSeekAfter(Tools.fields(values));
         return this;
     }
 
@@ -1707,7 +1788,7 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
 
     @Override
     public SelectSeekLimitStep<R> seekAfter(Object... values) {
-        getQuery().addSeekAfter(Utils.fields(values));
+        getQuery().addSeekAfter(Tools.fields(values));
         return this;
     }
 
@@ -1719,7 +1800,7 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
 
     @Override
     public SelectSeekLimitStep<R> seekBefore(Object... values) {
-        getQuery().addSeekBefore(Utils.fields(values));
+        getQuery().addSeekBefore(Tools.fields(values));
         return this;
     }
 
@@ -1817,47 +1898,45 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
         return this;
     }
 
-    /* [pro] xx
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxx xxxxxxxx xxxxxxxx x
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxx xxxxx
-    x
 
-    xx [/pro] */
+
+
+
+
+
+
+
     @Override
     public final SelectImpl noWait() {
         getQuery().setForUpdateNoWait();
         return this;
     }
 
-    /* [pro] xx
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxx xxxxxxxxxxxx x
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxx xxxxx
-    x
+    @Override
+    public final SelectImpl skipLocked() {
+        getQuery().setForUpdateSkipLocked();
+        return this;
+    }
 
-    xx [/pro] */
     @Override
     public final SelectImpl forShare() {
         getQuery().setForShare(true);
         return this;
     }
 
-    /* [pro] xx
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxx x
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxx xxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxx x
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxx xxxxx
-    x
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
 
     @Override
     public final SelectImpl union(Select<? extends R> select) {
@@ -1875,8 +1954,18 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final SelectImpl exceptAll(Select<? extends R> select) {
+        return new SelectImpl(getDelegate().exceptAll(select));
+    }
+
+    @Override
     public final SelectImpl intersect(Select<? extends R> select) {
         return new SelectImpl(getDelegate().intersect(select));
+    }
+
+    @Override
+    public final SelectImpl intersectAll(Select<? extends R> select) {
+        return new SelectImpl(getDelegate().intersectAll(select));
     }
 
     @Override
@@ -1896,6 +1985,16 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     @Override
     public final SelectImpl having(Field<Boolean> condition) {
         return having(condition(condition));
+    }
+
+    @Override
+    public final SelectImpl having(Boolean condition) {
+        return having(condition(condition));
+    }
+
+    @Override
+    public final SelectImpl having(SQL sql) {
+        return having(condition(sql));
     }
 
     @Override
@@ -1931,11 +2030,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
         joinConditions = new ConditionProviderImpl();
         joinConditions.addConditions(conditions);
 
-        /* [pro] xx
-        xx xxxxxxxxxxxxxxxx xx xxxx xx xxxxxxxxxxxxxxxxxxxxxx x xx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxx xxx xxxxxxxxxxx x xxxxxxxxxxxxxx xx xxxxxxxxxxxxxxxxx
-        xxxx
-        xx [/pro] */
+
+
+
+
+
             getQuery().addJoin(joinTable, joinType, new Condition[] { joinConditions });
 
         joinTable = null;
@@ -1947,6 +2046,16 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     @Override
     public final SelectImpl on(Field<Boolean> condition) {
         return on(condition(condition));
+    }
+
+    @Override
+    public final SelectImpl on(Boolean condition) {
+        return on(condition(condition));
+    }
+
+    @Override
+    public final SelectImpl on(SQL sql) {
+        return on(condition(sql));
     }
 
     @Override
@@ -2011,12 +2120,27 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
 
     @Override
     public final SelectImpl join(TableLike<?> table) {
+        return innerJoin(table);
+    }
+
+    @Override
+    public final SelectImpl innerJoin(TableLike<?> table) {
         return join(table, JoinType.JOIN);
+    }
+
+    @Override
+    public final SelectImpl leftJoin(TableLike<?> table) {
+        return leftOuterJoin(table);
     }
 
     @Override
     public final SelectImpl leftOuterJoin(TableLike<?> table) {
         return join(table, JoinType.LEFT_OUTER_JOIN);
+    }
+
+    @Override
+    public final SelectImpl rightJoin(TableLike<?> table) {
+        return rightOuterJoin(table);
     }
 
     @Override
@@ -2078,33 +2202,94 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
         return join(table, JoinType.NATURAL_RIGHT_OUTER_JOIN);
     }
 
-    /* [pro] xx
+    @Override
+    public final SelectImpl leftSemiJoin(TableLike<?> table) {
+        return join(table, JoinType.LEFT_SEMI_JOIN);
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxx xxxxxx x
-        xxxxxx xxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxx
-    x
+    @Override
+    public final SelectImpl leftAntiJoin(TableLike<?> table) {
+        return join(table, JoinType.LEFT_ANTI_JOIN);
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxx xxxxxx x
-        xxxxxx xxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxx
-    x
+    @Override
+    public final SelectImpl crossApply(TableLike<?> table) {
+        return join(table, JoinType.CROSS_APPLY);
+    }
 
-    xx [/pro] */
+    @Override
+    public final SelectImpl outerApply(TableLike<?> table) {
+        return join(table, JoinType.OUTER_APPLY);
+    }
+
+    @Override
+    public final SelectImpl straightJoin(TableLike<?> table) {
+        return join(table, JoinType.STRAIGHT_JOIN);
+    }
+
+    @Override
+    public final SelectImpl join(SQL sql) {
+        return innerJoin(sql);
+    }
 
     @Override
     public final SelectImpl join(String sql) {
-        return join(table(sql));
+        return innerJoin(sql);
     }
 
     @Override
     public final SelectImpl join(String sql, Object... bindings) {
-        return join(table(sql, bindings));
+        return innerJoin(sql, bindings);
     }
 
     @Override
     public final SelectImpl join(String sql, QueryPart... parts) {
-        return join(table(sql, parts));
+        return innerJoin(sql, parts);
+    }
+
+    @Override
+    public final SelectImpl innerJoin(SQL sql) {
+        return innerJoin(table(sql));
+    }
+
+    @Override
+    public final SelectImpl innerJoin(String sql) {
+        return innerJoin(table(sql));
+    }
+
+    @Override
+    public final SelectImpl innerJoin(String sql, Object... bindings) {
+        return innerJoin(table(sql, bindings));
+    }
+
+    @Override
+    public final SelectImpl innerJoin(String sql, QueryPart... parts) {
+        return innerJoin(table(sql, parts));
+    }
+
+    @Override
+    public final SelectImpl leftJoin(SQL sql) {
+        return leftOuterJoin(sql);
+    }
+
+    @Override
+    public final SelectImpl leftJoin(String sql) {
+        return leftOuterJoin(sql);
+    }
+
+    @Override
+    public final SelectImpl leftJoin(String sql, Object... bindings) {
+        return leftOuterJoin(sql, bindings);
+    }
+
+    @Override
+    public final SelectImpl leftJoin(String sql, QueryPart... parts) {
+        return leftOuterJoin(sql, parts);
+    }
+
+    @Override
+    public final SelectImpl leftOuterJoin(SQL sql) {
+        return leftOuterJoin(table(sql));
     }
 
     @Override
@@ -2123,6 +2308,31 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final SelectImpl rightJoin(SQL sql) {
+        return rightOuterJoin(sql);
+    }
+
+    @Override
+    public final SelectImpl rightJoin(String sql) {
+        return rightOuterJoin(sql);
+    }
+
+    @Override
+    public final SelectImpl rightJoin(String sql, Object... bindings) {
+        return rightOuterJoin(sql, bindings);
+    }
+
+    @Override
+    public final SelectImpl rightJoin(String sql, QueryPart... parts) {
+        return rightOuterJoin(sql, parts);
+    }
+
+    @Override
+    public final SelectImpl rightOuterJoin(SQL sql) {
+        return rightOuterJoin(table(sql));
+    }
+
+    @Override
     public final SelectImpl rightOuterJoin(String sql) {
         return rightOuterJoin(table(sql));
     }
@@ -2135,6 +2345,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     @Override
     public final SelectImpl rightOuterJoin(String sql, QueryPart... parts) {
         return rightOuterJoin(table(sql, parts));
+    }
+
+    @Override
+    public final SelectOnStep<R> fullOuterJoin(SQL sql) {
+        return fullOuterJoin(table(sql));
     }
 
     @Override
@@ -2153,6 +2368,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final SelectJoinStep<R> crossJoin(SQL sql) {
+        return crossJoin(table(sql));
+    }
+
+    @Override
     public final SelectJoinStep<R> crossJoin(String sql) {
         return crossJoin(table(sql));
     }
@@ -2165,6 +2385,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     @Override
     public final SelectJoinStep<R> crossJoin(String sql, QueryPart... parts) {
         return crossJoin(table(sql, parts));
+    }
+
+    @Override
+    public final SelectImpl naturalJoin(SQL sql) {
+        return naturalJoin(table(sql));
     }
 
     @Override
@@ -2183,6 +2408,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final SelectImpl naturalLeftOuterJoin(SQL sql) {
+        return naturalLeftOuterJoin(table(sql));
+    }
+
+    @Override
     public final SelectImpl naturalLeftOuterJoin(String sql) {
         return naturalLeftOuterJoin(table(sql));
     }
@@ -2195,6 +2425,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     @Override
     public final SelectImpl naturalLeftOuterJoin(String sql, QueryPart... parts) {
         return naturalLeftOuterJoin(table(sql, parts));
+    }
+
+    @Override
+    public final SelectImpl naturalRightOuterJoin(SQL sql) {
+        return naturalRightOuterJoin(table(sql));
     }
 
     @Override
@@ -2212,50 +2447,71 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
         return naturalRightOuterJoin(table(sql, parts));
     }
 
-    /* [pro] xx
+    @Override
+    public final SelectImpl crossApply(SQL sql) {
+        return crossApply(table(sql));
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxx
-    x
+    @Override
+    public final SelectImpl crossApply(String sql) {
+        return crossApply(table(sql));
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx xxxxxxxxx xxxxxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxx
-    x
+    @Override
+    public final SelectImpl crossApply(String sql, Object... bindings) {
+        return crossApply(table(sql, bindings));
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx xxxxxxxxxxxx xxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxx xxxxxxxx
-    x
+    @Override
+    public final SelectImpl crossApply(String sql, QueryPart... parts) {
+        return crossApply(table(sql, parts));
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxx
-    x
+    @Override
+    public final SelectImpl outerApply(SQL sql) {
+        return outerApply(table(sql));
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx xxxxxxxxx xxxxxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxx
-    x
+    @Override
+    public final SelectImpl outerApply(String sql) {
+        return outerApply(table(sql));
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx xxxxxxxxxxxx xxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxx xxxxxxxx
-    x
+    @Override
+    public final SelectImpl outerApply(String sql, Object... bindings) {
+        return outerApply(table(sql, bindings));
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxx xxxxxxx x
-        xxxxxxxxxxxxxxx x xxxxxxx
-        xxxxxx xxxxx
-    x
+    @Override
+    public final SelectImpl outerApply(String sql, QueryPart... parts) {
+        return outerApply(table(sql, parts));
+    }
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxx xxxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxx
-    x
 
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    @Override
+    public final SelectImpl straightJoin(String sql, Object... bindings) {
+        return straightJoin(table(sql, bindings));
+    }
+
+    @Override
+    public final SelectImpl straightJoin(String sql, QueryPart... parts) {
+        return straightJoin(table(sql, parts));
+    }
+
     @Override
     public final ResultQuery<R> maxRows(int rows) {
         return getDelegate().maxRows(rows);
@@ -2297,6 +2553,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final ResultQuery<R> intern(Name... fieldNames) {
+        return getDelegate().intern(fieldNames);
+    }
+
+    @Override
     public final Class<? extends R> getRecordType() {
         return getDelegate().getRecordType();
     }
@@ -2326,6 +2587,13 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
         return getDelegate().iterator();
     }
 
+
+    @Override
+    public final Stream<R> stream() {
+        return getDelegate().stream();
+    }
+
+
     @Override
     public final Cursor<R> fetchLazy() {
         return getDelegate().fetchLazy();
@@ -2338,7 +2606,7 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
-    public final List<Result<Record>> fetchMany() {
+    public final Results fetchMany() {
         return getDelegate().fetchMany();
     }
 
@@ -2388,6 +2656,21 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final List<?> fetch(Name fieldName) {
+        return getDelegate().fetch(fieldName);
+    }
+
+    @Override
+    public final <T> List<T> fetch(Name fieldName, Class<? extends T> type) {
+        return getDelegate().fetch(fieldName, type);
+    }
+
+    @Override
+    public final <U> List<U> fetch(Name fieldName, Converter<?, U> converter) {
+        return getDelegate().fetch(fieldName, converter);
+    }
+
+    @Override
     public final <T> T fetchOne(Field<T> field) {
         return getDelegate().fetchOne(field);
     }
@@ -2433,6 +2716,21 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final Object fetchOne(Name fieldName) {
+        return getDelegate().fetchOne(fieldName);
+    }
+
+    @Override
+    public final <T> T fetchOne(Name fieldName, Class<? extends T> type) {
+        return getDelegate().fetchOne(fieldName, type);
+    }
+
+    @Override
+    public final <U> U fetchOne(Name fieldName, Converter<?, U> converter) {
+        return getDelegate().fetchOne(fieldName, converter);
+    }
+
+    @Override
     public final R fetchOne() {
         return getDelegate().fetchOne();
     }
@@ -2461,6 +2759,98 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     public final <Z extends Record> Z fetchOneInto(Table<Z> table) {
         return getDelegate().fetchOneInto(table);
     }
+
+
+    @Override
+    public final <T> Optional<T> fetchOptional(Field<T> field) {
+        return getDelegate().fetchOptional(field);
+    }
+
+    @Override
+    public final <T> Optional<T> fetchOptional(Field<?> field, Class<? extends T> type) {
+        return getDelegate().fetchOptional(field, type);
+    }
+
+    @Override
+    public final <T, U> Optional<U> fetchOptional(Field<T> field, Converter<? super T, U> converter) {
+        return getDelegate().fetchOptional(field, converter);
+    }
+
+    @Override
+    public final Optional<?> fetchOptional(int fieldIndex) {
+        return getDelegate().fetchOptional(fieldIndex);
+    }
+
+    @Override
+    public final <T> Optional<T> fetchOptional(int fieldIndex, Class<? extends T> type) {
+        return getDelegate().fetchOptional(fieldIndex, type);
+    }
+
+    @Override
+    public final <U> Optional<U> fetchOptional(int fieldIndex, Converter<?, U> converter) {
+        return getDelegate().fetchOptional(fieldIndex, converter);
+    }
+
+    @Override
+    public final Optional<?> fetchOptional(String fieldName) {
+        return getDelegate().fetchOptional(fieldName);
+    }
+
+    @Override
+    public final <T> Optional<T> fetchOptional(String fieldName, Class<? extends T> type) {
+        return getDelegate().fetchOptional(fieldName, type);
+    }
+
+    @Override
+    public final <U> Optional<U> fetchOptional(String fieldName, Converter<?, U> converter) {
+        return getDelegate().fetchOptional(fieldName, converter);
+    }
+
+    @Override
+    public final Optional<?> fetchOptional(Name fieldName) {
+        return getDelegate().fetchOptional(fieldName);
+    }
+
+    @Override
+    public final <T> Optional<T> fetchOptional(Name fieldName, Class<? extends T> type) {
+        return getDelegate().fetchOptional(fieldName, type);
+    }
+
+    @Override
+    public final <U> Optional<U> fetchOptional(Name fieldName, Converter<?, U> converter) {
+        return getDelegate().fetchOptional(fieldName, converter);
+    }
+
+    @Override
+    public final Optional<R> fetchOptional() {
+        return getDelegate().fetchOptional();
+    }
+
+    @Override
+    public final <E> Optional<E> fetchOptional(RecordMapper<? super R, E> mapper) {
+        return getDelegate().fetchOptional(mapper);
+    }
+
+    @Override
+    public final Optional<Map<String, Object>> fetchOptionalMap() {
+        return getDelegate().fetchOptionalMap();
+    }
+
+    @Override
+    public final Optional<Object[]> fetchOptionalArray() {
+        return getDelegate().fetchOptionalArray();
+    }
+
+    @Override
+    public final <E> Optional<E> fetchOptionalInto(Class<? extends E> type) {
+        return getDelegate().fetchOptionalInto(type);
+    }
+
+    @Override
+    public final <Z extends Record> Optional<Z> fetchOptionalInto(Table<Z> table) {
+        return getDelegate().fetchOptionalInto(table);
+    }
+
 
     @Override
     public final <T> T fetchAny(Field<T> field) {
@@ -2508,8 +2898,28 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final Object fetchAny(Name fieldName) {
+        return getDelegate().fetchAny(fieldName);
+    }
+
+    @Override
+    public final <T> T fetchAny(Name fieldName, Class<? extends T> type) {
+        return getDelegate().fetchAny(fieldName, type);
+    }
+
+    @Override
+    public final <U> U fetchAny(Name fieldName, Converter<?, U> converter) {
+        return getDelegate().fetchAny(fieldName, converter);
+    }
+
+    @Override
     public final R fetchAny() {
         return getDelegate().fetchAny();
+    }
+
+    @Override
+    public final <E> E fetchAny(RecordMapper<? super R, E> mapper) {
+        return getDelegate().fetchAny(mapper);
     }
 
     @Override
@@ -2548,6 +2958,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final Map<?, R> fetchMap(Name keyFieldName) {
+        return getDelegate().fetchMap(keyFieldName);
+    }
+
+    @Override
     public final <K, V> Map<K, V> fetchMap(Field<K> key, Field<V> value) {
         return getDelegate().fetchMap(key, value);
     }
@@ -2559,6 +2974,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
 
     @Override
     public final Map<?, ?> fetchMap(String keyFieldName, String valueFieldName) {
+        return getDelegate().fetchMap(keyFieldName, valueFieldName);
+    }
+
+    @Override
+    public final Map<?, ?> fetchMap(Name keyFieldName, Name valueFieldName) {
         return getDelegate().fetchMap(keyFieldName, valueFieldName);
     }
 
@@ -2578,6 +2998,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final <E> Map<?, E> fetchMap(Name keyFieldName, Class<? extends E> type) {
+        return getDelegate().fetchMap(keyFieldName, type);
+    }
+
+    @Override
     public final <K, E> Map<K, E> fetchMap(Field<K> key, RecordMapper<? super R, E> mapper) {
         return getDelegate().fetchMap(key, mapper);
     }
@@ -2589,6 +3014,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
 
     @Override
     public final <E> Map<?, E> fetchMap(String keyFieldName, RecordMapper<? super R, E> mapper) {
+        return getDelegate().fetchMap(keyFieldName, mapper);
+    }
+
+    @Override
+    public final <E> Map<?, E> fetchMap(Name keyFieldName, RecordMapper<? super R, E> mapper) {
         return getDelegate().fetchMap(keyFieldName, mapper);
     }
 
@@ -2608,6 +3038,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final Map<Record, R> fetchMap(Name[] keyFieldNames) {
+        return getDelegate().fetchMap(keyFieldNames);
+    }
+
+    @Override
     public final <E> Map<List<?>, E> fetchMap(Field<?>[] keys, Class<? extends E> type) {
         return getDelegate().fetchMap(keys, type);
     }
@@ -2619,6 +3054,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
 
     @Override
     public final <E> Map<List<?>, E> fetchMap(String[] keyFieldNames, Class<? extends E> type) {
+        return getDelegate().fetchMap(keyFieldNames, type);
+    }
+
+    @Override
+    public final <E> Map<List<?>, E> fetchMap(Name[] keyFieldNames, Class<? extends E> type) {
         return getDelegate().fetchMap(keyFieldNames, type);
     }
 
@@ -2635,6 +3075,41 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     @Override
     public final <E> Map<List<?>, E> fetchMap(String[] keyFieldNames, RecordMapper<? super R, E> mapper) {
         return getDelegate().fetchMap(keyFieldNames, mapper);
+    }
+
+    @Override
+    public final <E> Map<List<?>, E> fetchMap(Name[] keyFieldNames, RecordMapper<? super R, E> mapper) {
+        return getDelegate().fetchMap(keyFieldNames, mapper);
+    }
+
+    @Override
+    public final <K> Map<K, R> fetchMap(Class<? extends K> keyType) {
+        return getDelegate().fetchMap(keyType);
+    }
+
+    @Override
+    public final <K, V> Map<K, V> fetchMap(Class<? extends K> keyType, Class<? extends V> valueType) {
+        return getDelegate().fetchMap(keyType, valueType);
+    }
+
+    @Override
+    public final <K, V> Map<K, V> fetchMap(Class<? extends K> keyType, RecordMapper<? super R, V> valueMapper) {
+        return getDelegate().fetchMap(keyType, valueMapper);
+    }
+
+    @Override
+    public final <K> Map<K, R> fetchMap(RecordMapper<? super R, K> keyMapper) {
+        return getDelegate().fetchMap(keyMapper);
+    }
+
+    @Override
+    public final <K, V> Map<K, V> fetchMap(RecordMapper<? super R, K> keyMapper, Class<V> valueType) {
+        return getDelegate().fetchMap(keyMapper, valueType);
+    }
+
+    @Override
+    public final <K, V> Map<K, V> fetchMap(RecordMapper<? super R, K> keyMapper, RecordMapper<? super R, V> valueMapper) {
+        return getDelegate().fetchMap(keyMapper, valueMapper);
     }
 
     @Override
@@ -2673,6 +3148,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final Map<?, Result<R>> fetchGroups(Name keyFieldName) {
+        return getDelegate().fetchGroups(keyFieldName);
+    }
+
+    @Override
     public final <K, V> Map<K, List<V>> fetchGroups(Field<K> key, Field<V> value) {
         return getDelegate().fetchGroups(key, value);
     }
@@ -2684,6 +3164,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
 
     @Override
     public final Map<?, List<?>> fetchGroups(String keyFieldName, String valueFieldName) {
+        return getDelegate().fetchGroups(keyFieldName, valueFieldName);
+    }
+
+    @Override
+    public final Map<?, List<?>> fetchGroups(Name keyFieldName, Name valueFieldName) {
         return getDelegate().fetchGroups(keyFieldName, valueFieldName);
     }
 
@@ -2703,6 +3188,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final <E> Map<?, List<E>> fetchGroups(Name keyFieldName, Class<? extends E> type) {
+        return getDelegate().fetchGroups(keyFieldName, type);
+    }
+
+    @Override
     public final <K, E> Map<K, List<E>> fetchGroups(Field<K> key, RecordMapper<? super R, E> mapper) {
         return getDelegate().fetchGroups(key, mapper);
     }
@@ -2714,6 +3204,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
 
     @Override
     public final <E> Map<?, List<E>> fetchGroups(String keyFieldName, RecordMapper<? super R, E> mapper) {
+        return getDelegate().fetchGroups(keyFieldName, mapper);
+    }
+
+    @Override
+    public final <E> Map<?, List<E>> fetchGroups(Name keyFieldName, RecordMapper<? super R, E> mapper) {
         return getDelegate().fetchGroups(keyFieldName, mapper);
     }
 
@@ -2733,6 +3228,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final Map<Record, Result<R>> fetchGroups(Name[] keyFieldNames) {
+        return getDelegate().fetchGroups(keyFieldNames);
+    }
+
+    @Override
     public final <E> Map<Record, List<E>> fetchGroups(Field<?>[] keys, Class<? extends E> type) {
         return getDelegate().fetchGroups(keys, type);
     }
@@ -2744,6 +3244,11 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
 
     @Override
     public final <E> Map<Record, List<E>> fetchGroups(String[] keyFieldNames, Class<? extends E> type) {
+        return getDelegate().fetchGroups(keyFieldNames, type);
+    }
+
+    @Override
+    public final <E> Map<Record, List<E>> fetchGroups(Name[] keyFieldNames, Class<? extends E> type) {
         return getDelegate().fetchGroups(keyFieldNames, type);
     }
 
@@ -2760,6 +3265,41 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     @Override
     public final <E> Map<Record, List<E>> fetchGroups(String[] keyFieldNames, RecordMapper<? super R, E> mapper) {
         return getDelegate().fetchGroups(keyFieldNames, mapper);
+    }
+
+    @Override
+    public final <E> Map<Record, List<E>> fetchGroups(Name[] keyFieldNames, RecordMapper<? super R, E> mapper) {
+        return getDelegate().fetchGroups(keyFieldNames, mapper);
+    }
+
+    @Override
+    public final <K> Map<K, Result<R>> fetchGroups(Class<? extends K> keyType) {
+        return getDelegate().fetchGroups(keyType);
+    }
+
+    @Override
+    public final <K, V> Map<K, List<V>> fetchGroups(Class<? extends K> keyType, Class<? extends V> valueType) {
+        return getDelegate().fetchGroups(keyType, valueType);
+    }
+
+    @Override
+    public final <K, V> Map<K, List<V>> fetchGroups(Class<? extends K> keyType, RecordMapper<? super R, V> valueMapper) {
+        return getDelegate().fetchGroups(keyType, valueMapper);
+    }
+
+    @Override
+    public final <K> Map<K, Result<R>> fetchGroups(RecordMapper<? super R, K> keyMapper) throws MappingException {
+        return getDelegate().fetchGroups(keyMapper);
+    }
+
+    @Override
+    public final <K, V> Map<K, List<V>> fetchGroups(RecordMapper<? super R, K> keyMapper, Class<V> valueType) {
+        return getDelegate().fetchGroups(keyMapper, valueType);
+    }
+
+    @Override
+    public final <K, V> Map<K, List<V>> fetchGroups(RecordMapper<? super R, K> keyMapper, RecordMapper<? super R, V> valueMapper) {
+        return getDelegate().fetchGroups(keyMapper, valueMapper);
     }
 
     @Override
@@ -2818,6 +3358,21 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final Object[] fetchArray(Name fieldName) {
+        return getDelegate().fetchArray(fieldName);
+    }
+
+    @Override
+    public final <T> T[] fetchArray(Name fieldName, Class<? extends T> type) {
+        return getDelegate().fetchArray(fieldName, type);
+    }
+
+    @Override
+    public final <U> U[] fetchArray(Name fieldName, Converter<?, U> converter) {
+        return getDelegate().fetchArray(fieldName, converter);
+    }
+
+    @Override
     public final <T> T[] fetchArray(Field<T> field) {
         return getDelegate().fetchArray(field);
     }
@@ -2859,6 +3414,21 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
 
     @Override
     public final <U> Set<U> fetchSet(String fieldName, Converter<?, U> converter) {
+        return getDelegate().fetchSet(fieldName, converter);
+    }
+
+    @Override
+    public final Set<?> fetchSet(Name fieldName) {
+        return getDelegate().fetchSet(fieldName);
+    }
+
+    @Override
+    public final <T> Set<T> fetchSet(Name fieldName, Class<? extends T> type) {
+        return getDelegate().fetchSet(fieldName, type);
+    }
+
+    @Override
+    public final <U> Set<U> fetchSet(Name fieldName, Converter<?, U> converter) {
         return getDelegate().fetchSet(fieldName, converter);
     }
 
@@ -2960,6 +3530,21 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     }
 
     @Override
+    public final Field<?> field(Name string) {
+        return getDelegate().field(string);
+    }
+
+    @Override
+    public final <T> Field<T> field(Name name, Class<T> type) {
+        return getDelegate().field(name, type);
+    }
+
+    @Override
+    public final <T> Field<T> field(Name name, DataType<T> dataType) {
+        return getDelegate().field(name, dataType);
+    }
+
+    @Override
     public final Field<?> field(int index) {
         return getDelegate().field(index);
     }
@@ -2977,6 +3562,26 @@ class SelectImpl<R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11,
     @Override
     public final Field<?>[] fields() {
         return getDelegate().fields();
+    }
+
+    @Override
+    public final Field<?>[] fields(Field<?>... fields) {
+        return getDelegate().fields(fields);
+    }
+
+    @Override
+    public final Field<?>[] fields(String... fieldNames) {
+        return getDelegate().fields(fieldNames);
+    }
+
+    @Override
+    public final Field<?>[] fields(Name... fieldNames) {
+        return getDelegate().fields(fieldNames);
+    }
+
+    @Override
+    public final Field<?>[] fields(int... fieldIndexes) {
+        return getDelegate().fields(fieldIndexes);
     }
 
     /**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,16 +41,21 @@
 
 package org.jooq.impl;
 
-import static org.jooq.impl.Utils.indexOrFail;
+import static org.jooq.impl.Tools.indexOrFail;
 
+import java.sql.SQLWarning;
 import java.util.Collection;
 
 import org.jooq.Clause;
 import org.jooq.Context;
 import org.jooq.DataType;
 import org.jooq.Field;
+import org.jooq.Name;
 import org.jooq.Record;
 import org.jooq.RecordType;
+import org.jooq.Table;
+import org.jooq.TableField;
+import org.jooq.tools.JooqLogger;
 
 /**
  * A simple wrapper for <code>Field[]</code>, providing some useful lookup
@@ -60,8 +65,9 @@ import org.jooq.RecordType;
  */
 class Fields<R extends Record> extends AbstractQueryPart implements RecordType<R> {
 
-    private static final long serialVersionUID = -6911012275707591576L;
-    Field<?>[]                fields;
+    private static final long       serialVersionUID = -6911012275707591576L;
+    private static final JooqLogger log              = JooqLogger.getLogger(Fields.class);
+    Field<?>[]                      fields;
 
     Fields(Field<?>... fields) {
         this.fields = fields;
@@ -92,11 +98,40 @@ class Fields<R extends Record> extends AbstractQueryPart implements RecordType<R
             if (f.equals(field))
                 return (Field<T>) f;
 
-        // In case no exact match was found, return the first field with matching name
-        String name = field.getName();
-        for (Field<?> f1 : fields) {
-            if (f1.getName().equals(name)) {
-                return (Field<T>) f1;
+        // [#4283] table / column matches are better than only column matches
+        Field<?> columnMatch = null;
+
+        String tableName = tableName(field);
+        String fieldName = field.getName();
+
+        for (Field<?> f : fields) {
+            if (tableName != null) {
+                String tName = tableName(f);
+
+                if (tName != null && tableName.equals(tName) && f.getName().equals(fieldName))
+                    return (Field<T>) f;
+            }
+
+            // In case no exact match was found, return the first field with matching name
+            if (f.getName().equals(fieldName)) {
+                if (columnMatch == null)
+                    columnMatch = f;
+                else
+                    // [#4476] [#4477] This might be unintentional from a user
+                    // perspective, e.g. when ambiguous ID columns are present.
+                    log.info("Ambiguous match found for " + fieldName + ". Both " + columnMatch + " and " + f + " match.", new SQLWarning());
+            }
+        }
+
+        return (Field<T>) columnMatch;
+    }
+
+    private final String tableName(Field<?> field) {
+        if (field instanceof TableField) {
+            Table<?> table = ((TableField<?, ?>) field).getTable();
+
+            if (table != null) {
+                return table.getName();
             }
         }
 
@@ -104,18 +139,22 @@ class Fields<R extends Record> extends AbstractQueryPart implements RecordType<R
     }
 
     @Override
-    public final Field<?> field(String name) {
-        if (name == null) {
+    public final Field<?> field(String fieldName) {
+        if (fieldName == null)
             return null;
-        }
 
-        for (Field<?> f : fields) {
-            if (f.getName().equals(name)) {
-                return f;
-            }
-        }
+        Field<?> columnMatch = null;
 
-        return null;
+        for (Field<?> f : fields)
+            if (f.getName().equals(fieldName))
+                if (columnMatch == null)
+                    columnMatch = f;
+                else
+                    // [#4476] [#4477] [#5046] This might be unintentional from a user
+                    // perspective, e.g. when ambiguous ID columns are present.
+                    log.info("Ambiguous match found for " + fieldName + ". Both " + columnMatch + " and " + f + " match.", new SQLWarning());
+
+        return columnMatch;
     }
 
     @Override
@@ -126,6 +165,26 @@ class Fields<R extends Record> extends AbstractQueryPart implements RecordType<R
 
     @Override
     public final <T> Field<T> field(String fieldName, DataType<T> dataType) {
+        Field<?> result = field(fieldName);
+        return result == null ? null : result.coerce(dataType);
+    }
+
+    @Override
+    public final Field<?> field(Name name) {
+        if (name == null)
+            return null;
+
+        return field(DSL.field(name));
+    }
+
+    @Override
+    public final <T> Field<T> field(Name fieldName, Class<T> type) {
+        Field<?> result = field(fieldName);
+        return result == null ? null : result.coerce(type);
+    }
+
+    @Override
+    public final <T> Field<T> field(Name fieldName, DataType<T> dataType) {
         Field<?> result = field(fieldName);
         return result == null ? null : result.coerce(dataType);
     }
@@ -160,9 +219,8 @@ class Fields<R extends Record> extends AbstractQueryPart implements RecordType<R
     public final Field<?>[] fields(Field<?>... f) {
         Field<?>[] result = new Field[f.length];
 
-        for (int i = 0; i < result.length; i++) {
+        for (int i = 0; i < result.length; i++)
             result[i] = field(f[i]);
-        }
 
         return result;
     }
@@ -171,9 +229,18 @@ class Fields<R extends Record> extends AbstractQueryPart implements RecordType<R
     public final Field<?>[] fields(String... f) {
         Field<?>[] result = new Field[f.length];
 
-        for (int i = 0; i < result.length; i++) {
+        for (int i = 0; i < result.length; i++)
             result[i] = field(f[i]);
-        }
+
+        return result;
+    }
+
+    @Override
+    public final Field<?>[] fields(Name... f) {
+        Field<?>[] result = new Field[f.length];
+
+        for (int i = 0; i < result.length; i++)
+            result[i] = field(f[i]);
 
         return result;
     }
@@ -182,9 +249,8 @@ class Fields<R extends Record> extends AbstractQueryPart implements RecordType<R
     public final Field<?>[] fields(int... f) {
         Field<?>[] result = new Field[f.length];
 
-        for (int i = 0; i < result.length; i++) {
+        for (int i = 0; i < result.length; i++)
             result[i] = field(f[i]);
-        }
 
         return result;
     }
@@ -217,6 +283,11 @@ class Fields<R extends Record> extends AbstractQueryPart implements RecordType<R
     }
 
     @Override
+    public final int indexOf(Name fieldName) {
+        return indexOf(field(fieldName));
+    }
+
+    @Override
     public final Class<?>[] types() {
         int size = fields.length;
         Class<?>[] result = new Class[size];
@@ -235,6 +306,11 @@ class Fields<R extends Record> extends AbstractQueryPart implements RecordType<R
 
     @Override
     public final Class<?> type(String fieldName) {
+        return type(indexOrFail(this, fieldName));
+    }
+
+    @Override
+    public final Class<?> type(Name fieldName) {
         return type(indexOrFail(this, fieldName));
     }
 
@@ -260,6 +336,11 @@ class Fields<R extends Record> extends AbstractQueryPart implements RecordType<R
         return dataType(indexOrFail(this, fieldName));
     }
 
+    @Override
+    public final DataType<?> dataType(Name fieldName) {
+        return dataType(indexOrFail(this, fieldName));
+    }
+
     final int[] indexesOf(Field<?>... f) {
         int[] result = new int[f.length];
 
@@ -271,6 +352,16 @@ class Fields<R extends Record> extends AbstractQueryPart implements RecordType<R
     }
 
     final int[] indexesOf(String... fieldNames) {
+        int[] result = new int[fieldNames.length];
+
+        for (int i = 0; i < fieldNames.length; i++) {
+            result[i] = indexOrFail(this, fieldNames[i]);
+        }
+
+        return result;
+    }
+
+    final int[] indexesOf(Name... fieldNames) {
         int[] result = new int[fieldNames.length];
 
         for (int i = 0; i < fieldNames.length; i++) {

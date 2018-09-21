@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>org.jooq</groupId>
         <artifactId>jooq-parent</artifactId>
-        <version>3.6.6-SNAPSHOT</version>
+        <version>3.7.4</version>
     </parent>
 
     <groupId>org.jooq</groupId>
@@ -14,7 +15,7 @@
     <name>jOOQ Scala</name>
 
     <properties>
-        <scala.version>2.10.4</scala.version>
+        <scala.version>2.10.5</scala.version>
         <org.h2.version>1.4.181</org.h2.version>
     </properties>
 
@@ -23,108 +24,111 @@
         <testSourceDirectory>src/test/scala</testSourceDirectory>
         <plugins>
 
-            <!-- [pro] xxx
-            xxxx xxx xx xxxx xxxxxx xx xxxxxx xxxx xxx
-            xxxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxx
+            <!-- [trial] -->
 
-                xxxxxxxxxxxxxx
-                    xxxxxxxxxxxx
-                        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                        xxxxxxxxxxxxxxxxxxxxxxxxxxx
-                        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                    xxxxxxxxxxxxx
-                xxxxxxxxxxxxxxx
 
-                xxxx xxxxxx xxxxxxxxxxxxx xxxxxx xx xxx xxxxxxxxxx xxx
-                xxxxxxxxxxxxxxx
-                    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                    xxxxxxxxxxxxxxxxxxxxxxx
-                    xxxxxxxxxxxxxxxxxxxxx
-                    xxxxxxx xxxxxxxxxx xxx xxxxxxx xx xxxxxxxxxxxxxxxxxxxxxx xxx
-                    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                xxxxxxxxxxxxxxxx
 
-                xxxxxxxxxxxx
-                    xxxxxxxxxxx
-                        xxxxxxxxxxxxxxxxxxxxxxxx
-                        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                        xxxxxxx
-                            xxxxxxxxxxxxxxxxxxxx
-                        xxxxxxxx
-                        xxxxxxxxxxxxxxx
-                            xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                            xxxxxxxxxx
-                                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                            xxxxxxxxxxx
-                        xxxxxxxxxxxxxxxx
-                    xxxxxxxxxxxx
-                xxxxxxxxxxxxx
-            xxxxxxxxx
 
-            xxxx xxx xxxx xxxx xxxxxxxxx xxxxxx xxx xxxxxxxx x xxxxxx xxx x xxxxx xxx
-            xxxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxxxx
-                xxxxxxxxxxxx
-                    xxxxxxxxxxx
-                        xxxxxxxxxxxxxx
-                        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                        xxxxxxx
-                            xxxxxxxxxxxxxxxxxxxxx
-                        xxxxxxxx
-                        xxxxxxxxxxxxxxx
-                            xxxxxx
-                                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                                xxxxxxxxxxxxxxx
-                                xxxxxxxxxxxxxxxxxxxxx
-                            xxxxxxx
-                            xxxxxxxxxxx
-                                xxxxxxxxxx
-                                    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                                xxxxxxxxxxx
-                                xxxxxxxxxx
-                                    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                                    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                                    xxxxxxxxxxxxxxxxxxx
-                                xxxxxxxxxxx
 
-                                xxxx xxxxxxx xxxx xxxxxxxx xxxx xxxxxx xx xxxxxxxx xxx xxxxxxxxxxxxx xxxxx
-                                             xxx xxx xxxxx xxxxxx xx xxxx xxx
-                                xxxxxxxxxx
-                                    xxxxxxxxxx
-                                        xxxxxxxx
-                                            xxxxxxx
-                                                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                                                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                                                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                                            xxxxxxxx
-                                        xxxxxxxxx
-                                    xxxxxxxxxxx
-                                xxxxxxxxxxx
-                                xxxxxxxx
-                                    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                                    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                                xxxxxxxxx
-                            xxxxxxxxxxxx
-                        xxxxxxxxxxxxxxxx
-                    xxxxxxxxxxxx
-                xxxxxxxxxxxxx
 
-                xxxxxxxxxxxxxx
-                    xxxxxxxxxxxx
-                        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                        xxxxxxxxxxxxxxxxxxxxxxxxxxx
-                        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                    xxxxxxxxxxxxx
-                xxxxxxxxxxxxxxx
-            xxxxxxxxx
-            xxxx [/pro] -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            <!-- [/trial] -->
 
             <!-- The Scala compiler plugin -->
             <plugin>
@@ -198,7 +202,7 @@
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_2.10</artifactId>
-            <version>2.1.3</version>
+            <version>2.2.5</version>
             <type>jar</type>
             <scope>test</scope>
         </dependency>

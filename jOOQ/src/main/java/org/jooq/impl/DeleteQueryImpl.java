@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,8 +71,8 @@ class DeleteQueryImpl<R extends Record> extends AbstractDMLQuery<R> implements D
 
     private final ConditionProviderImpl condition;
 
-    DeleteQueryImpl(Configuration configuration, Table<R> table) {
-        super(configuration, table);
+    DeleteQueryImpl(Configuration configuration, WithImpl with, Table<R> table) {
+        super(configuration, with, table);
 
         this.condition = new ConditionProviderImpl();
     }

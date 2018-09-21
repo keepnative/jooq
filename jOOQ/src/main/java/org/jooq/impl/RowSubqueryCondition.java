@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,20 +47,20 @@ import static org.jooq.Comparator.EQUALS;
 import static org.jooq.Comparator.IN;
 import static org.jooq.Comparator.NOT_EQUALS;
 import static org.jooq.Comparator.NOT_IN;
-// ...
 import static org.jooq.SQLDialect.H2;
 import static org.jooq.SQLDialect.HSQLDB;
 import static org.jooq.SQLDialect.MARIADB;
 import static org.jooq.SQLDialect.MYSQL;
 // ...
 import static org.jooq.SQLDialect.POSTGRES;
+// ...
 import static org.jooq.impl.DSL.exists;
 import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.name;
 import static org.jooq.impl.DSL.notExists;
 import static org.jooq.impl.DSL.row;
 import static org.jooq.impl.DSL.select;
-import static org.jooq.impl.Utils.DATA_ROW_VALUE_EXPRESSION_PREDICATE_SUBQUERY;
+import static org.jooq.impl.Tools.DataKey.DATA_ROW_VALUE_EXPRESSION_PREDICATE_SUBQUERY;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -137,21 +137,23 @@ class RowSubqueryCondition extends AbstractCondition {
             return new Native();
         }
 
-        // [#2395] These dialects have native support for = and <>
-        else if (
-            asList(H2, HSQLDB, MARIADB, MYSQL, POSTGRES).contains(family) &&
-            asList(EQUALS, NOT_EQUALS).contains(comparator)) {
 
-            return new Native();
-        }
 
-        // [#2395] These dialects have native support for IN and NOT IN
-        else if (
-            asList(H2, HSQLDB, MARIADB, MYSQL, POSTGRES).contains(family) &&
-            asList(IN, NOT_IN).contains(comparator)) {
 
-            return new Native();
-        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         // [#2395] All other configurations have to be emulated
         else {

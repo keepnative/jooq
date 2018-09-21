@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +45,7 @@ import static java.util.Arrays.asList;
 import static org.jooq.impl.DSL.select;
 import static org.jooq.impl.DSL.table;
 import static org.jooq.impl.DSL.val;
-import static org.jooq.impl.Utils.DATA_ROW_VALUE_EXPRESSION_PREDICATE_SUBQUERY;
+import static org.jooq.impl.Tools.DataKey.DATA_ROW_VALUE_EXPRESSION_PREDICATE_SUBQUERY;
 
 import org.jooq.Clause;
 import org.jooq.Configuration;
@@ -131,13 +131,13 @@ class QuantifiedSelectImpl<R extends Record> extends AbstractQueryPart implement
                     return (QueryPartInternal) array;
                 }
 
-                // [#869] H2 and HSQLDB can simulate this syntax by unnesting
+                // [#869] H2 and HSQLDB can emulate this syntax by unnesting
                 // the array in a subselect
                 case H2:
                 case HSQLDB:
                     return (QueryPartInternal) create(ctx).select().from(table(array));
 
-                // [#1048] All other dialects simulate unnesting of arrays using
+                // [#1048] All other dialects emulate unnesting of arrays using
                 // UNION ALL-connected subselects
                 default: {
 

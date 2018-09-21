@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,7 +49,7 @@ import static org.jooq.impl.DSL.sequence;
 import static org.jooq.impl.DSL.sql;
 import static org.jooq.impl.DSL.table;
 import static org.jooq.impl.DSL.trueCondition;
-import static org.jooq.impl.Utils.list;
+import static org.jooq.impl.Tools.list;
 import static org.jooq.tools.Convert.convert;
 
 import java.io.IOException;
@@ -69,6 +69,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import javax.annotation.Generated;
 import javax.sql.DataSource;
@@ -82,7 +84,9 @@ import org.jooq.BindContext;
 import org.jooq.CommonTableExpression;
 import org.jooq.Condition;
 import org.jooq.Configuration;
+import org.jooq.ConnectionCallable;
 import org.jooq.ConnectionProvider;
+import org.jooq.ConnectionRunnable;
 import org.jooq.CreateIndexStep;
 import org.jooq.CreateSequenceFinalStep;
 import org.jooq.CreateTableAsStep;
@@ -180,6 +184,8 @@ import org.jooq.Record9;
 import org.jooq.RenderContext;
 import org.jooq.Result;
 import org.jooq.ResultQuery;
+import org.jooq.Results;
+import org.jooq.SQL;
 import org.jooq.SQLDialect;
 import org.jooq.Schema;
 import org.jooq.Select;
@@ -208,14 +214,12 @@ import org.jooq.exception.DataAccessException;
 import org.jooq.exception.InvalidResultException;
 import org.jooq.exception.SQLDialectNotSupportedException;
 import org.jooq.impl.BatchCRUD.Action;
-import org.jooq.tools.JooqLogger;
 import org.jooq.tools.csv.CSVReader;
+import org.jooq.tools.jdbc.JDBCUtils;
 import org.jooq.tools.jdbc.MockCallable;
 import org.jooq.tools.jdbc.MockConfiguration;
 import org.jooq.tools.jdbc.MockDataProvider;
 import org.jooq.tools.jdbc.MockRunnable;
-import org.jooq.tools.reflect.Reflect;
-import org.jooq.tools.reflect.ReflectException;
 
 /**
  * A default implementation for {@link DSLContext}.
@@ -232,8 +236,7 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
     /**
      * Generated UID
      */
-    private static final long       serialVersionUID = 2681360188806309513L;
-    private static final JooqLogger log              = JooqLogger.getLogger(DefaultDSLContext.class);
+    private static final long serialVersionUID = 2681360188806309513L;
 
     // -------------------------------------------------------------------------
     // XXX Constructors
@@ -276,7 +279,25 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
     }
 
     public DefaultDSLContext(Configuration configuration) {
-        super(configuration);
+        super(configuration, configuration == null ? null : configuration.data());
+    }
+
+    // -------------------------------------------------------------------------
+    // XXX AutoCloseable
+    // -------------------------------------------------------------------------
+
+    @Override
+    public void close() {
+        ConnectionProvider cp = configuration().connectionProvider();
+
+        if (cp instanceof DefaultConnectionProvider) {
+            DefaultConnectionProvider dcp = (DefaultConnectionProvider) cp;
+
+            if (dcp.finalize) {
+                JDBCUtils.safeClose(dcp.connection);
+                dcp.connection = null;
+            }
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -285,12 +306,12 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public Schema map(Schema schema) {
-        return Utils.getMappedSchema(configuration(), schema);
+        return Tools.getMappedSchema(configuration(), schema);
     }
 
     @Override
     public <R extends Record> Table<R> map(Table<R> table) {
-        return Utils.getMappedTable(configuration(), table);
+        return Tools.getMappedTable(configuration(), table);
     }
 
     // -------------------------------------------------------------------------
@@ -325,12 +346,9 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
             // [#3718] Use reflection to support also JDBC 4.0
             catch (Exception suppress) {
-                try {
-                    Reflect.on(cause).call("addSuppressed", suppress);
-                }
-                catch (ReflectException ignore) {
-                    log.error("Error when rolling back", suppress);
-                }
+
+                cause.addSuppressed(suppress);
+
             }
 
             if (cause instanceof RuntimeException) {
@@ -350,6 +368,32 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
             @Override
             public Void run(Configuration c) throws Exception {
                 transactional.run(c);
+                return null;
+            }
+        });
+    }
+
+    @Override
+    public <T> T connectionResult(ConnectionCallable<T> callable) {
+        final Connection connection = configuration().connectionProvider().acquire();
+
+        try {
+            return callable.run(connection);
+        }
+        catch (Exception e) {
+            throw new DataAccessException("Error while running ConnectionCallable", e);
+        }
+        finally {
+            configuration().connectionProvider().release(connection);
+        }
+    }
+
+    @Override
+    public void connection(final ConnectionRunnable runnable) {
+        connectionResult(new ConnectionCallable<Void>() {
+            @Override
+            public Void run(Connection connection) throws Exception {
+                runnable.run(connection);
                 return null;
             }
         });
@@ -390,22 +434,22 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public String render(QueryPart part) {
-        return renderContext().render(part);
+        return renderContext().visit(part).render();
     }
 
     @Override
     public String renderNamedParams(QueryPart part) {
-        return renderContext().paramType(NAMED).render(part);
+        return renderContext().paramType(NAMED).visit(part).render();
     }
 
     @Override
     public String renderNamedOrInlinedParams(QueryPart part) {
-        return renderContext().paramType(NAMED_OR_INLINED).render(part);
+        return renderContext().paramType(NAMED_OR_INLINED).visit(part).render();
     }
 
     @Override
     public String renderInlined(QueryPart part) {
-        return renderContext().paramType(INLINED).render(part);
+        return renderContext().paramType(INLINED).visit(part).render();
     }
 
     @Override
@@ -477,18 +521,28 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
     // -------------------------------------------------------------------------
 
     @Override
+    public Query query(SQL sql) {
+        return new SQLQuery(configuration(), sql);
+    }
+
+    @Override
     public Query query(String sql) {
         return query(sql, new Object[0]);
     }
 
     @Override
     public Query query(String sql, Object... bindings) {
-        return new SQLQuery(configuration(), sql(sql, bindings));
+        return query(sql(sql, bindings));
     }
 
     @Override
     public Query query(String sql, QueryPart... parts) {
         return query(sql, (Object[]) parts);
+    }
+
+    @Override
+    public Result<Record> fetch(SQL sql) {
+        return resultQuery(sql).fetch();
     }
 
     @Override
@@ -507,6 +561,11 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
     }
 
     @Override
+    public Cursor<Record> fetchLazy(SQL sql) {
+        return resultQuery(sql).fetchLazy();
+    }
+
+    @Override
     public Cursor<Record> fetchLazy(String sql) {
         return resultQuery(sql).fetchLazy();
     }
@@ -521,19 +580,51 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
         return resultQuery(sql, parts).fetchLazy();
     }
 
+
     @Override
-    public List<Result<Record>> fetchMany(String sql) {
+    public Stream<Record> fetchStream(SQL sql) {
+        return resultQuery(sql).stream();
+    }
+
+    @Override
+    public Stream<Record> fetchStream(String sql) {
+        return resultQuery(sql).stream();
+    }
+
+    @Override
+    public Stream<Record> fetchStream(String sql, Object... bindings) {
+        return resultQuery(sql, bindings).stream();
+    }
+
+    @Override
+    public Stream<Record> fetchStream(String sql, QueryPart... parts) {
+        return resultQuery(sql, parts).stream();
+    }
+
+
+    @Override
+    public Results fetchMany(SQL sql) {
         return resultQuery(sql).fetchMany();
     }
 
     @Override
-    public List<Result<Record>> fetchMany(String sql, Object... bindings) {
+    public Results fetchMany(String sql) {
+        return resultQuery(sql).fetchMany();
+    }
+
+    @Override
+    public Results fetchMany(String sql, Object... bindings) {
         return resultQuery(sql, bindings).fetchMany();
     }
 
     @Override
-    public List<Result<Record>> fetchMany(String sql, QueryPart... parts) {
+    public Results fetchMany(String sql, QueryPart... parts) {
         return resultQuery(sql, parts).fetchMany();
+    }
+
+    @Override
+    public Record fetchOne(SQL sql) {
+        return resultQuery(sql).fetchOne();
     }
 
     @Override
@@ -551,6 +642,33 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
         return resultQuery(sql, parts).fetchOne();
     }
 
+
+    @Override
+    public Optional<Record> fetchOptional(SQL sql) {
+        return Optional.ofNullable(fetchOne(sql));
+    }
+
+    @Override
+    public Optional<Record> fetchOptional(String sql) {
+        return Optional.ofNullable(fetchOne(sql));
+    }
+
+    @Override
+    public Optional<Record> fetchOptional(String sql, Object... bindings) {
+        return Optional.ofNullable(fetchOne(sql, bindings));
+    }
+
+    @Override
+    public Optional<Record> fetchOptional(String sql, QueryPart... parts) {
+        return Optional.ofNullable(fetchOne(sql, parts));
+    }
+
+
+    @Override
+    public Object fetchValue(SQL sql) {
+        return fetchValue((ResultQuery) resultQuery(sql));
+    }
+
     @Override
     public Object fetchValue(String sql) {
         return fetchValue((ResultQuery) resultQuery(sql));
@@ -564,6 +682,33 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
     @Override
     public Object fetchValue(String sql, QueryPart... parts) {
         return fetchValue((ResultQuery) resultQuery(sql, parts));
+    }
+
+
+    @Override
+    public Optional<?> fetchOptionalValue(SQL sql) {
+        return Optional.ofNullable(fetchValue(sql));
+    }
+
+    @Override
+    public Optional<?> fetchOptionalValue(String sql) {
+        return Optional.ofNullable(fetchValue(sql));
+    }
+
+    @Override
+    public Optional<?> fetchOptionalValue(String sql, Object... bindings) {
+        return Optional.ofNullable(fetchValue(sql, bindings));
+    }
+
+    @Override
+    public Optional<?> fetchOptionalValue(String sql, QueryPart... parts) {
+        return Optional.ofNullable(fetchValue(sql, parts));
+    }
+
+
+    @Override
+    public List<?> fetchValues(SQL sql) {
+        return fetchValues((ResultQuery) resultQuery(sql));
     }
 
     @Override
@@ -582,6 +727,11 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
     }
 
     @Override
+    public int execute(SQL sql) {
+        return query(sql).execute();
+    }
+
+    @Override
     public int execute(String sql) {
         return query(sql).execute();
     }
@@ -597,13 +747,18 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
     }
 
     @Override
+    public ResultQuery<Record> resultQuery(SQL sql) {
+        return new SQLResultQuery(configuration(), sql);
+    }
+
+    @Override
     public ResultQuery<Record> resultQuery(String sql) {
         return resultQuery(sql, new Object[0]);
     }
 
     @Override
     public ResultQuery<Record> resultQuery(String sql, Object... bindings) {
-        return new SQLResultQuery(configuration(), sql(sql, bindings));
+        return resultQuery(sql(sql, bindings));
     }
 
     @Override
@@ -637,23 +792,45 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public Record fetchOne(ResultSet rs) {
-        return Utils.fetchOne(fetchLazy(rs));
+        return Tools.fetchOne(fetchLazy(rs));
     }
 
     @Override
     public Record fetchOne(ResultSet rs, Field<?>... fields) {
-        return Utils.fetchOne(fetchLazy(rs, fields));
+        return Tools.fetchOne(fetchLazy(rs, fields));
     }
 
     @Override
     public Record fetchOne(ResultSet rs, DataType<?>... types) {
-        return Utils.fetchOne(fetchLazy(rs, types));
+        return Tools.fetchOne(fetchLazy(rs, types));
     }
 
     @Override
     public Record fetchOne(ResultSet rs, Class<?>... types) {
-        return Utils.fetchOne(fetchLazy(rs, types));
+        return Tools.fetchOne(fetchLazy(rs, types));
     }
+
+
+    @Override
+    public Optional<Record> fetchOptional(ResultSet rs) {
+        return Optional.ofNullable(fetchOne(rs));
+    }
+
+    @Override
+    public Optional<Record> fetchOptional(ResultSet rs, Field<?>... fields) {
+        return Optional.ofNullable(fetchOne(rs, fields));
+    }
+
+    @Override
+    public Optional<Record> fetchOptional(ResultSet rs, DataType<?>... types) {
+        return Optional.ofNullable(fetchOne(rs, types));
+    }
+
+    @Override
+    public Optional<Record> fetchOptional(ResultSet rs, Class<?>... types) {
+        return Optional.ofNullable(fetchOne(rs, types));
+    }
+
 
     @Override
     public Object fetchValue(ResultSet rs) {
@@ -674,6 +851,28 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
     public <T> T fetchValue(ResultSet rs, Class<T> type) {
         return (T) value1((Record1) fetchOne(rs, type));
     }
+
+
+    @Override
+    public Optional<?> fetchOptionalValue(ResultSet rs) {
+        return Optional.ofNullable(fetchValue(rs));
+    }
+
+    @Override
+    public <T> Optional<T> fetchOptionalValue(ResultSet rs, Field<T> field) {
+        return Optional.ofNullable(fetchValue(rs, field));
+    }
+
+    @Override
+    public <T> Optional<T> fetchOptionalValue(ResultSet rs, DataType<T> type) {
+        return Optional.ofNullable(fetchValue(rs, type));
+    }
+
+    @Override
+    public <T> Optional<T> fetchOptionalValue(ResultSet rs, Class<T> type) {
+        return Optional.ofNullable(fetchValue(rs, type));
+    }
+
 
     @Override
     public List<?> fetchValues(ResultSet rs) {
@@ -734,8 +933,30 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public Cursor<Record> fetchLazy(ResultSet rs, Class<?>... types) {
-        return fetchLazy(rs, Utils.dataTypes(types));
+        return fetchLazy(rs, Tools.dataTypes(types));
     }
+
+
+    @Override
+    public Stream<Record> fetchStream(ResultSet rs) {
+        return fetchLazy(rs).stream();
+    }
+
+    @Override
+    public Stream<Record> fetchStream(ResultSet rs, Field<?>... fields) {
+        return fetchLazy(rs, fields).stream();
+    }
+
+    @Override
+    public Stream<Record> fetchStream(ResultSet rs, DataType<?>... types) {
+        return fetchLazy(rs, types).stream();
+    }
+
+    @Override
+    public Stream<Record> fetchStream(ResultSet rs, Class<?>... types) {
+        return fetchLazy(rs, types).stream();
+    }
+
 
     @Override
     public Result<Record> fetchFromTXT(String string) {
@@ -744,16 +965,26 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public Result<Record> fetchFromTXT(String string, String nullLiteral) {
-        return fetchFromStringData(Utils.parseTXT(string, nullLiteral));
+        return fetchFromStringData(Tools.parseTXT(string, nullLiteral));
     }
 
     @Override
     public Result<Record> fetchFromCSV(String string) {
-        return fetchFromCSV(string, ',');
+        return fetchFromCSV(string, true, ',');
     }
 
     @Override
     public Result<Record> fetchFromCSV(String string, char delimiter) {
+        return fetchFromCSV(string, true, delimiter);
+    }
+
+    @Override
+    public Result<Record> fetchFromCSV(String string, boolean header) {
+        return fetchFromCSV(string, header, ',');
+    }
+
+    @Override
+    public Result<Record> fetchFromCSV(String string, boolean header, char delimiter) {
         CSVReader reader = new CSVReader(new StringReader(string), delimiter);
         List<String[]> list = null;
 
@@ -770,7 +1001,7 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
             catch (IOException ignore) {}
         }
 
-        return fetchFromStringData(list);
+        return fetchFromStringData(list, header);
     }
 
     @Override
@@ -801,25 +1032,42 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public Result<Record> fetchFromStringData(String[]... strings) {
-        return fetchFromStringData(list(strings));
+        return fetchFromStringData(list(strings), true);
     }
 
     @Override
     public Result<Record> fetchFromStringData(List<String[]> strings) {
+        return fetchFromStringData(strings, true);
+    }
+
+    @Override
+    public Result<Record> fetchFromStringData(List<String[]> strings, boolean header) {
         if (strings.size() == 0) {
             return new ResultImpl<Record>(configuration());
         }
         else {
             List<Field<?>> fields = new ArrayList<Field<?>>();
+            int firstRow;
 
-            for (String name : strings.get(0)) {
-                fields.add(field(name(name), String.class));
+            if (header) {
+                firstRow = 1;
+
+                for (String name : strings.get(0)) {
+                    fields.add(field(name(name), String.class));
+                }
+            }
+            else {
+                firstRow = 0;
+
+                for (int i = 0; i < strings.get(0).length; i++) {
+                    fields.add(field(name("COL" + (i + 1)), String.class));
+                }
             }
 
             Result<Record> result = new ResultImpl<Record>(configuration(), fields);
 
-            if (strings.size() > 1) {
-                for (String[] values : strings.subList(1, strings.size())) {
+            if (strings.size() > firstRow) {
+                for (String[] values : strings.subList(firstRow, strings.size())) {
                     RecordImpl record = new RecordImpl(fields);
 
                     for (int i = 0; i < Math.min(values.length, fields.size()); i++) {
@@ -1199,22 +1447,22 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public SelectQuery<Record> selectQuery() {
-        return new SelectQueryImpl(null, configuration());
+        return new SelectQueryImpl(configuration(), null);
     }
 
     @Override
     public <R extends Record> SelectQuery<R> selectQuery(TableLike<R> table) {
-        return new SelectQueryImpl<R>(null, configuration(), table);
+        return new SelectQueryImpl<R>(configuration(), null, table);
     }
 
     @Override
     public <R extends Record> InsertQuery<R> insertQuery(Table<R> into) {
-        return new InsertQueryImpl<R>(configuration(), into);
+        return new InsertQueryImpl<R>(configuration(), null, into);
     }
 
     @Override
     public <R extends Record> InsertSetStep<R> insertInto(Table<R> into) {
-        return new InsertImpl(configuration(), into, Collections.<Field<?>>emptyList());
+        return new InsertImpl(configuration(), null, into, Collections.<Field<?>>emptyList());
     }
 
 // [jooq-tools] START [insert]
@@ -1222,160 +1470,160 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1> InsertValuesStep1<R, T1> insertInto(Table<R> into, Field<T1> field1) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2> InsertValuesStep2<R, T1, T2> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3> InsertValuesStep3<R, T1, T2, T3> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4> InsertValuesStep4<R, T1, T2, T3, T4> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5> InsertValuesStep5<R, T1, T2, T3, T4, T5> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6> InsertValuesStep6<R, T1, T2, T3, T4, T5, T6> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7> InsertValuesStep7<R, T1, T2, T3, T4, T5, T6, T7> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8> InsertValuesStep8<R, T1, T2, T3, T4, T5, T6, T7, T8> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9> InsertValuesStep9<R, T1, T2, T3, T4, T5, T6, T7, T8, T9> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> InsertValuesStep10<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> InsertValuesStep11<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> InsertValuesStep12<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> InsertValuesStep13<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> InsertValuesStep14<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> InsertValuesStep15<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> InsertValuesStep16<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> InsertValuesStep17<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> InsertValuesStep18<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> InsertValuesStep19<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20> InsertValuesStep20<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19, Field<T20> field20) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21> InsertValuesStep21<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19, Field<T20> field20, Field<T21> field21) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20, field21 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20, field21 }));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22> InsertValuesStep22<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22> insertInto(Table<R> into, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19, Field<T20> field20, Field<T21> field21, Field<T22> field22) {
-        return new InsertImpl(configuration(), into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20, field21, field22 }));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20, field21, field22 }));
     }
 
 // [jooq-tools] END [insert]
 
     @Override
     public <R extends Record> InsertValuesStepN<R> insertInto(Table<R> into, Field<?>... fields) {
-        return new InsertImpl(configuration(), into, Arrays.asList(fields));
+        return new InsertImpl(configuration(), null, into, Arrays.asList(fields));
     }
 
     @Override
     public <R extends Record> InsertValuesStepN<R> insertInto(Table<R> into, Collection<? extends Field<?>> fields) {
-        return new InsertImpl(configuration(), into, fields);
+        return new InsertImpl(configuration(), null, into, fields);
     }
 
     @Override
     public <R extends Record> UpdateQuery<R> updateQuery(Table<R> table) {
-        return new UpdateQueryImpl<R>(configuration(), table);
+        return new UpdateQueryImpl<R>(configuration(), null, table);
     }
 
     @Override
     public <R extends Record> UpdateSetFirstStep<R> update(Table<R> table) {
-        return new UpdateImpl<R>(configuration(), table);
+        return new UpdateImpl<R>(configuration(), null, table);
     }
 
     @Override
     public <R extends Record> MergeUsingStep<R> mergeInto(Table<R> table) {
-        return new MergeImpl(configuration(), table);
+        return new MergeImpl(configuration(), null, table);
     }
 
 // [jooq-tools] START [merge]
@@ -1383,133 +1631,133 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1> MergeKeyStep1<R, T1> mergeInto(Table<R> table, Field<T1> field1) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2> MergeKeyStep2<R, T1, T2> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3> MergeKeyStep3<R, T1, T2, T3> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4> MergeKeyStep4<R, T1, T2, T3, T4> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5> MergeKeyStep5<R, T1, T2, T3, T4, T5> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6> MergeKeyStep6<R, T1, T2, T3, T4, T5, T6> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7> MergeKeyStep7<R, T1, T2, T3, T4, T5, T6, T7> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8> MergeKeyStep8<R, T1, T2, T3, T4, T5, T6, T7, T8> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9> MergeKeyStep9<R, T1, T2, T3, T4, T5, T6, T7, T8, T9> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> MergeKeyStep10<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> MergeKeyStep11<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> MergeKeyStep12<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> MergeKeyStep13<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> MergeKeyStep14<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> MergeKeyStep15<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> MergeKeyStep16<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> MergeKeyStep17<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> MergeKeyStep18<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> MergeKeyStep19<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20> MergeKeyStep20<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19, Field<T20> field20) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21> MergeKeyStep21<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19, Field<T20> field20, Field<T21> field21) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20, field21));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20, field21));
     }
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
     public <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22> MergeKeyStep22<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19, Field<T20> field20, Field<T21> field21, Field<T22> field22) {
-        return new MergeImpl(configuration(), table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20, field21, field22));
+        return new MergeImpl(configuration(), null, table, Arrays.asList(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20, field21, field22));
     }
 
 // [jooq-tools] END [merge]
@@ -1521,12 +1769,12 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public <R extends Record> MergeKeyStepN<R> mergeInto(Table<R> table, Collection<? extends Field<?>> fields) {
-        return new MergeImpl(configuration(), table, fields);
+        return new MergeImpl(configuration(), null, table, fields);
     }
 
     @Override
     public <R extends Record> DeleteQuery<R> deleteQuery(Table<R> table) {
-        return new DeleteQueryImpl<R>(configuration(), table);
+        return new DeleteQueryImpl<R>(configuration(), null, table);
     }
 
     @Override
@@ -1536,7 +1784,7 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public <R extends Record> DeleteWhereStep<R> deleteFrom(Table<R> table) {
-        return new DeleteImpl<R>(configuration(), table);
+        return new DeleteImpl<R>(configuration(), null, table);
     }
 
     // -------------------------------------------------------------------------
@@ -1630,12 +1878,12 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public CreateViewAsStep<Record> createView(String view, String... fields) {
-        return createView(table(name(view)), Utils.fieldsByName(view, fields));
+        return createView(table(name(view)), Tools.fieldsByName(view, fields));
     }
 
     @Override
     public CreateViewAsStep<Record> createView(Name view, Name... fields) {
-        return createView(table(view), Utils.fieldsByName(fields));
+        return createView(table(view), Tools.fieldsByName(fields));
     }
 
     @Override
@@ -1896,6 +2144,10 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
                 return select(field).fetchOne(field);
             }
 
+
+
+
+
             case CUBRID:
             case MARIADB:
             case MYSQL: {
@@ -1913,25 +2165,25 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
                 return select(field).fetchOne(field);
             }
 
-            /* [pro] xx
-            xxxx xxxxxxxxx x
-                xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxx xxxx xxxxxxxxx xxxxx xxxxx x xxxx xxxxxxxxxxxxxxxxxx
-            x
 
-            xxxx xxxxxxx x
-                xxxxxxxxxxxxxxxxx xxxxx x xxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxx
-                xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            x
 
-            xxxx xxxxxxx
-            xxxx xxxx
-            xxxx xxxxxxxxxx
-            xxxx xxxxxxx x
-                xxxxxxxxxxxxxxxxx xxxxx x xxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxx
-                xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            x
 
-            xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             default:
                 throw new SQLDialectNotSupportedException("identity functionality not supported by " + configuration().dialect());
         }
@@ -1965,7 +2217,7 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public Record newRecord(Field<?>... fields) {
-        return Utils.newRecord(false, RecordImpl.class, fields, configuration()).<RuntimeException>operate(null);
+        return Tools.newRecord(false, RecordImpl.class, fields, configuration()).<RuntimeException>operate(null);
     }
 
     // [jooq-tools] START [newRecord]
@@ -2106,17 +2358,17 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public <R extends UDTRecord<R>> R newRecord(UDT<R> type) {
-        return Utils.newRecord(false, type, configuration()).<RuntimeException>operate(null);
+        return Tools.newRecord(false, type, configuration()).<RuntimeException>operate(null);
     }
 
     @Override
     public <R extends Record> R newRecord(Table<R> table) {
-        return Utils.newRecord(false, table, configuration()).<RuntimeException>operate(null);
+        return Tools.newRecord(false, table, configuration()).<RuntimeException>operate(null);
     }
 
     @Override
     public <R extends Record> R newRecord(Table<R> table, final Object source) {
-        return Utils.newRecord(false, table, configuration())
+        return Tools.newRecord(false, table, configuration())
                     .operate(new RecordOperation<R, RuntimeException>() {
 
             @Override
@@ -2279,7 +2531,7 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public <R extends Record> Result<R> fetch(ResultQuery<R> query) {
-        final Configuration previous = Utils.getConfiguration(query);
+        final Configuration previous = Tools.getConfiguration(query);
 
         try {
             query.attach(configuration());
@@ -2292,7 +2544,7 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public <R extends Record> Cursor<R> fetchLazy(ResultQuery<R> query) {
-        final Configuration previous = Utils.getConfiguration(query);
+        final Configuration previous = Tools.getConfiguration(query);
 
         try {
             query.attach(configuration());
@@ -2303,9 +2555,24 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
         }
     }
 
+
     @Override
-    public <R extends Record> List<Result<Record>> fetchMany(ResultQuery<R> query) {
-        final Configuration previous = Utils.getConfiguration(query);
+    public <R extends Record> Stream<R> fetchStream(ResultQuery<R> query) {
+        final Configuration previous = Tools.getConfiguration(query);
+
+        try {
+            query.attach(configuration());
+            return query.stream();
+        }
+        finally {
+            query.attach(previous);
+        }
+    }
+
+
+    @Override
+    public <R extends Record> Results fetchMany(ResultQuery<R> query) {
+        final Configuration previous = Tools.getConfiguration(query);
 
         try {
             query.attach(configuration());
@@ -2318,7 +2585,7 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public <R extends Record> R fetchOne(ResultQuery<R> query) {
-        final Configuration previous = Utils.getConfiguration(query);
+        final Configuration previous = Tools.getConfiguration(query);
 
         try {
             query.attach(configuration());
@@ -2329,9 +2596,16 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
         }
     }
 
+
+    @Override
+    public <R extends Record> Optional<R> fetchOptional(ResultQuery<R> query) {
+        return Optional.ofNullable(fetchOne(query));
+    }
+
+
     @Override
     public <T, R extends Record1<T>> T fetchValue(ResultQuery<R> query) {
-        final Configuration previous = Utils.getConfiguration(query);
+        final Configuration previous = Tools.getConfiguration(query);
 
         try {
             query.attach(configuration());
@@ -2341,6 +2615,23 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
             query.attach(previous);
         }
     }
+
+    @Override
+    public <T> T fetchValue(TableField<?, T> field) {
+        return fetchValue(select(field).from(field.getTable()));
+    }
+
+
+    @Override
+    public <T, R extends Record1<T>> Optional<T> fetchOptionalValue(ResultQuery<R> query) {
+        return Optional.ofNullable(fetchValue(query));
+    }
+
+    @Override
+    public <T> Optional<T> fetchOptionalValue(TableField<?, T> field) {
+        return Optional.ofNullable(fetchValue(field));
+    }
+
 
     @Override
     public <T, R extends Record1<T>> List<T> fetchValues(ResultQuery<R> query) {
@@ -2394,7 +2685,7 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public int execute(Query query) {
-        final Configuration previous = Utils.getConfiguration(query);
+        final Configuration previous = Tools.getConfiguration(query);
 
         try {
             query.attach(configuration());
@@ -2421,22 +2712,34 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
 
     @Override
     public <R extends Record> R fetchOne(Table<R> table) {
-        return Utils.fetchOne(fetchLazy(table));
+        return Tools.fetchOne(fetchLazy(table));
     }
 
     @Override
     public <R extends Record> R fetchOne(Table<R> table, Condition condition) {
-        return Utils.fetchOne(fetchLazy(table, condition));
+        return Tools.fetchOne(fetchLazy(table, condition));
+    }
+
+
+    @Override
+    public <R extends Record> Optional<R> fetchOptional(Table<R> table) {
+        return Optional.ofNullable(fetchOne(table));
     }
 
     @Override
+    public <R extends Record> Optional<R> fetchOptional(Table<R> table, Condition condition) {
+        return Optional.ofNullable(fetchOne(table, condition));
+    }
+
+
+    @Override
     public <R extends Record> R fetchAny(Table<R> table) {
-        return Utils.filterOne(selectFrom(table).limit(1).fetch());
+        return Tools.filterOne(selectFrom(table).limit(1).fetch());
     }
 
     @Override
     public <R extends Record> R fetchAny(Table<R> table, Condition condition) {
-        return Utils.filterOne(selectFrom(table).where(condition).limit(1).fetch());
+        return Tools.filterOne(selectFrom(table).where(condition).limit(1).fetch());
     }
 
     @Override
@@ -2449,6 +2752,18 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
         return selectFrom(table).where(condition).fetchLazy();
     }
 
+
+    @Override
+    public <R extends Record> Stream<R> fetchStream(Table<R> table) {
+        return fetchStream(table, trueCondition());
+    }
+
+    @Override
+    public <R extends Record> Stream<R> fetchStream(Table<R> table, Condition condition) {
+        return selectFrom(table).where(condition).stream();
+    }
+
+
     @Override
     public <R extends TableRecord<R>> int executeInsert(R record) {
         InsertQuery<R> insert = insertQuery(record.getTable());
@@ -2459,7 +2774,7 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
     @Override
     public <R extends UpdatableRecord<R>> int executeUpdate(R record) {
         UpdateQuery<R> update = updateQuery(record.getTable());
-        Utils.addConditions(update, record, record.getTable().getPrimaryKey().getFieldsArray());
+        Tools.addConditions(update, record, record.getTable().getPrimaryKey().getFieldsArray());
         update.setRecord(record);
         return update.execute();
     }
@@ -2475,7 +2790,7 @@ public class DefaultDSLContext extends AbstractScope implements DSLContext, Seri
     @Override
     public <R extends UpdatableRecord<R>> int executeDelete(R record) {
         DeleteQuery<R> delete = deleteQuery(record.getTable());
-        Utils.addConditions(delete, record, record.getTable().getPrimaryKey().getFieldsArray());
+        Tools.addConditions(delete, record, record.getTable().getPrimaryKey().getFieldsArray());
         return delete.execute();
     }
 

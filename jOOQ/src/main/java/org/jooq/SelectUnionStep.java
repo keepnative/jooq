@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,9 +49,12 @@ import static org.jooq.SQLDialect.H2;
 import static org.jooq.SQLDialect.HSQLDB;
 // ...
 // ...
+import static org.jooq.SQLDialect.MARIADB;
+import static org.jooq.SQLDialect.MYSQL;
 // ...
 import static org.jooq.SQLDialect.POSTGRES;
 import static org.jooq.SQLDialect.SQLITE;
+// ...
 // ...
 // ...
 
@@ -101,30 +104,44 @@ import static org.jooq.SQLDialect.SQLITE;
 public interface SelectUnionStep<R extends Record> extends SelectFinalStep<R> {
 
     /**
-     * Combine with other selects
+     * Apply the <code>UNION</code> set operation.
      */
     @Override
     @Support
     SelectOrderByStep<R> union(Select<? extends R> select);
 
     /**
-     * Combine with other selects
+     * Apply the <code>UNION ALL</code> set operation.
      */
     @Override
     @Support
     SelectOrderByStep<R> unionAll(Select<? extends R> select);
 
     /**
-     * Combine with other selects
+     * Apply the <code>EXCEPT</code> (or <code>MINUS</code>) set operation.
      */
     @Override
-    @Support({ CUBRID, DERBY, H2, HSQLDB, POSTGRES, SQLITE })
+    @Support({ CUBRID, DERBY, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
     SelectOrderByStep<R> except(Select<? extends R> select);
 
     /**
-     * Combine with other selects
+     * Apply the <code>EXCEPT ALL</code> set operation.
      */
     @Override
-    @Support({ CUBRID, DERBY, H2, HSQLDB, POSTGRES, SQLITE })
+    @Support({ CUBRID, DERBY, POSTGRES })
+    SelectOrderByStep<R> exceptAll(Select<? extends R> select);
+
+    /**
+     * Apply the <code>INTERSECT</code> set operation.
+     */
+    @Override
+    @Support({ CUBRID, DERBY, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
     SelectOrderByStep<R> intersect(Select<? extends R> select);
+
+    /**
+     * Apply the <code>INTERSECT ALL</code> set operation.
+     */
+    @Override
+    @Support({ CUBRID, DERBY, POSTGRES })
+    SelectOrderByStep<R> intersectAll(Select<? extends R> select);
 }

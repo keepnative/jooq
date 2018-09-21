@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,10 +57,10 @@ class Dual extends AbstractTable<Record> {
 
     private static final long          serialVersionUID = -7492790780048090156L;
     private static final Table<Record> FORCED_DUAL      = select(new Field[] { inline("X").as("DUMMY") }).asTable("DUAL");
-    /* [pro] xx
-    xxxxxx xxxxx xxxxxx                xxxxxxxxxxx      x xxxxxxx xxxxxxxx xxxx xxxx xxxxxxxxxxxxxxx
-    xxxxxx xxxxx xxxxxx                xxxxxxxxxxxxx    x xxxxxxx x xx xxxx xxxx xxxxxxxxx xxxxx xxxxx x xxx
-    xx [/pro] */
+
+
+
+
     static final String                DUAL_HSQLDB      = "select 1 as dual from information_schema.system_users limit 1";
 
     private final boolean              force;
@@ -112,10 +112,13 @@ class Dual extends AbstractTable<Record> {
         }
         else {
             switch (ctx.family()) {
-                /* [pro] xx
-                xxxx xxxx
-                xxxx xxxxxxxxxx
-                xx [/pro] */
+
+
+
+
+
+
+                case H2:
                 case POSTGRES:
                 case SQLITE:
                     break;
@@ -132,40 +135,46 @@ class Dual extends AbstractTable<Record> {
                     ctx.literal("db_root");
                     break;
 
-                // These dialects don't have a DUAL table. But simulation is needed
+                // These dialects don't have a DUAL table. But emulation is needed
                 // for queries like SELECT 1 WHERE 1 = 1
-                /* [pro] xx
-                xxxx xxxxxxx
-                    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xx xxxxxxx
-                    xxxxxx
 
-                xxxx xxxx
-                    xxxxxxxxxxxxxxxxxxxxx
-                       xxxxxxxxx
-                       xxxxxxxxxxxxxxxxx
-                    xxxxxx
 
-                xxxx xxxxxxxxx
-                    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xx xxxxxxx
-                    xxxxxx
 
-                xxxx xxxxxxx
-                    xxxxxxxxxxxxxxxxxxxx x xx xxxxx xx xxxxxxx
-                    xxxxxx
 
-                xxxx xxxxx
-                xxxx xxxxxxx
-                    xxxxxxxxxxxxxxxxxx
-                       xxxxxxxxx
-                       xxxxxxxxxxxxxxxxxx
-                    xxxxxx
 
-                xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 case DERBY:
                     ctx.literal("SYSIBM")
                        .sql('.')
                        .literal("SYSDUMMY1");
                     break;
+
+                case MARIADB:
+                case MYSQL:
+
+
+
 
                 default:
                     ctx.keyword("dual");

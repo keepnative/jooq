@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,6 +46,7 @@ import org.jooq.Context;
 import org.jooq.Converter;
 import org.jooq.DataType;
 import org.jooq.Field;
+import org.jooq.Name;
 import org.jooq.Record;
 import org.jooq.Row;
 import org.jooq.Schema;
@@ -102,6 +103,11 @@ public class UDTImpl<R extends UDTRecord<R>> extends AbstractQueryPart implement
     }
 
     @Override
+    public final Field<?> field(Name fieldName) {
+        return fieldsRow().field(fieldName);
+    }
+
+    @Override
     public final Field<?> field(int index) {
         return fieldsRow().field(index);
     }
@@ -109,6 +115,26 @@ public class UDTImpl<R extends UDTRecord<R>> extends AbstractQueryPart implement
     @Override
     public final Field<?>[] fields() {
         return fieldsRow().fields();
+    }
+
+    @Override
+    public final Field<?>[] fields(Field<?>... f) {
+        return fieldsRow().fields(f);
+    }
+
+    @Override
+    public final Field<?>[] fields(String... fieldNames) {
+        return fieldsRow().fields(fieldNames);
+    }
+
+    @Override
+    public final Field<?>[] fields(Name... fieldNames) {
+        return fieldsRow().fields(fieldNames);
+    }
+
+    @Override
+    public final Field<?>[] fields(int... fieldIndexes) {
+        return fieldsRow().fields(fieldIndexes);
     }
 
     final Fields<R> fields0() {
@@ -140,7 +166,7 @@ public class UDTImpl<R extends UDTRecord<R>> extends AbstractQueryPart implement
 
     @Override
     public final void accept(Context<?> ctx) {
-        Schema mappedSchema = Utils.getMappedSchema(ctx.configuration(), getSchema());
+        Schema mappedSchema = Tools.getMappedSchema(ctx.configuration(), getSchema());
 
         if (mappedSchema != null) {
             ctx.visit(mappedSchema);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -123,6 +123,8 @@ public enum Clause {
     TABLE_JOIN_NATURAL_OUTER_RIGHT,
     TABLE_JOIN_CROSS_APPLY,
     TABLE_JOIN_OUTER_APPLY,
+    TABLE_JOIN_SEMI_LEFT,
+    TABLE_JOIN_ANTI_LEFT,
     TABLE_JOIN_ON,
     TABLE_JOIN_USING,
     TABLE_JOIN_PARTITION_BY,
@@ -339,12 +341,28 @@ public enum Clause {
     SELECT_INTERSECT,
 
     /**
+     * A <code>INTERSECT ALL</code> set operation.
+     * <p>
+     * This clause surrounds two or more subselects (see {@link #SELECT})
+     * concatenating them using a <code>INTERSECT ALL</code> set operation.
+     */
+    SELECT_INTERSECT_ALL,
+
+    /**
      * A <code>EXCEPT</code> set operation.
      * <p>
      * This clause surrounds two or more subselects (see {@link #SELECT})
      * concatenating them using a <code>EXCEPT</code> set operation.
      */
     SELECT_EXCEPT,
+
+    /**
+     * A <code>EXCEPT ALL</code> set operation.
+     * <p>
+     * This clause surrounds two or more subselects (see {@link #SELECT})
+     * concatenating them using a <code>EXCEPT ALL</code> set operation.
+     */
+    SELECT_EXCEPT_ALL,
 
     /**
      * A <code>SELECT</code> clause within a {@link #SELECT} statement or

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,8 +59,8 @@ import static org.jooq.impl.Term.ARRAY_AGG;
 import static org.jooq.impl.Term.LIST_AGG;
 import static org.jooq.impl.Term.MEDIAN;
 import static org.jooq.impl.Term.ROW_NUMBER;
-import static org.jooq.impl.Utils.DATA_LOCALLY_SCOPED_DATA_MAP;
-import static org.jooq.impl.Utils.DATA_WINDOW_DEFINITIONS;
+import static org.jooq.impl.Tools.DataKey.DATA_LOCALLY_SCOPED_DATA_MAP;
+import static org.jooq.impl.Tools.DataKey.DATA_WINDOW_DEFINITIONS;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -77,6 +77,7 @@ import org.jooq.Field;
 import org.jooq.Name;
 import org.jooq.OrderedAggregateFunction;
 import org.jooq.QueryPart;
+import org.jooq.SQL;
 import org.jooq.SQLDialect;
 import org.jooq.SortField;
 import org.jooq.WindowBeforeOverStep;
@@ -197,6 +198,8 @@ class Function<T> extends AbstractField<T> implements
     public /* final */ void accept(Context<?> ctx) {
         if (term == ARRAY_AGG && asList(HSQLDB, POSTGRES).contains(ctx.family())) {
             toSQLGroupConcat(ctx);
+            toSQLFilterClause(ctx);
+            toSQLOverClause(ctx);
         }
         else if (term == LIST_AGG && asList(CUBRID, H2, HSQLDB, MARIADB, MYSQL).contains(ctx.family())) {
             toSQLGroupConcat(ctx);
@@ -206,11 +209,11 @@ class Function<T> extends AbstractField<T> implements
             toSQLFilterClause(ctx);
             toSQLOverClause(ctx);
         }
-        /* [pro] xx
-        xxxx xx xxxxx xx xxxxxxxx xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxxxxxxxxxxxxxxxx
-        x
-        xx [/pro] */
+
+
+
+
+
         else if (term == MEDIAN && asList(POSTGRES).contains(ctx.family())) {
             Field<?>[] fields = new Field[arguments.size()];
             for (int i = 0; i < fields.length; i++)
@@ -227,57 +230,57 @@ class Function<T> extends AbstractField<T> implements
         }
     }
 
-    /* [pro] xx
-    xxx
-     x xxxxxxx xxxxxxxxxxxxxxxxxxxxx xxxxxxxxxx xxx xxx
-     xx
-    xxxxx xxxx xxxxxxxxxxxxxxxxxxxxxx xxxx x
 
-        xx xxxx xx x xxxxxxxx xxxx xx xxxx xxx xxxxx xxx xxxx xxxxxx
-        xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xx xxxxxxx xxxxx xx xxx xx xxxxxxxxxxxxxxx xx
-        xx xxxxxxxxxxxxxxxxx x xx x
-            xxxxxxxxxxxxxxxxxxxxxxx
-        x
 
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-        xx xxxxxxxxxxxxxxxxx x xx x
-            xxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxxxxxxxxxxxxxxxxxxx
-                   xxxxxxx xxx
-        x
 
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-        xx xxxxxxxxxxxxxxxxx x xx x
-            xxxxxxxxxxxxx xx xxxxxx
-        x
 
-        xxxxxxxxxxxxx xx xxxxxxx
 
-        xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxxxxxxxx xxxxxxxxxxxxxxxxx xxxxxxxxxx xx
-                   xxxxxxxxxxxxxxxxxxxxxxxxxxx
-        x
 
-        xxxxxxxxxxxxx xx xxxxxx
-        xxxxxxxxx xxxxxxxxxxxxxxxxxxxxxx xxx
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxxxxxxxxx xx xxxxxxxxxxxx
 
-        xx xxxxxxxxxxxxxxxxx x xx x
-            xxxxxxxxxx xxx
 
-            xx xxx xxxxxxxxx xx xx xxxx xxxxx xxx xxx
-            xx xxx xxxxxxx xxx xxxxxx x
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x xxx
-            xxxxxxxxxxxxx xx xxxxxx
-        x
-    x
 
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     /**
-     * [#1275] <code>LIST_AGG</code> simulation for Postgres, Sybase
+     * [#1275] <code>LIST_AGG</code> emulation for Postgres, Sybase
      */
     final void toSQLStringAgg(Context<?> ctx) {
         toSQLFunctionName(ctx);
@@ -307,7 +310,7 @@ class Function<T> extends AbstractField<T> implements
     }
 
     /**
-     * [#1273] <code>LIST_AGG</code> simulation for MySQL and CUBRID
+     * [#1273] <code>LIST_AGG</code> emulation for MySQL and CUBRID
      */
     final void toSQLGroupConcat(Context<?> ctx) {
         toSQLFunctionName(ctx);
@@ -469,23 +472,23 @@ class Function<T> extends AbstractField<T> implements
         }
 
         if (ignoreNulls) {
-            /* [pro] xx
-            xx xxxxxxxxxxxxx xx xxxxxxxxxxxxxxx x
-                xxxxxxxxxx xxxxxxx xxxxxxxxx
-            x
-            xxxx
-            xx [/pro] */
+
+
+
+
+
+
             {
                 ctx.sql(' ').keyword("ignore nulls");
             }
         }
         else if (respectNulls) {
-            /* [pro] xx
-            xx xxxxxxxxxxxxx xx xxxxxxxxxxxxxxx x
-                xxxxxxxxxx xxxxxxxx xxxxxxxxx
-            x
-            xxxx
-            xx [/pro] */
+
+
+
+
+
+
             {
                 ctx.sql(' ').keyword("respect nulls");
             }
@@ -532,58 +535,58 @@ class Function<T> extends AbstractField<T> implements
         return this;
     }
 
-    /* [pro] xx
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx x
-        xxxxx x xxxxx
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxx xxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxxxxxx xxxxxxx x
-        xxxxx x xxxxx
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxx xxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx x
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxx xxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx x
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxxxxxx xxxxxxx x
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxx xxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxx x
-        xxxxxxxxxxx x xxxxx
-        xxxxxxxxxxxx x xxxxxx
-        xxxxxx xxxxx
-    x
 
-    xxxxxxxxx
-    xxxxxx xxxxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxxx x
-        xxxxxxxxxxx x xxxxxx
-        xxxxxxxxxxxx x xxxxx
-        xxxxxx xxxxx
-    x
 
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     @Override
     public final WindowBeforeOverStep<T> filterWhere(Condition... conditions) {
         return filterWhere(Arrays.asList(conditions));
@@ -600,6 +603,16 @@ class Function<T> extends AbstractField<T> implements
     @Override
     public final WindowBeforeOverStep<T> filterWhere(Field<Boolean> field) {
         return filterWhere(condition(field));
+    }
+
+    @Override
+    public final WindowBeforeOverStep<T> filterWhere(Boolean field) {
+        return filterWhere(condition(field));
+    }
+
+    @Override
+    public final WindowBeforeOverStep<T> filterWhere(SQL sql) {
+        return filterWhere(condition(sql));
     }
 
     @Override

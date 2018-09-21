@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -93,4 +93,27 @@ public interface MergeMatchedDeleteStep<R extends Record> extends MergeNotMatche
      */
     @Support({ CUBRID })
     MergeNotMatchedStep<R> deleteWhere(Field<Boolean> condition);
+
+    /**
+     * Add an additional <code>DELETE WHERE</code> clause to the preceding
+     * <code>WHEN MATCHED THEN UPDATE</code> clause.
+     * <p>
+     * <b>Note:</b> This syntax is only available for the
+     * {@link SQLDialect#CUBRID} and {@link SQLDialect#ORACLE} databases!
+     * <p>
+     * See <a href=
+     * "http://docs.oracle.com/cd/B19306_01/server.102/b14200/statements_9016.htm"
+     * >http://docs.oracle.com/cd/B19306_01/server.102/b14200/statements_9016.
+     * htm</a> for a full definition of the Oracle <code>MERGE</code> statement
+     *
+     * @deprecated - 3.8.0 - [#4763] - Use {@link #deleteWhere(Condition)} or
+     *             {@link #deleteWhere(Field)} instead. Due to ambiguity between
+     *             calling this method using {@link Field#equals(Object)}
+     *             argument, vs. calling the other method via a
+     *             {@link Field#equal(Object)} argument, this method will be
+     *             removed in the future.
+     */
+    @Deprecated
+    @Support({ CUBRID })
+    MergeNotMatchedStep<R> deleteWhere(Boolean condition);
 }

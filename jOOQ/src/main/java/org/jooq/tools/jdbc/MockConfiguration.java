@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,6 +65,7 @@ import org.jooq.conf.Settings;
  *
  * @author Lukas Eder
  */
+@SuppressWarnings("deprecation")
 public class MockConfiguration implements Configuration {
 
     /**
@@ -130,7 +131,6 @@ public class MockConfiguration implements Configuration {
         return delegate.converterProvider();
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public org.jooq.SchemaMapping schemaMapping() {
         return delegate.schemaMapping();

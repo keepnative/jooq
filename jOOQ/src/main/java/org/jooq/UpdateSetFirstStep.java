@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,6 +47,7 @@ import static org.jooq.SQLDialect.HSQLDB;
 // ...
 // ...
 import static org.jooq.SQLDialect.POSTGRES;
+import static org.jooq.SQLDialect.POSTGRES_9_5;
 
 import javax.annotation.Generated;
 
@@ -70,7 +71,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -79,7 +80,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -88,7 +89,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -97,7 +98,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -106,7 +107,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -115,7 +116,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -124,7 +125,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -133,7 +134,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -142,7 +143,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -151,7 +152,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -160,7 +161,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -169,7 +170,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -178,7 +179,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -187,7 +188,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -196,7 +197,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -205,7 +206,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -214,7 +215,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -223,7 +224,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -232,7 +233,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -241,7 +242,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -250,7 +251,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -259,7 +260,7 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      * <p>
-     * This is simulated using a subquery for the <code>value</code>, where row
+     * This is emulated using a subquery for the <code>value</code>, where row
      * value expressions aren't supported.
      */
     @Support({ H2, HSQLDB, POSTGRES })
@@ -267,134 +268,149 @@ public interface UpdateSetFirstStep<R extends Record> extends UpdateSetStep<R> {
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
+     * <p>
+     * This is emulated using a subquery for the <code>value</code>, where row
+     * value expressions aren't supported.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES })
+    UpdateFromStep<R> set(RowN row, RowN value);
+
+    /**
+     * Specify a multi-column set clause for the <code>UPDATE</code> statement.
+     */
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1> UpdateFromStep<R> set(Row1<T1> row, Select<? extends Record1<T1>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2> UpdateFromStep<R> set(Row2<T1, T2> row, Select<? extends Record2<T1, T2>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3> UpdateFromStep<R> set(Row3<T1, T2, T3> row, Select<? extends Record3<T1, T2, T3>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4> UpdateFromStep<R> set(Row4<T1, T2, T3, T4> row, Select<? extends Record4<T1, T2, T3, T4>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5> UpdateFromStep<R> set(Row5<T1, T2, T3, T4, T5> row, Select<? extends Record5<T1, T2, T3, T4, T5>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6> UpdateFromStep<R> set(Row6<T1, T2, T3, T4, T5, T6> row, Select<? extends Record6<T1, T2, T3, T4, T5, T6>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7> UpdateFromStep<R> set(Row7<T1, T2, T3, T4, T5, T6, T7> row, Select<? extends Record7<T1, T2, T3, T4, T5, T6, T7>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8> UpdateFromStep<R> set(Row8<T1, T2, T3, T4, T5, T6, T7, T8> row, Select<? extends Record8<T1, T2, T3, T4, T5, T6, T7, T8>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8, T9> UpdateFromStep<R> set(Row9<T1, T2, T3, T4, T5, T6, T7, T8, T9> row, Select<? extends Record9<T1, T2, T3, T4, T5, T6, T7, T8, T9>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UpdateFromStep<R> set(Row10<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> row, Select<? extends Record10<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UpdateFromStep<R> set(Row11<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> row, Select<? extends Record11<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UpdateFromStep<R> set(Row12<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> row, Select<? extends Record12<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UpdateFromStep<R> set(Row13<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> row, Select<? extends Record13<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UpdateFromStep<R> set(Row14<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> row, Select<? extends Record14<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UpdateFromStep<R> set(Row15<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> row, Select<? extends Record15<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UpdateFromStep<R> set(Row16<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> row, Select<? extends Record16<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> UpdateFromStep<R> set(Row17<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> row, Select<? extends Record17<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> UpdateFromStep<R> set(Row18<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> row, Select<? extends Record18<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> UpdateFromStep<R> set(Row19<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> row, Select<? extends Record19<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20> UpdateFromStep<R> set(Row20<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20> row, Select<? extends Record20<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21> UpdateFromStep<R> set(Row21<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21> row, Select<? extends Record21<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21>> select);
 
     /**
      * Specify a multi-column set clause for the <code>UPDATE</code> statement.
      */
-    @Support({ H2, HSQLDB })
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22> UpdateFromStep<R> set(Row22<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22> row, Select<? extends Record22<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22>> select);
+
+    /**
+     * Specify a multi-column set clause for the <code>UPDATE</code> statement.
+     */
+    @Support({ H2, HSQLDB, POSTGRES_9_5 })
+    UpdateFromStep<R> set(RowN row, Select<?> select);
 
 }

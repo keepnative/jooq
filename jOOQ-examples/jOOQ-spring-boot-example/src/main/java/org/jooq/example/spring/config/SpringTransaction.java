@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +38,7 @@
  *
  *
  */
-package org.jooq.example.spring;
+package org.jooq.example.spring.config;
 
 import org.jooq.Transaction;
 import org.springframework.transaction.TransactionStatus;

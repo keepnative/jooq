@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,8 +48,6 @@ import org.jooq.BindContext;
 import org.jooq.Context;
 import org.jooq.Field;
 import org.jooq.RenderContext;
-import org.jooq.Schema;
-import org.jooq.UDT;
 import org.jooq.UDTRecord;
 import org.jooq.exception.SQLDialectNotSupportedException;
 
@@ -75,39 +73,39 @@ class UDTConstant<R extends UDTRecord<R>> extends AbstractParam<R> {
     final void toSQL0(RenderContext context) {
         switch (context.family()) {
 
-            /* [pro] xx
-            xx xxxxxx xxxxxxxx xxxxxxxxxxxxxxxxx xxxxx xxx xxxxxx xxx xx xxxxx
-            xx xx xxx xxxxxxxxxxxxxxxxx xxxxxxxx
-            xxxx xxxxxxx x
-                xx xxxxxxxxxxxxxxxxxxxx xx xxxxxxxx x
-                    xxxxxxxxxxxxxxxxxxxxx
-                x xxxx x
-                    xxxxxxxxxxxxxxxxx
-                x
 
-                xxxxxxx
-            x
 
-            xx xxx xxxxxxxx xxxxx xxx xxxx xx xxxx xxxxxxxxxxxx xx xxxx
-            xxxx xxxx x
 
-                xx xxx xxxxxxxxxx xxx xxxxx xxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                xxxxxxxxxxxxxxxxxx
 
-                xxxxxx xxxxxxxxx x xxxxx
-                xxx xxxxxxxxx xxxxx x xxxxxxxxxxxxxxx x
-                    xxxxxxxxxxxxxxxxxxxxxxx
-                    xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                    xxxxxxxxxxxxxxxxx
-                    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                    xxxxxxxxxxxxxxxxx
-                x
 
-                xxxxxxx
-            x
 
-            xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             // Due to lack of UDT support in the Postgres JDBC drivers, all UDT's
             // have to be inlined
             case POSTGRES: {
@@ -122,8 +120,24 @@ class UDTConstant<R extends UDTRecord<R>> extends AbstractParam<R> {
         }
     }
 
-    private void toSQLInline(RenderContext context) {
-        context.sql(getInlineConstructor(context));
+    private final void toSQLInline(RenderContext context) {
+        switch (context.family()) {
+            case POSTGRES:
+                context.keyword("row");
+                break;
+
+
+
+
+
+
+            // Assume default behaviour if dialect is not available
+            default: {
+                context.visit(value.getUDT());
+                break;
+            }
+        }
+
         context.sql('(');
 
         String separator = "";
@@ -136,46 +150,37 @@ class UDTConstant<R extends UDTRecord<R>> extends AbstractParam<R> {
         context.sql(')');
     }
 
-    private String getInlineConstructor(RenderContext context) {
-        // TODO [#884] Fix this with a local render context (using ctx.literal)
+    @Deprecated
+    private final String getInlineConstructor(RenderContext context) {
         switch (context.family()) {
             case POSTGRES:
                 return "ROW";
 
-            /* [pro] xx
-            xxxx xxxxxxx
-            xxxx xxxx
-            xx [/pro] */
+
+
+
+
 
             // Assume default behaviour if dialect is not available
-            default: {
-                UDT<?> udt = value.getUDT();
-                Schema mappedSchema = Utils.getMappedSchema(context.configuration(), udt.getSchema());
-
-                if (mappedSchema != null) {
-                    return mappedSchema + "." + udt.getName();
-                }
-                else {
-                    return udt.getName();
-                }
-            }
+            default:
+                return Tools.getMappedUDTName(context.configuration(), value);
         }
     }
 
     final void bind0(BindContext context) {
         switch (context.family()) {
 
-            /* [pro] xx
-            xx xxxxxx xxxxxxxx xxxxxxxxxxxxxxxxx xxxxx xxx xxxxxx xxx xx xxxxx
-            xx xx xxx xxxxxxxxxxxxxxxxx xxxxxxxx
-            xxxx xxxxxxx
-                xxxxxxxxxxxxxxxxxxxxxxxx xxxxxx
-                xxxxxx
 
-            xx xx xxx xxx xxxx xxxxxxxx xxxxxx xx xx xxxxxxx xxxx xxx xxxxxxxx xxxxx
-            xxxx xxxx
 
-            xx [/pro] */
+
+
+
+
+
+
+
+
+
             // Postgres cannot bind a complete structured type. The type is
             // inlined instead: ROW(.., .., ..)
             case POSTGRES: {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,15 +40,18 @@
  */
 package org.jooq.impl;
 
+import static java.util.Arrays.asList;
 import static org.jooq.Clause.CREATE_SEQUENCE;
 import static org.jooq.Clause.CREATE_SEQUENCE_SEQUENCE;
+import static org.jooq.SQLDialect.CUBRID;
+import static org.jooq.SQLDialect.DERBY;
+import static org.jooq.SQLDialect.SQL_SERVER;
 // ...
 
 import org.jooq.Clause;
 import org.jooq.Configuration;
 import org.jooq.Context;
 import org.jooq.CreateSequenceFinalStep;
-import org.jooq.SQLDialect;
 import org.jooq.Sequence;
 
 /**
@@ -79,23 +82,16 @@ class CreateSequenceImpl extends AbstractQuery implements
 
     @Override
     public final void accept(Context<?> ctx) {
-        SQLDialect family = ctx.configuration().dialect().family();
-
         ctx.start(CREATE_SEQUENCE_SEQUENCE)
-           .keyword("create sequence")
+           .keyword("create")
+           .sql(' ')
+           .keyword(ctx.family() == CUBRID ? "serial" : "sequence")
            .sql(' ')
            .visit(sequence);
 
-        /* [pro] xx
-        xx xxx xxxxxx xxxxxxxx xx xxxxxxxxx xxxxxxxx xxxx xxxxxxxxxxxxxxxxxxxx
-        xx xxxxxxxxxxxxx xx xxxxxxxxxx
-            xxxxxxxxxxxxxxxxxx xxxxxxxxxxxx xxxx
-        xx [/pro] */
-        switch (family) {
-            case SQL_SERVER:
-                ctx.sql(' ').keyword("start with").sql(' ').sql(1);
-                break;
-        }
+        // Some databases default to sequences starting with MIN_VALUE
+        if (asList(DERBY, SQL_SERVER).contains(ctx.family()))
+            ctx.keyword("start with").sql(" 1");
 
         ctx.end(CREATE_SEQUENCE_SEQUENCE);
     }

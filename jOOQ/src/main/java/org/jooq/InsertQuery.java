@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,6 +54,7 @@ import static org.jooq.SQLDialect.MARIADB;
 import static org.jooq.SQLDialect.MYSQL;
 // ...
 import static org.jooq.SQLDialect.POSTGRES;
+import static org.jooq.SQLDialect.POSTGRES_9_5;
 import static org.jooq.SQLDialect.SQLITE;
 // ...
 // ...
@@ -108,7 +109,7 @@ public interface InsertQuery<R extends Record> extends StoreQuery<R>, Insert<R> 
      *
      * @see InsertOnDuplicateStep#onDuplicateKeyUpdate()
      */
-    @Support({ CUBRID, HSQLDB, MARIADB, MYSQL })
+    @Support({ CUBRID, HSQLDB, MARIADB, MYSQL, POSTGRES_9_5 })
     void onDuplicateKeyUpdate(boolean flag);
 
     /**
@@ -116,32 +117,46 @@ public interface InsertQuery<R extends Record> extends StoreQuery<R>, Insert<R> 
      * this <code>INSERT</code> statement.
      * <p>
      * This clause is not actually supported in this form by any database, but
-     * can be simulated as such:
+     * can be emulated as such:
      * <table border="1">
      * <tr>
      * <th>Dialect</th>
-     * <th>Simulation</th>
+     * <th>Emulation</th>
      * </tr>
      * <tr>
-     * <td> {@link SQLDialect#MYSQL}</td>
-     * <td> <code><pre>INSERT IGNORE INTO ..</pre></code></td>
+     * <td>{@link SQLDialect#MYSQL} and {@link SQLDialect#MARIADB}</td>
+     * <td><code><pre>INSERT IGNORE INTO ..</pre></code></td>
      * </tr>
      * <tr>
-     * <td> {@link SQLDialect#CUBRID}</td>
+     * <td>{@link SQLDialect#POSTGRES_9_5}</td>
+     * <td><code><pre>INSERT INTO .. ON CONFLICT DO NOTHING</pre></code></td>
+     * </tr>
+     * <tr>
+     * <td>{@link SQLDialect#CUBRID}</td>
      * <td>
      * <code><pre>INSERT INTO .. ON DUPLICATE KEY UPDATE [any-field] = [any-field]</pre></code>
      * </td>
      * </tr>
      * <tr>
-     * <td> {@link SQLDialect#DB2}<br/>
+     * <td>{@link SQLDialect#DB2}<br/>
      * {@link SQLDialect#HSQLDB}<br/>
      * {@link SQLDialect#ORACLE}<br/>
      * {@link SQLDialect#SQLSERVER}<br/>
      * {@link SQLDialect#SYBASE}</td>
      * <td><code><pre>MERGE INTO [dst]
-     * USING ([values]) src
-     * ON [dst.key] = [src.key]
+     * USING ([values])
+     * ON [dst.key] = [values.key]
      * WHEN NOT MATCHED THEN INSERT ..</pre></code></td>
+     * </tr>
+     * <tr>
+     * <td>All the others</td>
+     * <td><code><pre>INSERT INTO [dst] ( ... )
+     * SELECT [values]
+     * WHERE NOT EXISTS (
+     *   SELECT 1
+     *   FROM [dst]
+     *   WHERE [dst.key] = [values.key]
+     * )</pre></code></td>
      * </tr>
      * </table>
      * <p>
@@ -149,7 +164,7 @@ public interface InsertQuery<R extends Record> extends StoreQuery<R>, Insert<R> 
      * the <code>ON DUPLICATE KEY IGNORE</code> flag (see
      * {@link #onDuplicateKeyIgnore(boolean)}. Setting one will unset the other
      */
-    @Support({ CUBRID, HSQLDB, MARIADB, MYSQL })
+    @Support
     void onDuplicateKeyIgnore(boolean flag);
 
     /**
@@ -158,7 +173,7 @@ public interface InsertQuery<R extends Record> extends StoreQuery<R>, Insert<R> 
      *
      * @see InsertOnDuplicateStep#onDuplicateKeyUpdate()
      */
-    @Support({ CUBRID, HSQLDB, MARIADB, MYSQL })
+    @Support({ CUBRID, HSQLDB, MARIADB, MYSQL, POSTGRES_9_5 })
     <T> void addValueForUpdate(Field<T> field, T value);
 
     /**
@@ -167,7 +182,7 @@ public interface InsertQuery<R extends Record> extends StoreQuery<R>, Insert<R> 
      *
      * @see InsertOnDuplicateStep#onDuplicateKeyUpdate()
      */
-    @Support({ CUBRID, HSQLDB, MARIADB, MYSQL })
+    @Support({ CUBRID, HSQLDB, MARIADB, MYSQL, POSTGRES_9_5 })
     <T> void addValueForUpdate(Field<T> field, Field<T> value);
 
     /**
@@ -180,7 +195,7 @@ public interface InsertQuery<R extends Record> extends StoreQuery<R>, Insert<R> 
      *
      * @see InsertOnDuplicateStep#onDuplicateKeyUpdate()
      */
-    @Support({ CUBRID, HSQLDB, MARIADB, MYSQL })
+    @Support({ CUBRID, HSQLDB, MARIADB, MYSQL, POSTGRES_9_5 })
     void addValuesForUpdate(Map<? extends Field<?>, ?> map);
 
     /**
@@ -188,6 +203,13 @@ public interface InsertQuery<R extends Record> extends StoreQuery<R>, Insert<R> 
      */
     @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
     void setDefaultValues();
+
+    /**
+     * Use a <code>SELECT</code> statement as the source of values for the
+     * <code>INSERT</code> statement.
+     */
+    @Support
+    void setSelect(Field<?>[] fields, Select<?> select);
 
     /**
      * {@inheritDoc}
@@ -205,7 +227,7 @@ public interface InsertQuery<R extends Record> extends StoreQuery<R>, Insert<R> 
      */
     @Override
     @Support
-    void setReturning(Identity<R, ? extends Number> identity);
+    void setReturning(Identity<R, ?> identity);
 
     /**
      * {@inheritDoc}

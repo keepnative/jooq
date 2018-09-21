@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,7 +58,9 @@ import static org.jooq.SQLDialect.MYSQL;
 // ...
 // ...
 import static org.jooq.SQLDialect.POSTGRES;
+import static org.jooq.SQLDialect.POSTGRES_9_3;
 import static org.jooq.SQLDialect.SQLITE;
+// ...
 // ...
 // ...
 
@@ -128,12 +130,12 @@ public interface Table<R extends Record> extends TableLike<R> {
      * one <code>IDENTITY</code> column.
      * <p>
      * Note: Unfortunately, this is not supported in the Oracle dialect, where
-     * identities simulated by triggers cannot be formally detected.
+     * identities emulated by triggers cannot be formally detected.
      *
      * @return The table's <code>IDENTITY</code> information, or
      *         <code>null</code>, if no such information is available.
      */
-    Identity<R, ? extends Number> getIdentity();
+    Identity<R, ?> getIdentity();
     /**
      * Retrieve the table's primary key
      *
@@ -232,6 +234,35 @@ public interface Table<R extends Record> extends TableLike<R> {
      */
     <O extends Record> List<ForeignKey<R, O>> getReferencesTo(Table<O> other);
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // -------------------------------------------------------------------------
     // XXX: Aliasing clauses
     // -------------------------------------------------------------------------
@@ -317,13 +348,110 @@ public interface Table<R extends Record> extends TableLike<R> {
      * condition will be rendered
      */
     @Support
-    TableOptionalOnStep join(TableLike<?> table, JoinType type);
+    TableOptionalOnStep<Record> join(TableLike<?> table, JoinType type);
+
+    /**
+     * <code>INNER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #innerJoin(TableLike)}.
+     *
+     * @see #innerJoin(TableLike)
+     */
+    @Support
+    TableOnStep<Record> join(TableLike<?> table);
+
+    /**
+     * <code>INNER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #innerJoin(String)}.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(SQL)
+     * @see #innerJoin(SQL)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    TableOnStep<Record> join(SQL sql);
+
+    /**
+     * <code>INNER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #innerJoin(String)}.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String)
+     * @see #innerJoin(String)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    TableOnStep<Record> join(String sql);
+
+    /**
+     * <code>INNER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #innerJoin(String, Object...)}.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String, Object...)
+     * @see #innerJoin(String, Object...)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    TableOnStep<Record> join(String sql, Object... bindings);
+
+    /**
+     * <code>INNER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #innerJoin(String, QueryPart...)}.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String, QueryPart...)
+     * @see #innerJoin(String, QueryPart...)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    TableOnStep<Record> join(String sql, QueryPart... parts);
 
     /**
      * <code>INNER JOIN</code> a table to this table.
      */
     @Support
-    TableOnStep join(TableLike<?> table);
+    TableOnStep<Record> innerJoin(TableLike<?> table);
+
+    /**
+     * <code>INNER JOIN</code> a table to this table.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(SQL)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    TableOnStep<Record> innerJoin(SQL sql);
 
     /**
      * <code>INNER JOIN</code> a table to this table.
@@ -334,10 +462,11 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String)
+     * @see SQL
      */
     @Support
     @PlainSQL
-    TableOnStep join(String sql);
+    TableOnStep<Record> innerJoin(String sql);
 
     /**
      * <code>INNER JOIN</code> a table to this table.
@@ -348,10 +477,11 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, Object...)
+     * @see SQL
      */
     @Support
     @PlainSQL
-    TableOnStep join(String sql, Object... bindings);
+    TableOnStep<Record> innerJoin(String sql, Object... bindings);
 
     /**
      * <code>INNER JOIN</code> a table to this table.
@@ -362,16 +492,114 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, QueryPart...)
+     * @see SQL
      */
     @Support
     @PlainSQL
-    TableOnStep join(String sql, QueryPart... parts);
+    TableOnStep<Record> innerJoin(String sql, QueryPart... parts);
+
+    /**
+     * <code>LEFT OUTER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #leftOuterJoin(TableLike)}.
+     *
+     * @see #leftOuterJoin(TableLike)
+     */
+    @Support
+    TablePartitionByStep<Record> leftJoin(TableLike<?> table);
+
+    /**
+     * <code>LEFT OUTER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #leftOuterJoin(String)}.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(SQL)
+     * @see #leftOuterJoin(SQL)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    TablePartitionByStep<Record> leftJoin(SQL sql);
+
+    /**
+     * <code>LEFT OUTER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #leftOuterJoin(String)}.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String)
+     * @see #leftOuterJoin(String)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    TablePartitionByStep<Record> leftJoin(String sql);
+
+    /**
+     * <code>LEFT OUTER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #leftOuterJoin(String, Object...)}.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String, Object...)
+     * @see #leftOuterJoin(String, Object...)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    TablePartitionByStep<Record> leftJoin(String sql, Object... bindings);
+
+    /**
+     * <code>LEFT OUTER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #leftOuterJoin(String, QueryPart...)}.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String, QueryPart...)
+     * @see #leftOuterJoin(String, QueryPart...)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    TablePartitionByStep<Record> leftJoin(String sql, QueryPart... parts);
 
     /**
      * <code>LEFT OUTER JOIN</code> a table to this table.
      */
     @Support
-    TablePartitionByStep leftOuterJoin(TableLike<?> table);
+    TablePartitionByStep<Record> leftOuterJoin(TableLike<?> table);
+
+    /**
+     * <code>LEFT OUTER JOIN</code> a table to this table.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(SQL)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    TablePartitionByStep<Record> leftOuterJoin(SQL sql);
 
     /**
      * <code>LEFT OUTER JOIN</code> a table to this table.
@@ -382,10 +610,11 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String)
+     * @see SQL
      */
     @Support
     @PlainSQL
-    TablePartitionByStep leftOuterJoin(String sql);
+    TablePartitionByStep<Record> leftOuterJoin(String sql);
 
     /**
      * <code>LEFT OUTER JOIN</code> a table to this table.
@@ -396,10 +625,11 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, Object...)
+     * @see SQL
      */
     @Support
     @PlainSQL
-    TablePartitionByStep leftOuterJoin(String sql, Object... bindings);
+    TablePartitionByStep<Record> leftOuterJoin(String sql, Object... bindings);
 
     /**
      * <code>LEFT OUTER JOIN</code> a table to this table.
@@ -410,10 +640,103 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, QueryPart...)
+     * @see SQL
      */
     @Support
     @PlainSQL
-    TablePartitionByStep leftOuterJoin(String sql, QueryPart... parts);
+    TablePartitionByStep<Record> leftOuterJoin(String sql, QueryPart... parts);
+
+    /**
+     * <code>RIGHT OUTER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #rightOuterJoin(TableLike)}.
+     * <p>
+     * This is only possible where the underlying RDBMS supports it.
+     *
+     * @see #rightOuterJoin(TableLike)
+     */
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
+    TablePartitionByStep<Record> rightJoin(TableLike<?> table);
+
+    /**
+     * <code>RIGHT OUTER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #rightOuterJoin(String)}.
+     * <p>
+     * This is only possible where the underlying RDBMS supports it.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(SQL)
+     * @see #rightOuterJoin(SQL)
+     * @see SQL
+     */
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
+    @PlainSQL
+    TablePartitionByStep<Record> rightJoin(SQL sql);
+
+    /**
+     * <code>RIGHT OUTER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #rightOuterJoin(String)}.
+     * <p>
+     * This is only possible where the underlying RDBMS supports it.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String)
+     * @see #rightOuterJoin(String)
+     * @see SQL
+     */
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
+    @PlainSQL
+    TablePartitionByStep<Record> rightJoin(String sql);
+
+    /**
+     * <code>RIGHT OUTER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #rightOuterJoin(String, Object...)}.
+     * <p>
+     * This is only possible where the underlying RDBMS supports it.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String, Object...)
+     * @see #rightOuterJoin(String, Object...)
+     * @see SQL
+     */
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
+    @PlainSQL
+    TablePartitionByStep<Record> rightJoin(String sql, Object... bindings);
+
+    /**
+     * <code>RIGHT OUTER JOIN</code> a table to this table.
+     * <p>
+     * A synonym for {@link #rightOuterJoin(String, QueryPart...)}.
+     * <p>
+     * This is only possible where the underlying RDBMS supports it
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String, QueryPart...)
+     * @see #rightOuterJoin(String, QueryPart...)
+     * @see SQL
+     */
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
+    @PlainSQL
+    TablePartitionByStep<Record> rightJoin(String sql, QueryPart... parts);
 
     /**
      * <code>RIGHT OUTER JOIN</code> a table to this table.
@@ -421,7 +744,24 @@ public interface Table<R extends Record> extends TableLike<R> {
      * This is only possible where the underlying RDBMS supports it
      */
     @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
-    TablePartitionByStep rightOuterJoin(TableLike<?> table);
+    TablePartitionByStep<Record> rightOuterJoin(TableLike<?> table);
+
+    /**
+     * <code>RIGHT OUTER JOIN</code> a table to this table.
+     * <p>
+     * This is only possible where the underlying RDBMS supports it
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(SQL)
+     * @see SQL
+     */
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
+    @PlainSQL
+    TablePartitionByStep<Record> rightOuterJoin(SQL sql);
 
     /**
      * <code>RIGHT OUTER JOIN</code> a table to this table.
@@ -434,10 +774,11 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String)
+     * @see SQL
      */
     @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
     @PlainSQL
-    TablePartitionByStep rightOuterJoin(String sql);
+    TablePartitionByStep<Record> rightOuterJoin(String sql);
 
     /**
      * <code>RIGHT OUTER JOIN</code> a table to this table.
@@ -450,10 +791,11 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, Object...)
+     * @see SQL
      */
     @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
     @PlainSQL
-    TablePartitionByStep rightOuterJoin(String sql, Object... bindings);
+    TablePartitionByStep<Record> rightOuterJoin(String sql, Object... bindings);
 
     /**
      * <code>RIGHT OUTER JOIN</code> a table to this table.
@@ -466,10 +808,11 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, QueryPart...)
+     * @see SQL
      */
     @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
     @PlainSQL
-    TablePartitionByStep rightOuterJoin(String sql, QueryPart... parts);
+    TablePartitionByStep<Record> rightOuterJoin(String sql, QueryPart... parts);
 
     /**
      * <code>FULL OUTER JOIN</code> a table to this table.
@@ -477,7 +820,24 @@ public interface Table<R extends Record> extends TableLike<R> {
      * This is only possible where the underlying RDBMS supports it
      */
     @Support({ FIREBIRD, HSQLDB, POSTGRES })
-    TableOnStep fullOuterJoin(TableLike<?> table);
+    TableOnStep<Record> fullOuterJoin(TableLike<?> table);
+
+    /**
+     * <code>FULL OUTER JOIN</code> a table to this table.
+     * <p>
+     * This is only possible where the underlying RDBMS supports it
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(SQL)
+     * @see SQL
+     */
+    @Support({ FIREBIRD, HSQLDB, POSTGRES })
+    @PlainSQL
+    TableOnStep<Record> fullOuterJoin(SQL sql);
 
     /**
      * <code>FULL OUTER JOIN</code> a table to this table.
@@ -490,10 +850,11 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String)
+     * @see SQL
      */
     @Support({ FIREBIRD, HSQLDB, POSTGRES })
     @PlainSQL
-    TableOnStep fullOuterJoin(String sql);
+    TableOnStep<Record> fullOuterJoin(String sql);
 
     /**
      * <code>FULL OUTER JOIN</code> a table to this table.
@@ -506,10 +867,11 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, Object...)
+     * @see SQL
      */
     @Support({ FIREBIRD, HSQLDB, POSTGRES })
     @PlainSQL
-    TableOnStep fullOuterJoin(String sql, Object... bindings);
+    TableOnStep<Record> fullOuterJoin(String sql, Object... bindings);
 
     /**
      * <code>FULL OUTER JOIN</code> a table to this table.
@@ -522,15 +884,16 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, QueryPart...)
+     * @see SQL
      */
     @Support({ FIREBIRD, HSQLDB, POSTGRES })
     @PlainSQL
-    TableOnStep fullOuterJoin(String sql, QueryPart... parts);
+    TableOnStep<Record> fullOuterJoin(String sql, QueryPart... parts);
 
     /**
      * <code>CROSS JOIN</code> a table to this table.
      * <p>
-     * If this syntax is unavailable, it is simulated with a regular
+     * If this syntax is unavailable, it is emulated with a regular
      * <code>INNER JOIN</code>. The following two constructs are equivalent:
      * <code><pre>
      * A cross join B
@@ -543,7 +906,29 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>CROSS JOIN</code> a table to this table.
      * <p>
-     * If this syntax is unavailable, it is simulated with a regular
+     * If this syntax is unavailable, it is emulated with a regular
+     * <code>INNER JOIN</code>. The following two constructs are equivalent:
+     * <code><pre>
+     * A cross join B
+     * A join B on 1 = 1
+     * </pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(SQL)
+     * @see SQL
+     */
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
+    @PlainSQL
+    Table<Record> crossJoin(SQL sql);
+
+    /**
+     * <code>CROSS JOIN</code> a table to this table.
+     * <p>
+     * If this syntax is unavailable, it is emulated with a regular
      * <code>INNER JOIN</code>. The following two constructs are equivalent:
      * <code><pre>
      * A cross join B
@@ -556,6 +941,7 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String)
+     * @see SQL
      */
     @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
     @PlainSQL
@@ -564,7 +950,7 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>CROSS JOIN</code> a table to this table.
      * <p>
-     * If this syntax is unavailable, it is simulated with a regular
+     * If this syntax is unavailable, it is emulated with a regular
      * <code>INNER JOIN</code>. The following two constructs are equivalent:
      * <code><pre>
      * A cross join B
@@ -577,6 +963,7 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, Object...)
+     * @see SQL
      */
     @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
     @PlainSQL
@@ -585,7 +972,7 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>CROSS JOIN</code> a table to this table.
      * <p>
-     * If this syntax is unavailable, it is simulated with a regular
+     * If this syntax is unavailable, it is emulated with a regular
      * <code>INNER JOIN</code>. The following two constructs are equivalent:
      * <code><pre>
      * A cross join B
@@ -598,6 +985,7 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, QueryPart...)
+     * @see SQL
      */
     @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
     @PlainSQL
@@ -606,7 +994,7 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>NATURAL JOIN</code> a table to this table.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      */
     @Support
@@ -615,7 +1003,25 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>NATURAL JOIN</code> a table to this table.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
+     * this behaviour using the information provided in this query.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(SQL)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Table<Record> naturalJoin(SQL sql);
+
+    /**
+     * <code>NATURAL JOIN</code> a table to this table.
+     * <p>
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
@@ -624,6 +1030,7 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -632,7 +1039,7 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>NATURAL JOIN</code> a table to this table.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
@@ -641,6 +1048,7 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, Object...)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -649,7 +1057,7 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>NATURAL JOIN</code> a table to this table.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
@@ -658,6 +1066,7 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, QueryPart...)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -666,7 +1075,7 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>NATURAL LEFT OUTER JOIN</code> a table to this table.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      */
     @Support
@@ -675,7 +1084,25 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>NATURAL LEFT OUTER JOIN</code> a table to this table.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
+     * this behaviour using the information provided in this query.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(SQL)
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Table<Record> naturalLeftOuterJoin(SQL sql);
+
+    /**
+     * <code>NATURAL LEFT OUTER JOIN</code> a table to this table.
+     * <p>
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
@@ -684,6 +1111,7 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -692,7 +1120,7 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>NATURAL LEFT OUTER JOIN</code> a table to this table.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
@@ -701,6 +1129,7 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, Object...)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -709,7 +1138,7 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>NATURAL LEFT OUTER JOIN</code> a table to this table.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
@@ -718,6 +1147,7 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, QueryPart...)
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -726,7 +1156,7 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>NATURAL RIGHT OUTER JOIN</code> a table to this table.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      */
     @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
@@ -735,7 +1165,25 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>NATURAL RIGHT OUTER JOIN</code> a table to this table.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
+     * this behaviour using the information provided in this query.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(SQL)
+     * @see SQL
+     */
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
+    @PlainSQL
+    Table<Record> naturalRightOuterJoin(SQL sql);
+
+    /**
+     * <code>NATURAL RIGHT OUTER JOIN</code> a table to this table.
+     * <p>
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
@@ -744,6 +1192,7 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String)
+     * @see SQL
      */
     @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
     @PlainSQL
@@ -752,7 +1201,7 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>NATURAL RIGHT OUTER JOIN</code> a table to this table.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
@@ -761,6 +1210,7 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, Object...)
+     * @see SQL
      */
     @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
     @PlainSQL
@@ -769,7 +1219,7 @@ public interface Table<R extends Record> extends TableLike<R> {
     /**
      * <code>NATURAL RIGHT OUTER JOIN</code> a table to this table.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
@@ -778,6 +1228,7 @@ public interface Table<R extends Record> extends TableLike<R> {
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#table(String, QueryPart...)
+     * @see SQL
      */
     @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
     @PlainSQL
@@ -787,105 +1238,203 @@ public interface Table<R extends Record> extends TableLike<R> {
     // XXX: APPLY clauses on tables
     // -------------------------------------------------------------------------
 
-    /* [pro] xx
+    /**
+     * <code>CROSS APPLY</code> a table to this table.
+     */
+    @Support({ POSTGRES_9_3 })
+    Table<Record> crossApply(TableLike<?> table);
 
-    xxx
-     x xxxxxxxxxxx xxxxxxxxxxxx x xxxxx xx xxxx xxxxxx
-     xx
-    xxxxxxxxxx xxxxxxxxxx xxxxxxxxxx xxxxxx xx
-    xxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxx xxxxxxx
+    /**
+     * <code>CROSS APPLY</code> a table to this table.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(SQL)
+     * @see SQL
+     */
+    @Support({ POSTGRES_9_3 })
+    @PlainSQL
+    Table<Record> crossApply(SQL sql);
 
-    xxx
-     x xxxxxxxxxxx xxxxxxxxxxxx x xxxxx xx xxxx xxxxxx
-     x xxx
-     x xxxxxxxxxxxx xxxx xxxxxxxxx xxxxx xxx xxxx xxxx xxxxxxxx xxx xxxx
-     x xxxxxxxxx xxxxxx xxxxxxxxxx xxx xxx xxxx xxxxxx xxx xxxxxxxxxxx xx
-     x xxxxxxxxx xxx xxxxxxxxxx xx xxxx xx xxxxxxxx xxx xxxx xxxxxxxxx xxxxxx
-     x xxxxxx xxxxxxxx xxxx xxxxxxxxxxxx xxxx xxx xxxxxxxx
-     x
-     x xxxx xxxxxxxxxxxxxxxxx
-     xx
-    xxxxxxxxxx xxxxxxxxxx xxxxxxxxxx xxxxxx xx
-    xxxxxxxxx
-    xxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxxx
+    /**
+     * <code>CROSS APPLY</code> a table to this table.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String)
+     * @see SQL
+     */
+    @Support({ POSTGRES_9_3 })
+    @PlainSQL
+    Table<Record> crossApply(String sql);
 
-    xxx
-     x xxxxxxxxxxx xxxxxxxxxxxx x xxxxx xx xxxx xxxxxx
-     x xxx
-     x xxxxxxxxxxxx xxxx xxxxxxxxx xxxxx xxx xxxx xxxx xxxxxxxx xxx xxxx
-     x xxxxxxxxx xxxxxx xxxxxxxxxx xxx xxx xxxx xxxxxx xxx xxxxxxxxxxx xx
-     x xxxxxxxxx xxx xxxxxxxxxx xx xxxx xx xxxxxxxx xxx xxxx xxxxxxxxx xxxxxx
-     x xxxxxx xxxxxxxx xxxx xxxxxxxxxxxx xxxx xxx xxxxxxxx
-     x
-     x xxxx xxxxxxxxxxxxxxxxx xxxxxxxxxx
-     xx
-    xxxxxxxxxx xxxxxxxxxx xxxxxxxxxx xxxxxx xx
-    xxxxxxxxx
-    xxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx xxxxxxxxx xxxxxxxxxx
+    /**
+     * <code>CROSS APPLY</code> a table to this table.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String, Object...)
+     * @see SQL
+     */
+    @Support({ POSTGRES_9_3 })
+    @PlainSQL
+    Table<Record> crossApply(String sql, Object... bindings);
 
-    xxx
-     x xxxxxxxxxxx xxxxxxxxxxxx x xxxxx xx xxxx xxxxxx
-     x xxx
-     x xxxxxxxxxxxx xxxx xxxxxxxxx xxxxx xxx xxxx xxxx xxxxxxxx xxx xxxx
-     x xxxxxxxxx xxxxxx xxxxxxxxxx xxx xxx xxxx xxxxxx xxx xxxxxxxxxxx xx
-     x xxxxxxxxx xxx xxxxxxxxxx xx xxxx xx xxxxxxxx xxx xxxx xxxxxxxxx xxxxxx
-     x xxxxxx xxxxxxxx xxxx xxxxxxxxxxxx xxxx xxx xxxxxxxx
-     x
-     x xxxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxx
-     xx
-    xxxxxxxxxx xxxxxxxxxx xxxxxxxxxx xxxxxx xx
-    xxxxxxxxx
-    xxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx xxxxxxxxxxxx xxxxxxx
+    /**
+     * <code>CROSS APPLY</code> a table to this table.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String, QueryPart...)
+     * @see SQL
+     */
+    @Support({ POSTGRES_9_3 })
+    @PlainSQL
+    Table<Record> crossApply(String sql, QueryPart... parts);
 
-    xxx
-     x xxxxxxxxxxx xxxxxxxxxxxx x xxxxx xx xxxx xxxxxx
-     xx
-    xxxxxxxxxx xxxxxxxxxx xxxxxxxxxx xxxxxx xx
-    xxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxx xxxxxxx
+    /**
+     * <code>OUTER APPLY</code> a table to this table.
+     */
+    @Support({ POSTGRES_9_3 })
+    Table<Record> outerApply(TableLike<?> table);
 
-    xxx
-     x xxxxxxxxxxx xxxxxxxxxxxx x xxxxx xx xxxx xxxxxx
-     x xxx
-     x xxxxxxxxxxxx xxxx xxxxxxxxx xxxxx xxx xxxx xxxx xxxxxxxx xxx xxxx
-     x xxxxxxxxx xxxxxx xxxxxxxxxx xxx xxx xxxx xxxxxx xxx xxxxxxxxxxx xx
-     x xxxxxxxxx xxx xxxxxxxxxx xx xxxx xx xxxxxxxx xxx xxxx xxxxxxxxx xxxxxx
-     x xxxxxx xxxxxxxx xxxx xxxxxxxxxxxx xxxx xxx xxxxxxxx
-     x
-     x xxxx xxxxxxxxxxxxxxxxx
-     xx
-    xxxxxxxxxx xxxxxxxxxx xxxxxxxxxx xxxxxx xx
-    xxxxxxxxx
-    xxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxxx
+    /**
+     * <code>OUTER APPLY</code> a table to this table.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(SQL)
+     * @see SQL
+     */
+    @Support({ POSTGRES_9_3 })
+    @PlainSQL
+    Table<Record> outerApply(SQL sql);
 
-    xxx
-     x xxxxxxxxxxx xxxxxxxxxxxx x xxxxx xx xxxx xxxxxx
-     x xxx
-     x xxxxxxxxxxxx xxxx xxxxxxxxx xxxxx xxx xxxx xxxx xxxxxxxx xxx xxxx
-     x xxxxxxxxx xxxxxx xxxxxxxxxx xxx xxx xxxx xxxxxx xxx xxxxxxxxxxx xx
-     x xxxxxxxxx xxx xxxxxxxxxx xx xxxx xx xxxxxxxx xxx xxxx xxxxxxxxx xxxxxx
-     x xxxxxx xxxxxxxx xxxx xxxxxxxxxxxx xxxx xxx xxxxxxxx
-     x
-     x xxxx xxxxxxxxxxxxxxxxx xxxxxxxxxx
-     xx
-    xxxxxxxxxx xxxxxxxxxx xxxxxxxxxx xxxxxx xx
-    xxxxxxxxx
-    xxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx xxxxxxxxx xxxxxxxxxx
+    /**
+     * <code>OUTER APPLY</code> a table to this table.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String)
+     * @see SQL
+     */
+    @Support({ POSTGRES_9_3 })
+    @PlainSQL
+    Table<Record> outerApply(String sql);
 
-    xxx
-     x xxxxxxxxxxx xxxxxxxxxxxx x xxxxx xx xxxx xxxxxx
-     x xxx
-     x xxxxxxxxxxxx xxxx xxxxxxxxx xxxxx xxx xxxx xxxx xxxxxxxx xxx xxxx
-     x xxxxxxxxx xxxxxx xxxxxxxxxx xxx xxx xxxx xxxxxx xxx xxxxxxxxxxx xx
-     x xxxxxxxxx xxx xxxxxxxxxx xx xxxx xx xxxxxxxx xxx xxxx xxxxxxxxx xxxxxx
-     x xxxxxx xxxxxxxx xxxx xxxxxxxxxxxx xxxx xxx xxxxxxxx
-     x
-     x xxxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxx
-     xx
-    xxxxxxxxxx xxxxxxxxxx xxxxxxxxxx xxxxxx xx
-    xxxxxxxxx
-    xxxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxx xxxxxxxxxxxx xxxxxxx
+    /**
+     * <code>OUTER APPLY</code> a table to this table.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String, Object...)
+     * @see SQL
+     */
+    @Support({ POSTGRES_9_3 })
+    @PlainSQL
+    Table<Record> outerApply(String sql, Object... bindings);
 
-    xx [/pro] */
+    /**
+     * <code>OUTER APPLY</code> a table to this table.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String, QueryPart...)
+     * @see SQL
+     */
+    @Support({ POSTGRES_9_3 })
+    @PlainSQL
+    Table<Record> outerApply(String sql, QueryPart... parts);
+
+    /**
+     * <code>STRAIGHT_JOIN</code> a table to this table.
+     */
+    @Support({ MYSQL })
+    TableOnStep<Record> straightJoin(TableLike<?> table);
+
+    /**
+     * <code>STRAIGHT_JOIN</code> a table to this table.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(SQL)
+     * @see SQL
+     */
+    @Support({ MYSQL })
+    @PlainSQL
+    TableOnStep<Record> straightJoin(SQL sql);
+
+    /**
+     * <code>STRAIGHT_JOIN</code> a table to this table.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String)
+     * @see SQL
+     */
+    @Support({ MYSQL })
+    @PlainSQL
+    TableOnStep<Record> straightJoin(String sql);
+
+    /**
+     * <code>STRAIGHT_JOIN</code> a table to this table.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String, Object...)
+     * @see SQL
+     */
+    @Support({ MYSQL })
+    @PlainSQL
+    TableOnStep<Record> straightJoin(String sql, Object... bindings);
+
+    /**
+     * <code>STRAIGHT_JOIN</code> a table to this table.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#table(String, QueryPart...)
+     * @see SQL
+     */
+    @Support({ MYSQL })
+    @PlainSQL
+    TableOnStep<Record> straightJoin(String sql, QueryPart... parts);
 
     // -------------------------------------------------------------------------
     // XXX: Exotic and vendor-specific clauses on tables
@@ -1095,64 +1644,64 @@ public interface Table<R extends Record> extends TableLike<R> {
     @Support({ MARIADB, MYSQL })
     Table<R> forceIndexForGroupBy(String... indexes);
 
-    /* [pro] xx
-    xxx
-     x xxxxxxx x xxx xxxxxx xxxxx xxxxx xxxx xxx xxxxx xxxxxxxxxxxxx
-     x xxx
-     x xxxx xxxxx xxxxx xxxx xx xx xxxxxx xxxxxxxx xxxxx xx xxxxx xxx xx xxxxx
-     x xxxxxxxx xxxxx xxxxxxxx
-     x xxx
-     x xxxxxxxx
-     x xxx
-     x xxxxxxxxxxx
-     x xxxxxxxxxxxxxxx
-     x       xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-     x       xxxxxxxxx
-     x xxxxxxxxxxxxx
-     x xxx
-     x xxx xxxxxx xxxxxxxxxxxxxxxxxx xxxxx xxxxxx xxx
-     x xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxx xxx xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-     x
-     x xxxx xx
-     x      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-     x xxxx xxxxxxxxxxxxxxxxxxxxxxxxxxx
-     x xxxx xxxxxxxxxxxxxxxxxxxxxxxxxxx
-     xx
-    xxxxxxxxxx xxxxxxxxxx xxxxxx xx
-    xxxxxxxx xxxxxxxxxxx xxxxxx
 
-    xxx
-     x xxxxxx x xxx xxxxxxxxxxxxxxxxxx xxxxxxxxx xxxx xxxx xxxxxx xxxxxxxx xx
-     x xxxx xxxxxxx xxxxx
-     x xxx
-     x xxxx xxx xxxx xxxxxxxx xx xxxx xxxx
-     x xxxx
-     x xxxx xxxxxx xxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxx
-     x xxxx xxxxxx xxxxxxxxxxxxxxxxxxxxx xxxx xxx xxxxxxxxxx xxxxxxxxxxxxxxx
-     x xxxxxxxxx xxxxxxxx xx xxxxx xxxx xxxxx xx xxxxxxxxxx xxxx xxx xxxxxxxxxx
-     x xxxxxxxxxxxxxxx
-     x xxxxx
-     x
-     x xxxxxx xxxxxxxxxxxxxxxxxx xxx xxxxxxxxx xxxxxxxxx xxxx xxx xxxxxxxxx
-     x xxxxxxx x xxx xxxxxx xx xxxxxx xxx xxxxxxxxxxxxxxxxxx xxxxxxxxxx
-     xx
-    xxxxxxxxxx xxxxxxxxxx xxxxxxxxx xx
-    xxxxxxxxxxxx xxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxx
 
-    xxx
-     x xxxxxx x xxx xxxxxxxxxxxxxxxxxx xxxxxxxxx xxxx xxxx xxxxxx xxxxxxxx xx
-     x xxxx xxxxxxx xxxxx
-     x xxx
-     x xxx xxxx xxxxxxxx xxx xxxxxx xxxxxxxxxxxxxxxxx
-     x
-     x xxxxxx xxxxxxxxxxxxxxxxxx xxx xxxxxxxxx xxxxxxxxx xxxx xxx xxxxxxxxx
-     x xxxxxxx x xxx xxxxxx xx xxxxxx xxx xxxxxxxxxxxxxxxxxx xxxxxxxxxx
-     x xxxx xxxxxxxxxxxxxxxx
-     xx
-    xxxxxxxxxx xxxxxxxxxx xxxxxxxxx xx
-    xxxxxxxxxxxx xxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxx xxxxxxxxxxxxxxxxxxxx
 
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     /**
      * Create a new <code>TABLE</code> reference from this table, applying
      * relational division.
@@ -1208,75 +1757,117 @@ public interface Table<R extends Record> extends TableLike<R> {
     @Support
     DivideByOnStep divideBy(Table<?> divisor);
 
-    /* [pro] xx
-    xxx
-     x xxxxxx xx xxxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxx xxxxxxxx xxxxx xxxxxx xxxx
-     x xxxx xxxxxx
-     xx
-    xxxxxxxxxx xxxxxx xx
-    xxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxx xxxxx
+    /**
+     * A synthetic <code>LEFT SEMI JOIN</code> clause that translates to an
+     * equivalent <code>EXISTS</code> predicate.
+     * <p>
+     * The following two SQL snippets are semantically equivalent:
+     * <code><pre>
+     * -- Using LEFT SEMI JOIN
+     * FROM A
+     *     LEFT SEMI JOIN B
+     *         ON A.ID = B.ID
+     *
+     * -- Using WHERE EXISTS
+     * FROM A
+     * WHERE EXISTS (
+     *     SELECT 1 FROM B WHERE A.ID = B.ID
+     * )
+     * </pre></code>
+     */
+    @Support
+    TableOnStep<R> leftSemiJoin(TableLike<?> table);
 
-    xxx
-     x xxxxxx xx xxxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxx xxxxxxxx xxxxx xxxxxx xxxx
-     x xxxx xxxxxx
-     xx
-    xxxxxxxxxx xxxxxx xx
-    xxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxx xxxxx
+    /**
+     * A synthetic <code>LEFT ANTI JOIN</code> clause that translates to an
+     * equivalent <code>NOT EXISTS</code> predicate.
+     * <p>
+     * The following two SQL snippets are semantically equivalent:
+     * <code><pre>
+     * -- Using LEFT ANTI JOIN
+     * FROM A
+     *     LEFT ANTI JOIN B
+     *         ON A.ID = B.ID
+     *
+     * -- Using WHERE NOT EXISTS
+     * FROM A
+     * WHERE NOT EXISTS (
+     *     SELECT 1 FROM B WHERE A.ID = B.ID
+     * )
+     * </pre></code>
+     */
+    @Support
+    TableOnStep<R> leftAntiJoin(TableLike<?> table);
 
-    xxx
-     x xxxxxx xx xxxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxx xxxxxxxx xxxxx xxxxxx xxxx
-     x xxxx xxxxxx
-     xx
-    xxxxxxxxxx xxxxxx xx
-    xxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-    xxx
-     x xxxxxx xx xxxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxx xxxxxxxx xxxxx xxxxxx xxxx
-     x xxxx xxxxxx
-     xx
-    xxxxxxxxxx xxxxxx xx
-    xxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxx
 
-    xxx
-     x xxxxxx xx xxxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxx xxxxxxxx xxxxx xxxxxx xxxx
-     x xxxx xxxxxx
-     xx
-    xxxxxxxxxx xxxxxx xx
-    xxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxx
 
-    xxx
-     x xxxxxx xx xxxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxx xxxxxxxx xxxxx xxxxxx xxxx
-     x xxxx xxxxxx
-     xx
-    xxxxxxxxxx xxxxxx xx
-    xxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-    xxx
-     x xxxxxx xx xxxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxx xxxxx xxxxxx xxxx xxxx
-     x xxxxxx
-     xx
-    xxxxxxxxxx xxxxxx xx
-    xxxxxxxx xxxxxxxxxxxxxx xxxxx
 
-    xxx
-     x xxxxxx xx xxxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxx xxxxx xxxxxx xxxx xxxx
-     x xxxxxx
-     xx
-    xxxxxxxxxx xxxxxx xx
-    xxxxxxxx xxxxxxxxxxxxxxx xxxxxxx xxxxxxx xxxxx
 
-    xxx
-     x xxxxxx xx xxxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxx xxxxx xxxxxx xxxx xxxx
-     x xxxxxx
-     xx
-    xxxxxxxxxx xxxxxx xx
-    xxxxxxxx xxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxx
 
-    xxx
-     x xxxxxx xx xxxxxx xxxxxxxxxxxxxxxxxx xxxxxxxxx xxxxx xxxxxx xxxx xxxx
-     x xxxxxx
-     xx
-    xxxxxxxxxx xxxxxx xx
-    xxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxx
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }

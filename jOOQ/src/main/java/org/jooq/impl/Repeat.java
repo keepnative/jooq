@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,28 +68,28 @@ class Repeat extends AbstractFunction<String> {
     @Override
     final Field<String> getFunction0(Configuration configuration) {
         switch (configuration.dialect().family()) {
-            /* [pro] xx
-            xxxx xxxxx
-            xxxx xxxxxxxxx
-            xxxx xxxxxxx
-            xxxx xxxxxxx
-            xx [/pro] */
+
+
+
+
+
+
             case FIREBIRD:
                 return DSL.rpad(string, DSL.length(string).mul(count), string);
 
-            // Simulation of REPEAT() for SQLite currently cannot be achieved
+            // Emulation of REPEAT() for SQLite currently cannot be achieved
             // using RPAD() above, as RPAD() expects characters, not strings
             // Another option is documented here, though:
             // http://stackoverflow.com/questions/11568496/how-to-simulate-repeat-in-sqlite
             case SQLITE:
                 return DSL.field("replace(substr(quote(zeroblob(({0} + 1) / 2)), 3, {0}), '0', {1})", String.class, count, string);
 
-            /* [pro] xx
-            xxxx xxxx
-            xxxx xxxxxxxxxx
-                xxxxxx xxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxx xxxxxxx xxxxxxx
 
-            xx [/pro] */
+
+
+
+
+
             default:
                 return function("repeat", SQLDataType.VARCHAR, string, count);
         }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -158,4 +158,5 @@ public class PostgresDataType {
     public static final DataType<String>     ACLITEM                    = new DefaultDataType<String>(SQLDialect.POSTGRES, SQLDataType.VARCHAR, "aclitem");
     public static final DataType<String>     NAME                       = new DefaultDataType<String>(SQLDialect.POSTGRES, SQLDataType.VARCHAR, "name");
     public static final DataType<String>     REGPROC                    = new DefaultDataType<String>(SQLDialect.POSTGRES, SQLDataType.VARCHAR, "regproc");
+    public static final DataType<Object>     VOID                       = new DefaultDataType<Object>(SQLDialect.POSTGRES, SQLDataType.OTHER, "void");
 }

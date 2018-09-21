@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,13 +51,13 @@ import static org.jooq.Clause.MERGE_VALUES;
 import static org.jooq.Clause.MERGE_WHEN_MATCHED_THEN_UPDATE;
 import static org.jooq.Clause.MERGE_WHEN_NOT_MATCHED_THEN_INSERT;
 import static org.jooq.Clause.MERGE_WHERE;
-import static org.jooq.SQLDialect.H2;
 // ...
 import static org.jooq.impl.DSL.condition;
 import static org.jooq.impl.DSL.exists;
+import static org.jooq.impl.DSL.insertInto;
 import static org.jooq.impl.DSL.notExists;
 import static org.jooq.impl.DSL.nullSafe;
-import static org.jooq.impl.Utils.DATA_WRAP_DERIVED_TABLES_IN_PARENTHESES;
+import static org.jooq.impl.Tools.DataKey.DATA_WRAP_DERIVED_TABLES_IN_PARENTHESES;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -130,6 +130,7 @@ import org.jooq.QueryPart;
 import org.jooq.Record;
 import org.jooq.Record1;
 import org.jooq.Row;
+import org.jooq.SQL;
 import org.jooq.Select;
 import org.jooq.Table;
 import org.jooq.TableLike;
@@ -217,6 +218,7 @@ implements
     private static final long           serialVersionUID = -8835479296876774391L;
     private static final Clause[]       CLAUSES          = { MERGE };
 
+    private final WithImpl              with;
     private final Table<R>              table;
     private final ConditionProviderImpl on;
     private TableLike<?>                using;
@@ -232,61 +234,62 @@ implements
     private boolean                     notMatchedClause;
     private FieldMapForInsert           notMatchedInsert;
 
-    // Objects for the H2-specific syntax
-    private boolean                     h2Style;
-    private QueryPartList<Field<?>>     h2Fields;
-    private QueryPartList<Field<?>>     h2Keys;
-    private QueryPartList<Field<?>>     h2Values;
-    private Select<?>                   h2Select;
+    // Objects for the UPSERT syntax (including H2 MERGE, HANA UPSERT, etc.)
+    private boolean                     upsertStyle;
+    private QueryPartList<Field<?>>     upsertFields;
+    private QueryPartList<Field<?>>     upsertKeys;
+    private QueryPartList<Field<?>>     upsertValues;
+    private Select<?>                   upsertSelect;
 
-    MergeImpl(Configuration configuration, Table<R> table) {
-        this(configuration, table, null);
+    MergeImpl(Configuration configuration, WithImpl with, Table<R> table) {
+        this(configuration, with, table, null);
     }
 
-    MergeImpl(Configuration configuration, Table<R> table, Collection<? extends Field<?>> fields) {
+    MergeImpl(Configuration configuration, WithImpl with, Table<R> table, Collection<? extends Field<?>> fields) {
         super(configuration);
 
+        this.with = with;
         this.table = table;
         this.on = new ConditionProviderImpl();
 
         if (fields != null) {
-            h2Style = true;
-            h2Fields = new QueryPartList<Field<?>>(fields);
+            upsertStyle = true;
+            upsertFields = new QueryPartList<Field<?>>(fields);
         }
     }
 
     // -------------------------------------------------------------------------
-    // H2-specific MERGE API
+    // UPSERT API
     // -------------------------------------------------------------------------
 
-    QueryPartList<Field<?>> getH2Fields() {
-        if (h2Fields == null) {
-            h2Fields = new QueryPartList<Field<?>>(table.fields());
+    QueryPartList<Field<?>> getUpsertFields() {
+        if (upsertFields == null) {
+            upsertFields = new QueryPartList<Field<?>>(table.fields());
         }
 
-        return h2Fields;
+        return upsertFields;
     }
 
-    QueryPartList<Field<?>> getH2Keys() {
-        if (h2Keys == null) {
-            h2Keys = new QueryPartList<Field<?>>();
+    QueryPartList<Field<?>> getUpsertKeys() {
+        if (upsertKeys == null) {
+            upsertKeys = new QueryPartList<Field<?>>();
         }
 
-        return h2Keys;
+        return upsertKeys;
     }
 
-    QueryPartList<Field<?>> getH2Values() {
-        if (h2Values == null) {
-            h2Values = new QueryPartList<Field<?>>();
+    QueryPartList<Field<?>> getUpsertValues() {
+        if (upsertValues == null) {
+            upsertValues = new QueryPartList<Field<?>>();
         }
 
-        return h2Values;
+        return upsertValues;
     }
 
     @Override
     public final MergeImpl select(Select select) {
-        h2Style = true;
-        h2Select = select;
+        upsertStyle = true;
+        upsertSelect = select;
         return this;
     }
 
@@ -297,8 +300,8 @@ implements
 
     @Override
     public final MergeImpl key(Collection<? extends Field<?>> keys) {
-        h2Style = true;
-        getH2Keys().addAll(keys);
+        upsertStyle = true;
+        getUpsertKeys().addAll(keys);
         return this;
     }
 
@@ -537,12 +540,12 @@ implements
         // [#1541] The VALUES() clause is also supported in the H2-specific
         // syntax, in case of which, the USING() was not added
         if (using == null) {
-            h2Style = true;
-            getH2Values().addAll(Utils.fields(values, getH2Fields().toArray(new Field[0])));
+            upsertStyle = true;
+            getUpsertValues().addAll(Tools.fields(values, getUpsertFields().toArray(new Field[0])));
         }
         else {
             Field<?>[] fields = notMatchedInsert.keySet().toArray(new Field[0]);
-            notMatchedInsert.putValues(Utils.fields(values, fields));
+            notMatchedInsert.putValues(Tools.fields(values, fields));
         }
 
         return this;
@@ -586,6 +589,16 @@ implements
     }
 
     @Override
+    public final MergeOnConditionStep<R> on(Boolean condition) {
+        return on(condition(condition));
+    }
+
+    @Override
+    public final MergeImpl on(SQL sql) {
+        return on(condition(sql));
+    }
+
+    @Override
     public final MergeImpl on(String sql) {
         return on(condition(sql));
     }
@@ -609,6 +622,16 @@ implements
     @Override
     public final MergeImpl and(Field<Boolean> condition) {
         return and(condition(condition));
+    }
+
+    @Override
+    public final MergeImpl and(Boolean condition) {
+        return and(condition(condition));
+    }
+
+    @Override
+    public final MergeImpl and(SQL sql) {
+        return and(condition(sql));
     }
 
     @Override
@@ -637,6 +660,11 @@ implements
     }
 
     @Override
+    public final MergeImpl andNot(Boolean condition) {
+        return andNot(condition(condition));
+    }
+
+    @Override
     public final MergeImpl andExists(Select<?> select) {
         return and(exists(select));
     }
@@ -655,6 +683,16 @@ implements
     @Override
     public final MergeImpl or(Field<Boolean> condition) {
         return and(condition(condition));
+    }
+
+    @Override
+    public final MergeImpl or(Boolean condition) {
+        return and(condition(condition));
+    }
+
+    @Override
+    public final MergeImpl or(SQL sql) {
+        return or(condition(sql));
     }
 
     @Override
@@ -683,6 +721,11 @@ implements
     }
 
     @Override
+    public final MergeImpl orNot(Boolean condition) {
+        return orNot(condition(condition));
+    }
+
+    @Override
     public final MergeImpl orExists(Select<?> select) {
         return or(exists(select));
     }
@@ -703,7 +746,7 @@ implements
 
     @Override
     public final <T> MergeImpl set(Field<T> field, T value) {
-        return set(field, Utils.field(value, field));
+        return set(field, Tools.field(value, field));
     }
 
     @Override
@@ -723,7 +766,10 @@ implements
 
     @Override
     public final <T> MergeImpl set(Field<T> field, Select<? extends Record1<T>> value) {
-        return set(field, value.<T>asField());
+        if (value == null)
+            return set(field, (T) null);
+        else
+            return set(field, value.<T>asField());
     }
 
     @Override
@@ -743,7 +789,7 @@ implements
 
     @Override
     public final MergeImpl set(Record record) {
-        return set(Utils.mapOfChangedValues(record));
+        return set(Tools.mapOfChangedValues(record));
     }
 
     @Override
@@ -924,6 +970,11 @@ implements
     }
 
     @Override
+    public final MergeMatchedDeleteStep<R> where(Boolean condition) {
+        return where(condition(condition));
+    }
+
+    @Override
     public final MergeImpl deleteWhere(Condition condition) {
         matchedDeleteWhere = condition;
         return this;
@@ -934,31 +985,39 @@ implements
         return deleteWhere(condition(condition));
     }
 
+    @Override
+    public final MergeImpl deleteWhere(Boolean condition) {
+        return deleteWhere(condition(condition));
+    }
+
     // -------------------------------------------------------------------------
     // QueryPart API
     // -------------------------------------------------------------------------
 
     /**
-     * Return a standard MERGE statement simulating the H2-specific syntax
+     * Return a standard MERGE statement emulating the H2-specific syntax
      */
-    private final QueryPart getStandardMerge(Configuration config) {
-        switch (config.dialect().family()) {
-            /* [pro] xx
-            xxxx xxxx
-            xxxx xxxxxxxxx
-            xxxx xxxxxxx
-            xxxx xxxxxxxxxx
-            xxxx xxxxxxx
-            xx [/pro] */
+    private final QueryPart getStandardMerge(Context<?> ctx) {
+        Configuration config = ctx.configuration();
+
+        switch (ctx.family()) {
+
+
+
+
+
+
+
+
             case CUBRID:
             case HSQLDB: {
 
                 // The SRC for the USING() clause:
                 // ------------------------------
                 Table<?> src;
-                if (h2Select != null) {
+                if (upsertSelect != null) {
                     List<Field<?>> v = new ArrayList<Field<?>>();
-                    Row row = h2Select.fieldsRow();
+                    Row row = upsertSelect.fieldsRow();
 
                     for (int i = 0; i < row.size(); i++) {
                         v.add(row.field(i).as("s" + (i + 1)));
@@ -966,13 +1025,13 @@ implements
 
                     // [#579] TODO: Currently, this syntax may require aliasing
                     // on the call-site
-                    src = create(config).select(v).from(h2Select).asTable("src");
+                    src = create(config).select(v).from(upsertSelect).asTable("src");
                 }
                 else {
                     List<Field<?>> v = new ArrayList<Field<?>>();
 
-                    for (int i = 0; i < getH2Values().size(); i++) {
-                        v.add(getH2Values().get(i).as("s" + (i + 1)));
+                    for (int i = 0; i < getUpsertValues().size(); i++) {
+                        v.add(getUpsertValues().get(i).as("s" + (i + 1)));
                     }
 
                     src = create(config).select(v).asTable("src");
@@ -982,7 +1041,7 @@ implements
                 // --------------------------------
                 Set<Field<?>> onFields = new HashSet<Field<?>>();
                 Condition condition = null;
-                if (getH2Keys().isEmpty()) {
+                if (getUpsertKeys().isEmpty()) {
                     UniqueKey<?> key = table.getPrimaryKey();
 
                     if (key != null) {
@@ -1006,14 +1065,14 @@ implements
                     }
                 }
                 else {
-                    for (int i = 0; i < getH2Keys().size(); i++) {
-                        int matchIndex = getH2Fields().indexOf(getH2Keys().get(i));
+                    for (int i = 0; i < getUpsertKeys().size(); i++) {
+                        int matchIndex = getUpsertFields().indexOf(getUpsertKeys().get(i));
                         if (matchIndex == -1) {
                             throw new IllegalStateException("Fields in KEY() clause must be part of the fields specified in MERGE INTO table (...)");
                         }
 
-                        onFields.addAll(getH2Keys());
-                        Condition rhs = getH2Keys().get(i).equal((Field) src.field(matchIndex));
+                        onFields.addAll(getUpsertKeys());
+                        Condition rhs = getUpsertKeys().get(i).equal((Field) src.field(matchIndex));
 
                         if (condition == null) {
                             condition = rhs;
@@ -1032,11 +1091,11 @@ implements
                 for (int i = 0; i < src.fieldsRow().size(); i++) {
 
                     // Oracle does not allow to update fields from the ON clause
-                    if (!onFields.contains(getH2Fields().get(i))) {
-                        update.put(getH2Fields().get(i), src.field(i));
+                    if (!onFields.contains(getUpsertFields().get(i))) {
+                        update.put(getUpsertFields().get(i), src.field(i));
                     }
 
-                    insert.put(getH2Fields().get(i), src.field(i));
+                    insert.put(getUpsertFields().get(i), src.field(i));
                 }
 
                 return create(config).mergeInto(table)
@@ -1054,12 +1113,28 @@ implements
 
     @Override
     public final void accept(Context<?> ctx) {
-        if (h2Style) {
-            if (ctx.configuration().dialect() == H2) {
-                toSQLH2(ctx);
-            }
-            else {
-                ctx.visit(getStandardMerge(ctx.configuration()));
+        if (with != null)
+            ctx.visit(with).formatSeparator();
+
+        if (upsertStyle) {
+            switch (ctx.family()) {
+                case H2:
+                    toSQLH2Merge(ctx);
+                    break;
+
+                case POSTGRES:
+                    toPostgresInsertOnConflict(ctx);
+                    break;
+
+
+
+
+
+
+
+                default:
+                    ctx.visit(getStandardMerge(ctx));
+                    break;
             }
         }
         else {
@@ -1067,7 +1142,24 @@ implements
         }
     }
 
-    private final void toSQLH2(Context<?> ctx) {
+    private final void toPostgresInsertOnConflict(Context<?> ctx) {
+        Fields<?> fields = new Fields<Record>(getUpsertFields());
+        Map<Field<?>, Field<?>> map = new LinkedHashMap<Field<?>, Field<?>>();
+        for (Field<?> field : fields.fields)
+            map.put(field, getUpsertValues().get(fields.indexOf(field)));
+
+        if (upsertSelect != null) {
+            ctx.sql("[ merge with select is not supported in PostgreSQL ]");
+        }
+        else {
+            ctx.visit(insertInto(table, getUpsertFields())
+               .values(getUpsertValues())
+               .onDuplicateKeyUpdate()
+               .set(map));
+        }
+    }
+
+    private final void toSQLH2Merge(Context<?> ctx) {
         ctx.keyword("merge into")
            .sql(' ')
            .declareTables(true)
@@ -1075,25 +1167,67 @@ implements
            .formatSeparator();
 
         ctx.sql('(');
-        Utils.fieldNames(ctx, getH2Fields());
+        Tools.fieldNames(ctx, getUpsertFields());
         ctx.sql(')');
 
-        if (!getH2Keys().isEmpty()) {
+        if (!getUpsertKeys().isEmpty()) {
             ctx.sql(' ').keyword("key").sql(" (");
-            Utils.fieldNames(ctx, getH2Keys());
+            Tools.fieldNames(ctx, getUpsertKeys());
             ctx.sql(')');
         }
 
-        if (h2Select != null) {
+        if (upsertSelect != null) {
             ctx.sql(' ')
-               .visit(h2Select);
+               .visit(upsertSelect);
         }
         else {
             ctx.sql(' ').keyword("values").sql(" (")
-               .visit(getH2Values())
+               .visit(getUpsertValues())
                .sql(')');
         }
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     private final void toSQLStandard(Context<?> ctx) {
         ctx.start(MERGE_MERGE_INTO)
@@ -1114,40 +1248,40 @@ implements
         ctx.formatIndentEnd()
            .declareTables(false);
 
-        /* [pro] xx
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxxx xxxxxxxxxx
-            xxxx xxxxxxx x
-                xx xxxxxx xxxxxxxxxx xxxxxxx x
-                    xxx xxxx x xxxxxxxxxxxxxxxxxx
 
-                    xxxxxxxxx xxxxxxxxxxxxxxxxxxxxxx xx
-                       xxxxxxxxxxxxxx
-                       xxxxxxxxxx
-                       xxxxxxxxxx
 
-                    xxxxxx xxxxxxxxx x xxx
-                    xxx xxxxxxxxx xxxxx x xxxxxxxxxxxx xxxxxxxxxxxxxxxx x
 
-                        xx xxxx xxxxxx xxx xxxxxxx
-                        xx xxxxxx xxxxxxx xxxx
-                        xxxxxx xxxx x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                            x xxxxxxxx x xxxx x xxx x xxxxxxxxxxxxxxxxx
-                            x xxxxxxxxxxxxxxxx
 
-                        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                        xxxxxxxxx x xx xx
-                    x
 
-                    xxxxxxxxxxxxx
-                x
 
-                xxxxxx
-            x
-        x
 
-        xx [/pro] */
-        boolean onParentheses = false/* [pro] xx xx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xx xxxxxxxx [/pro] */;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        boolean onParentheses = false                                                                           ;
         ctx.end(MERGE_USING)
            .formatSeparator()
            .start(MERGE_ON)
@@ -1216,14 +1350,14 @@ implements
 
         ctx.end(MERGE_WHERE)
            .end(MERGE_WHEN_NOT_MATCHED_THEN_INSERT);
-        /* [pro] xx
 
-        xxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-            xxxx xxxxxxxxxx
-                xxxxxxxxxxxxx
-                xxxxxx
-        x
-        xx [/pro] */
+
+
+
+
+
+
+
     }
 
     @Override

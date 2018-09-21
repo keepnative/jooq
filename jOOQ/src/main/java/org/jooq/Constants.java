@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,7 +50,7 @@ public final class Constants {
     /**
      * The latest jOOQ minor version.
      */
-    public static final String MINOR_VERSION  = "3.6";
+    public static final String MINOR_VERSION  = "3.7";
 
     /**
      * The latest jOOQ version.
@@ -58,7 +58,7 @@ public final class Constants {
      * This is the same as {@link #MINOR_VERSION}, but it may include patch
      * version suffixes.
      */
-    public static final String VERSION        = "3.6.4";
+    public static final String VERSION        = "3.7.4";
 
     /**
      * The latest jOOQ full version.
@@ -66,17 +66,27 @@ public final class Constants {
      * This is the same as {@link #VERSION}, but it may include release
      * candidate and other suffixes.
      */
-    public static final String FULL_VERSION   = "3.6.4";
+    public static final String FULL_VERSION   = "3.7.4";
 
     /**
      * The current jooq-runtime XSD file name.
      */
-    public static final String XSD_RUNTIME    = "jooq-runtime-3.6.0.xsd";
+    public static final String XSD_RUNTIME    = "jooq-runtime-3.7.0.xsd";
 
     /**
      * The current jooq-runtime XML namespace
      */
     public static final String NS_RUNTIME     = "http://www.jooq.org/xsd/" + XSD_RUNTIME;
+
+    /**
+     * The current jooq-export XSD file name.
+     */
+    public static final String XSD_EXPORT     = "jooq-export-3.7.0.xsd";
+
+    /**
+     * The current jooq-export XML namespace
+     */
+    public static final String NS_EXPORT      = "http://www.jooq.org/xsd/" + XSD_EXPORT;
 
     /**
      * The current jooq-meta XSD file name.
@@ -91,7 +101,7 @@ public final class Constants {
     /**
      * The current jooq-codegen XSD file name.
      */
-    public static final String XSD_CODEGEN    = "jooq-codegen-3.6.0.xsd";
+    public static final String XSD_CODEGEN    = "jooq-codegen-3.7.0.xsd";
 
     /**
      * The current jooq-codegen XML namespace.

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,7 +55,10 @@ import static org.jooq.SQLDialect.MARIADB;
 import static org.jooq.SQLDialect.MYSQL;
 // ...
 import static org.jooq.SQLDialect.POSTGRES;
+import static org.jooq.SQLDialect.POSTGRES_9_5;
+// ...
 import static org.jooq.SQLDialect.SQLITE;
+// ...
 // ...
 // ...
 // ...
@@ -69,6 +72,9 @@ import java.sql.Statement;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.stream.Stream;
 
 import javax.annotation.Generated;
 
@@ -118,7 +124,30 @@ import org.jooq.tools.jdbc.MockRunnable;
  * @see Configuration
  * @author Lukas Eder
  */
-public interface DSLContext extends Scope {
+public interface DSLContext extends Scope , AutoCloseable  {
+
+    // -------------------------------------------------------------------------
+    // XXX AutoCloseable API
+    // -------------------------------------------------------------------------
+
+    /**
+     * Close the underlying resources, if any resources have been allocated when
+     * constructing this <code>DSLContext</code>.
+     * <p>
+     * Some {@link DSLContext} constructors, such as {@link DSL#using(String)},
+     * {@link DSL#using(String, Properties)}, or
+     * {@link DSL#using(String, String, String)} allocate a {@link Connection}
+     * resource, which is inaccessible to the outside of the {@link DSLContext}
+     * implementation. Proper resource management must thus be done via this
+     * {@link #close()} method.
+     *
+     * @throws DataAccessException When something went wrong closing the
+     *             underlying resources.
+     */
+
+    @Override
+
+    void close() throws DataAccessException;
 
     // -------------------------------------------------------------------------
     // XXX Configuration API
@@ -183,6 +212,27 @@ public interface DSLContext extends Scope {
      * @param transactional The transactional code
      */
     void transaction(TransactionalRunnable transactional);
+
+    /**
+     * Run a {@link ConnectionCallable} in the context of this
+     * <code>DSLContext</code>'s underlying {@link #configuration()}'s
+     * {@link Configuration#connectionProvider()}.
+     *
+     * @param runnable The code running statements against the
+     *            <code>connection</code>.
+     * @return The outcome of the callable
+     */
+    <T> T connectionResult(ConnectionCallable<T> callable);
+
+    /**
+     * Run a {@link ConnectionRunnable} in the context of this
+     * <code>DSLContext</code>'s underlying {@link #configuration()}'s
+     * {@link Configuration#connectionProvider()}.
+     *
+     * @param runnable The code running statements against the
+     *            <code>connection</code>.
+     */
+    void connection(ConnectionRunnable runnable);
 
     /**
      * Run a {@link MockRunnable} in the context of this <code>DSLContext</code>
@@ -372,6 +422,29 @@ public interface DSLContext extends Scope {
      *
      * @param sql The SQL
      * @return A query wrapping the plain SQL
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Query query(SQL sql);
+
+    /**
+     * Create a new query holding plain SQL. There must not be any binding
+     * variables contained in the SQL.
+     * <p>
+     * Example:
+     * <p>
+     * <code><pre>
+     * String sql = "SET SCHEMA 'abc'";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return A query wrapping the plain SQL
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -394,6 +467,7 @@ public interface DSLContext extends Scope {
      * @param sql The SQL
      * @param bindings The bindings
      * @return A query wrapping the plain SQL
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -424,6 +498,7 @@ public interface DSLContext extends Scope {
      * @param parts The {@link QueryPart} objects that are rendered at the
      *            {numbered placeholder} locations
      * @return A query wrapping the plain SQL
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -451,6 +526,35 @@ public interface DSLContext extends Scope {
      *         <code>null</code>, even if the database returns no
      *         {@link ResultSet}
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Result<Record> fetch(SQL sql) throws DataAccessException;
+
+    /**
+     * Execute a new query holding plain SQL.
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return The results from the executed query. This is never
+     *         <code>null</code>, even if the database returns no
+     *         {@link ResultSet}
+     * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -482,6 +586,7 @@ public interface DSLContext extends Scope {
      *         <code>null</code>, even if the database returns no
      *         {@link ResultSet}
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -513,6 +618,7 @@ public interface DSLContext extends Scope {
      *            {numbered placeholder} locations
      * @return The results from the executed query
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -546,6 +652,41 @@ public interface DSLContext extends Scope {
      *         <code>null</code>, even if the database returns no
      *         {@link ResultSet}
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Cursor<Record> fetchLazy(SQL sql) throws DataAccessException;
+
+    /**
+     * Execute a new query holding plain SQL and "lazily" return the generated
+     * result.
+     * <p>
+     * The returned {@link Cursor} holds a reference to the executed
+     * {@link PreparedStatement} and the associated {@link ResultSet}. Data can
+     * be fetched (or iterated over) lazily, fetching records from the
+     * {@link ResultSet} one by one.
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return The results from the executed query. This is never
+     *         <code>null</code>, even if the database returns no
+     *         {@link ResultSet}
+     * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -583,6 +724,7 @@ public interface DSLContext extends Scope {
      *         <code>null</code>, even if the database returns no
      *         {@link ResultSet}
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -618,12 +760,163 @@ public interface DSLContext extends Scope {
      *            parts can be injected
      * @param parts The {@link QueryPart} objects that are rendered at the
      *            {numbered placeholder} locations
-     * @return The results from the executed query
+     * @return The results from the executed query. This is never
+     *         <code>null</code>, even if the database returns no
+     *         {@link ResultSet}
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
     Cursor<Record> fetchLazy(String sql, QueryPart... parts) throws DataAccessException;
+
+
+    /**
+     * Execute a new query holding plain SQL and "lazily" return the generated
+     * result.
+     * <p>
+     * The returned {@link Stream} holds a reference to the executed
+     * {@link PreparedStatement} and the associated {@link ResultSet}. Data can
+     * be fetched (or iterated over) lazily, fetching records from the
+     * {@link ResultSet} one by one.
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return The results from the executed query. This is never
+     *         <code>null</code>, even if the database returns no
+     *         {@link ResultSet}
+     * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Stream<Record> fetchStream(SQL sql) throws DataAccessException;
+
+    /**
+     * Execute a new query holding plain SQL and "lazily" return the generated
+     * result.
+     * <p>
+     * The returned {@link Stream} holds a reference to the executed
+     * {@link PreparedStatement} and the associated {@link ResultSet}. Data can
+     * be fetched (or iterated over) lazily, fetching records from the
+     * {@link ResultSet} one by one.
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return The results from the executed query. This is never
+     *         <code>null</code>, even if the database returns no
+     *         {@link ResultSet}
+     * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Stream<Record> fetchStream(String sql) throws DataAccessException;
+
+    /**
+     * Execute a new query holding plain SQL and "lazily" return the generated
+     * result.
+     * <p>
+     * There must be as many bind variables contained in the SQL, as passed in
+     * the bindings parameter
+     * <p>
+     * The returned {@link Stream} holds a reference to the executed
+     * {@link PreparedStatement} and the associated {@link ResultSet}. Data can
+     * be fetched (or iterated over) lazily, fetching records from the
+     * {@link ResultSet} one by one.
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @param bindings The bindings
+     * @return The results from the executed query. This is never
+     *         <code>null</code>, even if the database returns no
+     *         {@link ResultSet}
+     * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Stream<Record> fetchStream(String sql, Object... bindings) throws DataAccessException;
+
+    /**
+     * Execute a new query holding plain SQL and "lazily" return the generated
+     * result.
+     * <p>
+     * The returned {@link Stream} holds a reference to the executed
+     * {@link PreparedStatement} and the associated {@link ResultSet}. Data can
+     * be fetched (or iterated over) lazily, fetching records from the
+     * {@link ResultSet} one by one.
+     * <p>
+     * Unlike {@link #fetchStream(String, Object...)}, the SQL passed to this
+     * method should not contain any bind variables. Instead, you can pass
+     * {@link QueryPart} objects to the method which will be rendered at indexed
+     * locations of your SQL string as such: <code><pre>
+     * // The following query
+     * fetchLazy("select {0}, {1} from {2}", val(1), inline("test"), name("DUAL"));
+     *
+     * // Will execute this SQL on an Oracle database with RenderNameStyle.QUOTED:
+     * select ?, 'test' from "DUAL"
+     * </pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses! One way to escape
+     * literals is to use {@link DSL#name(String...)} and similar methods
+     *
+     * @param sql The SQL clause, containing {numbered placeholders} where query
+     *            parts can be injected
+     * @param parts The {@link QueryPart} objects that are rendered at the
+     *            {numbered placeholder} locations
+     * @return The results from the executed query. This is never
+     *         <code>null</code>, even if the database returns no
+     *         {@link ResultSet}
+     * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Stream<Record> fetchStream(String sql, QueryPart... parts) throws DataAccessException;
+
 
     /**
      * Execute a new query holding plain SQL, possibly returning several result
@@ -644,10 +937,36 @@ public interface DSLContext extends Scope {
      *         <code>null</code>, even if the database returns no
      *         {@link ResultSet}
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
-    List<Result<Record>> fetchMany(String sql) throws DataAccessException;
+    Results fetchMany(SQL sql) throws DataAccessException;
+
+    /**
+     * Execute a new query holding plain SQL, possibly returning several result
+     * sets.
+     * <p>
+     * Example (Sybase ASE):
+     * <p>
+     * <code><pre>
+     * String sql = "sp_help 'my_table'";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return The results from the executed query. This is never
+     *         <code>null</code>, even if the database returns no
+     *         {@link ResultSet}
+     * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Results fetchMany(String sql) throws DataAccessException;
 
     /**
      * Execute a new query holding plain SQL, possibly returning several result
@@ -672,10 +991,11 @@ public interface DSLContext extends Scope {
      *         <code>null</code>, even if the database returns no
      *         {@link ResultSet}
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
-    List<Result<Record>> fetchMany(String sql, Object... bindings) throws DataAccessException;
+    Results fetchMany(String sql, Object... bindings) throws DataAccessException;
 
     /**
      * Execute a new query holding plain SQL, possibly returning several result
@@ -704,10 +1024,11 @@ public interface DSLContext extends Scope {
      *            {numbered placeholder} locations
      * @return The results from the executed query
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
-    List<Result<Record>> fetchMany(String sql, QueryPart... parts) throws DataAccessException;
+    Results fetchMany(String sql, QueryPart... parts) throws DataAccessException;
 
     /**
      * Execute a new query holding plain SQL.
@@ -730,6 +1051,34 @@ public interface DSLContext extends Scope {
      * @return The results from the executed query.
      * @throws DataAccessException if something went wrong executing the query
      * @throws TooManyRowsException if the query returned more than one record
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Record fetchOne(SQL sql) throws DataAccessException, TooManyRowsException;
+
+    /**
+     * Execute a new query holding plain SQL.
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return The results from the executed query.
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -761,6 +1110,7 @@ public interface DSLContext extends Scope {
      *         <code>null</code> if the database returned no records
      * @throws DataAccessException if something went wrong executing the query
      * @throws TooManyRowsException if the query returned more than one record
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -794,10 +1144,131 @@ public interface DSLContext extends Scope {
      *         <code>null</code> if the database returned no records
      * @throws DataAccessException if something went wrong executing the query
      * @throws TooManyRowsException if the query returned more than one record
+     * @see SQL
      */
     @Support
     @PlainSQL
     Record fetchOne(String sql, QueryPart... parts) throws DataAccessException, TooManyRowsException;
+
+
+    /**
+     * Execute a new query holding plain SQL.
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return The results from the executed query
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Optional<Record> fetchOptional(SQL sql) throws DataAccessException, TooManyRowsException;
+
+    /**
+     * Execute a new query holding plain SQL.
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return The results from the executed query
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Optional<Record> fetchOptional(String sql) throws DataAccessException, TooManyRowsException;
+
+    /**
+     * Execute a new query holding plain SQL.
+     * <p>
+     * There must be as many bind variables contained in the SQL, as passed in
+     * the bindings parameter
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @param bindings The bindings
+     * @return The results from the executed query
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Optional<Record> fetchOptional(String sql, Object... bindings) throws DataAccessException, TooManyRowsException;
+
+    /**
+     * Execute a new query holding plain SQL.
+     * <p>
+     * Unlike {@link #fetchOne(String, Object...)}, the SQL passed to this
+     * method should not contain any bind variables. Instead, you can pass
+     * {@link QueryPart} objects to the method which will be rendered at indexed
+     * locations of your SQL string as such: <code><pre>
+     * // The following query
+     * fetchOne("select {0}, {1} from {2}", val(1), inline("test"), name("DUAL"));
+     *
+     * // Will execute this SQL on an Oracle database with RenderNameStyle.QUOTED:
+     * select ?, 'test' from "DUAL"
+     * </pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses! One way to escape
+     * literals is to use {@link DSL#name(String...)} and similar methods
+     *
+     * @param sql The SQL clause, containing {numbered placeholders} where query
+     *            parts can be injected
+     * @param parts The {@link QueryPart} objects that are rendered at the
+     *            {numbered placeholder} locations
+     * @return The results from the executed query
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Optional<Record> fetchOptional(String sql, QueryPart... parts) throws DataAccessException, TooManyRowsException;
+
 
     /**
      * Execute a new query holding plain SQL.
@@ -823,6 +1294,37 @@ public interface DSLContext extends Scope {
      * @throws TooManyRowsException if the query returned more than one record
      * @throws InvalidResultException if the query returned a record with more
      *             than one value
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Object fetchValue(SQL sql) throws DataAccessException, TooManyRowsException, InvalidResultException;
+
+    /**
+     * Execute a new query holding plain SQL.
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return The result value from the executed query. This may be
+     *         <code>null</code> if the database returned no records
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @throws InvalidResultException if the query returned a record with more
+     *             than one value
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -856,6 +1358,7 @@ public interface DSLContext extends Scope {
      * @throws TooManyRowsException if the query returned more than one record
      * @throws InvalidResultException if the query returned a record with more
      *             than one value
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -891,10 +1394,139 @@ public interface DSLContext extends Scope {
      * @throws TooManyRowsException if the query returned more than one record
      * @throws InvalidResultException if the query returned a record with more
      *             than one value
+     * @see SQL
      */
     @Support
     @PlainSQL
     Object fetchValue(String sql, QueryPart... parts) throws DataAccessException, TooManyRowsException, InvalidResultException;
+
+
+    /**
+     * Execute a new query holding plain SQL.
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return The result value from the executed query
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @throws InvalidResultException if the query returned a record with more
+     *             than one value
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Optional<?> fetchOptionalValue(SQL sql) throws DataAccessException, TooManyRowsException, InvalidResultException;
+
+    /**
+     * Execute a new query holding plain SQL.
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return The result value from the executed query
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @throws InvalidResultException if the query returned a record with more
+     *             than one value
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Optional<?> fetchOptionalValue(String sql) throws DataAccessException, TooManyRowsException, InvalidResultException;
+
+    /**
+     * Execute a new query holding plain SQL.
+     * <p>
+     * There must be as many bind variables contained in the SQL, as passed in
+     * the bindings parameter
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @param bindings The bindings
+     * @return The results from the executed query
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @throws InvalidResultException if the query returned a record with more
+     *             than one value
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Optional<?> fetchOptionalValue(String sql, Object... bindings) throws DataAccessException, TooManyRowsException, InvalidResultException;
+
+    /**
+     * Execute a new query holding plain SQL.
+     * <p>
+     * Unlike {@link #fetchValue(String, Object...)}, the SQL passed to this
+     * method should not contain any bind variables. Instead, you can pass
+     * {@link QueryPart} objects to the method which will be rendered at indexed
+     * locations of your SQL string as such: <code><pre>
+     * // The following query
+     * fetchOne("select {0}, {1} from {2}", val(1), inline("test"), name("DUAL"));
+     *
+     * // Will execute this SQL on an Oracle database with RenderNameStyle.QUOTED:
+     * select ?, 'test' from "DUAL"
+     * </pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses! One way to escape
+     * literals is to use {@link DSL#name(String...)} and similar methods
+     *
+     * @param sql The SQL clause, containing {numbered placeholders} where query
+     *            parts can be injected
+     * @param parts The {@link QueryPart} objects that are rendered at the
+     *            {numbered placeholder} locations
+     * @return The results from the executed query
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @throws InvalidResultException if the query returned a record with more
+     *             than one value
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    Optional<?> fetchOptionalValue(String sql, QueryPart... parts) throws DataAccessException, TooManyRowsException, InvalidResultException;
+
 
     /**
      * Execute a new query holding plain SQL.
@@ -917,6 +1549,34 @@ public interface DSLContext extends Scope {
      * @return The result values from the executed query. This is never
      *         <code>null</code>.
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    List<?> fetchValues(SQL sql) throws DataAccessException;
+
+    /**
+     * Execute a new query holding plain SQL.
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return The result values from the executed query. This is never
+     *         <code>null</code>.
+     * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -947,6 +1607,7 @@ public interface DSLContext extends Scope {
      * @return The results from the executed query. This is never
      *         <code>null</code>.
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -979,6 +1640,7 @@ public interface DSLContext extends Scope {
      * @return The results from the executed query. This is never
      *         <code>null</code>.
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -995,6 +1657,24 @@ public interface DSLContext extends Scope {
      * @param sql The SQL
      * @return The results from the executed query
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    int execute(SQL sql) throws DataAccessException;
+
+    /**
+     * Execute a query holding plain SQL.
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return The results from the executed query
+     * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -1015,6 +1695,7 @@ public interface DSLContext extends Scope {
      * @param bindings The bindings
      * @return The results from the executed query
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -1046,6 +1727,7 @@ public interface DSLContext extends Scope {
      *            {numbered placeholder} locations
      * @return The results from the executed query
      * @throws DataAccessException if something went wrong executing the query
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -1091,6 +1773,53 @@ public interface DSLContext extends Scope {
      *
      * @param sql The SQL
      * @return An executable query
+     * @see SQL
+     */
+    @Support
+    @PlainSQL
+    ResultQuery<Record> resultQuery(SQL sql);
+
+    /**
+     * Create a new query holding plain SQL.
+     * <p>
+     * There must not be any binding variables contained in the SQL
+     * <p>
+     * Use this method, when you want to take advantage of the many ways to
+     * fetch results in jOOQ, using {@link ResultQuery}. Some examples:
+     * <p>
+     * <table border="1">
+     * <tr>
+     * <td> {@link ResultQuery#fetchLazy()}</td>
+     * <td>Open a cursor and fetch records one by one</td>
+     * </tr>
+     * <tr>
+     * <td> {@link ResultQuery#fetchInto(Class)}</td>
+     * <td>Fetch records into a custom POJO (optionally annotated with JPA
+     * annotations)</td>
+     * </tr>
+     * <tr>
+     * <td> {@link ResultQuery#fetchInto(RecordHandler)}</td>
+     * <td>Fetch records into a custom callback (similar to Spring's RowMapper)</td>
+     * </tr>
+     * </table>
+     * <p>
+     * Example (Postgres):
+     * <p>
+     * <code><pre>
+     * String sql = "FETCH ALL IN \"<unnamed cursor 1>\"";</pre></code> Example
+     * (SQLite):
+     * <p>
+     * <code><pre>
+     * String sql = "pragma table_info('my_table')";</pre></code>
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @param sql The SQL
+     * @return An executable query
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -1138,6 +1867,7 @@ public interface DSLContext extends Scope {
      * @param sql The SQL
      * @param bindings The bindings
      * @return A query wrapping the plain SQL
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -1168,6 +1898,7 @@ public interface DSLContext extends Scope {
      * @param parts The {@link QueryPart} objects that are rendered at the
      *            {numbered placeholder} locations
      * @return A query wrapping the plain SQL
+     * @see SQL
      */
     @Support
     @PlainSQL
@@ -1329,6 +2060,80 @@ public interface DSLContext extends Scope {
     @Support
     Record fetchOne(ResultSet rs, Class<?>... types) throws DataAccessException, TooManyRowsException;
 
+
+    /**
+     * Fetch a record from a JDBC {@link ResultSet} and transform it to a jOOQ
+     * {@link Record}.
+     * <p>
+     * This will internally fetch all records and throw an exception if there
+     * was more than one resulting record.
+     *
+     * @param rs The JDBC ResultSet to fetch data from
+     * @return The resulting jOOQ record
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     */
+    @Support
+    Optional<Record> fetchOptional(ResultSet rs) throws DataAccessException, TooManyRowsException;
+
+    /**
+     * Fetch a record from a JDBC {@link ResultSet} and transform it to a jOOQ
+     * {@link Record}.
+     * <p>
+     * This will internally fetch all records and throw an exception if there
+     * was more than one resulting record.
+     * <p>
+     * The additional <code>fields</code> argument is used by jOOQ to coerce
+     * field names and data types to the desired output
+     *
+     * @param rs The JDBC ResultSet to fetch data from
+     * @param fields The fields to use in the desired output
+     * @return The resulting jOOQ record
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     */
+    @Support
+    Optional<Record> fetchOptional(ResultSet rs, Field<?>... fields) throws DataAccessException, TooManyRowsException;
+
+    /**
+     * Fetch a record from a JDBC {@link ResultSet} and transform it to a jOOQ
+     * {@link Record}.
+     * <p>
+     * This will internally fetch all records and throw an exception if there
+     * was more than one resulting record.
+     * <p>
+     * The additional <code>types</code> argument is used by jOOQ to coerce data
+     * types to the desired output
+     *
+     * @param rs The JDBC ResultSet to fetch data from
+     * @param types The data types to use in the desired output
+     * @return The resulting jOOQ record
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     */
+    @Support
+    Optional<Record> fetchOptional(ResultSet rs, DataType<?>... types) throws DataAccessException, TooManyRowsException;
+
+    /**
+     * Fetch a record from a JDBC {@link ResultSet} and transform it to a jOOQ
+     * {@link Record}.
+     * <p>
+     * This will internally fetch all records and throw an exception if there
+     * was more than one resulting record.
+     * <p>
+     * The additional <code>types</code> argument is used by jOOQ to coerce data
+     * types to the desired output
+     *
+     * @param rs The JDBC ResultSet to fetch data from
+     * @param types The data types to use in the desired output
+     * @return The resulting jOOQ record
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     */
+    @Support
+    Optional<Record> fetchOptional(ResultSet rs, Class<?>... types) throws DataAccessException, TooManyRowsException;
+
+
     /**
      * Fetch a record from a JDBC {@link ResultSet} and return the only
      * contained value.
@@ -1408,6 +2213,88 @@ public interface DSLContext extends Scope {
      */
     @Support
     <T> T fetchValue(ResultSet rs, Class<T> type) throws DataAccessException, TooManyRowsException, InvalidResultException;
+
+
+    /**
+     * Fetch a record from a JDBC {@link ResultSet} and return the only
+     * contained value.
+     * <p>
+     * This will internally fetch all records and throw an exception if there
+     * was more than one resulting record.
+     *
+     * @param rs The JDBC ResultSet to fetch data from
+     * @return The resulting value
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @throws InvalidResultException if the query returned a record with more
+     *             than one value
+     */
+    @Support
+    Optional<?> fetchOptionalValue(ResultSet rs) throws DataAccessException, TooManyRowsException, InvalidResultException;
+
+    /**
+     * Fetch a record from a JDBC {@link ResultSet} and return the only
+     * contained value.
+     * <p>
+     * This will internally fetch all records and throw an exception if there
+     * was more than one resulting record.
+     * <p>
+     * The additional <code>field</code> argument is used by jOOQ to coerce
+     * field names and data types to the desired output
+     *
+     * @param rs The JDBC ResultSet to fetch data from
+     * @param field The field to use in the desired output
+     * @return The resulting value
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @throws InvalidResultException if the query returned a record with more
+     *             than one value
+     */
+    @Support
+    <T> Optional<T> fetchOptionalValue(ResultSet rs, Field<T> field) throws DataAccessException, TooManyRowsException, InvalidResultException;
+
+    /**
+     * Fetch a record from a JDBC {@link ResultSet} and return the only
+     * contained value.
+     * <p>
+     * This will internally fetch all records and throw an exception if there
+     * was more than one resulting record.
+     * <p>
+     * The additional <code>type</code> argument is used by jOOQ to coerce data
+     * types to the desired output
+     *
+     * @param rs The JDBC ResultSet to fetch data from
+     * @param type The data type to use in the desired output
+     * @return The resulting value
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @throws InvalidResultException if the query returned a record with more
+     *             than one value
+     */
+    @Support
+    <T> Optional<T> fetchOptionalValue(ResultSet rs, DataType<T> type) throws DataAccessException, TooManyRowsException, InvalidResultException;
+
+    /**
+     * Fetch a record from a JDBC {@link ResultSet} and return the only
+     * contained value.
+     * <p>
+     * This will internally fetch all records and throw an exception if there
+     * was more than one resulting record.
+     * <p>
+     * The additional <code>type</code> argument is used by jOOQ to coerce data
+     * types to the desired output
+     *
+     * @param rs The JDBC ResultSet to fetch data from
+     * @param type The data types to use in the desired output
+     * @return The resulting value
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @throws InvalidResultException if the query returned a record with more
+     *             than one value
+     */
+    @Support
+    <T> Optional<T> fetchOptionalValue(ResultSet rs, Class<T> type) throws DataAccessException, TooManyRowsException, InvalidResultException;
+
 
     /**
      * Fetch a result from a JDBC {@link ResultSet} and return the only
@@ -1529,6 +2416,72 @@ public interface DSLContext extends Scope {
     @Support
     Cursor<Record> fetchLazy(ResultSet rs, Class<?>... types) throws DataAccessException;
 
+
+    /**
+     * Wrap a JDBC {@link ResultSet} into a jOOQ {@link Stream}.
+     * <p>
+     * Use {@link #fetch(ResultSet)}, to load the entire <code>ResultSet</code>
+     * into a jOOQ <code>Result</code> at once.
+     *
+     * @param rs The JDBC ResultSet to fetch data from
+     * @return The resulting stream
+     * @throws DataAccessException if something went wrong executing the query
+     */
+    @Support
+    Stream<Record> fetchStream(ResultSet rs) throws DataAccessException;
+
+    /**
+     * Wrap a JDBC {@link ResultSet} into a jOOQ {@link Stream}.
+     * <p>
+     * Use {@link #fetch(ResultSet)}, to load the entire <code>ResultSet</code>
+     * into a jOOQ <code>Result</code> at once.
+     * <p>
+     * The additional <code>fields</code> argument is used by jOOQ to coerce
+     * field names and data types to the desired output
+     *
+     * @param rs The JDBC ResultSet to fetch data from
+     * @param fields The fields to use in the desired output
+     * @return The resulting stream
+     * @throws DataAccessException if something went wrong executing the query
+     */
+    @Support
+    Stream<Record> fetchStream(ResultSet rs, Field<?>... fields) throws DataAccessException;
+
+    /**
+     * Wrap a JDBC {@link ResultSet} into a jOOQ {@link Stream}.
+     * <p>
+     * Use {@link #fetch(ResultSet)}, to load the entire <code>ResultSet</code>
+     * into a jOOQ <code>Result</code> at once.
+     * <p>
+     * The additional <code>types</code> argument is used by jOOQ to coerce data
+     * types to the desired output
+     *
+     * @param rs The JDBC ResultSet to fetch data from
+     * @param types The data types to use in the desired output
+     * @return The resulting stream
+     * @throws DataAccessException if something went wrong executing the query
+     */
+    @Support
+    Stream<Record> fetchStream(ResultSet rs, DataType<?>... types) throws DataAccessException;
+
+    /**
+     * Wrap a JDBC {@link ResultSet} into a jOOQ {@link Stream}.
+     * <p>
+     * Use {@link #fetch(ResultSet)}, to load the entire <code>ResultSet</code>
+     * into a jOOQ <code>Result</code> at once.
+     * <p>
+     * The additional <code>types</code> argument is used by jOOQ to coerce data
+     * types to the desired output
+     *
+     * @param rs The JDBC ResultSet to fetch data from
+     * @param types The data types to use in the desired output
+     * @return The resulting stream
+     * @throws DataAccessException if something went wrong executing the query
+     */
+    @Support
+    Stream<Record> fetchStream(ResultSet rs, Class<?>... types) throws DataAccessException;
+
+
     /**
      * Fetch all data from a formatted string.
      * <p>
@@ -1616,12 +2569,12 @@ public interface DSLContext extends Scope {
      * conversion methods to retrieve other data types from the
      * <code>Result</code>:
      * <ul>
-     * <li> {@link Result#getValues(Field, Class)}</li>
-     * <li> {@link Result#getValues(int, Class)}</li>
-     * <li> {@link Result#getValues(String, Class)}</li>
-     * <li> {@link Result#getValues(Field, Converter)}</li>
-     * <li> {@link Result#getValues(int, Converter)}</li>
-     * <li> {@link Result#getValues(String, Converter)}</li>
+     * <li>{@link Result#getValues(Field, Class)}</li>
+     * <li>{@link Result#getValues(int, Class)}</li>
+     * <li>{@link Result#getValues(String, Class)}</li>
+     * <li>{@link Result#getValues(Field, Converter)}</li>
+     * <li>{@link Result#getValues(int, Converter)}</li>
+     * <li>{@link Result#getValues(String, Converter)}</li>
      * </ul>
      * <p>
      * Missing values result in <code>null</code>. Empty values result in empty
@@ -1644,12 +2597,12 @@ public interface DSLContext extends Scope {
      * various conversion methods to retrieve other data types from the
      * <code>Result</code>:
      * <ul>
-     * <li> {@link Result#getValues(Field, Class)}</li>
-     * <li> {@link Result#getValues(int, Class)}</li>
-     * <li> {@link Result#getValues(String, Class)}</li>
-     * <li> {@link Result#getValues(Field, Converter)}</li>
-     * <li> {@link Result#getValues(int, Converter)}</li>
-     * <li> {@link Result#getValues(String, Converter)}</li>
+     * <li>{@link Result#getValues(Field, Class)}</li>
+     * <li>{@link Result#getValues(int, Class)}</li>
+     * <li>{@link Result#getValues(String, Class)}</li>
+     * <li>{@link Result#getValues(Field, Converter)}</li>
+     * <li>{@link Result#getValues(int, Converter)}</li>
+     * <li>{@link Result#getValues(String, Converter)}</li>
      * </ul>
      * <p>
      * Missing values result in <code>null</code>. Empty values result in empty
@@ -1664,6 +2617,65 @@ public interface DSLContext extends Scope {
      */
     @Support
     Result<Record> fetchFromCSV(String string, char delimiter) throws DataAccessException;
+
+    /**
+     * Fetch all data from a CSV string.
+     * <p>
+     * This is the same as calling <code>fetchFromCSV(string, ',')</code> and
+     * the inverse of calling {@link Result#formatCSV(boolean)}. Rows may
+     * contain data, which is interpreted as {@link String}. Use the various
+     * conversion methods to retrieve other data types from the
+     * <code>Result</code>:
+     * <ul>
+     * <li>{@link Result#getValues(Field, Class)}</li>
+     * <li>{@link Result#getValues(int, Class)}</li>
+     * <li>{@link Result#getValues(String, Class)}</li>
+     * <li>{@link Result#getValues(Field, Converter)}</li>
+     * <li>{@link Result#getValues(int, Converter)}</li>
+     * <li>{@link Result#getValues(String, Converter)}</li>
+     * </ul>
+     * <p>
+     * Missing values result in <code>null</code>. Empty values result in empty
+     * <code>Strings</code>
+     *
+     * @param string The CSV string
+     * @param header Whether to parse the first line as a CSV header line
+     * @return The transformed result
+     * @throws DataAccessException If anything went wrong parsing the CSV file
+     * @see #fetchFromCSV(String, char)
+     */
+    @Support
+    Result<Record> fetchFromCSV(String string, boolean header) throws DataAccessException;
+
+    /**
+     * Fetch all data from a CSV string.
+     * <p>
+     * This is inverse of calling {@link Result#formatCSV(boolean, char)}. Rows
+     * may contain data, which are interpreted as {@link String}. Use the
+     * various conversion methods to retrieve other data types from the
+     * <code>Result</code>:
+     * <ul>
+     * <li>{@link Result#getValues(Field, Class)}</li>
+     * <li>{@link Result#getValues(int, Class)}</li>
+     * <li>{@link Result#getValues(String, Class)}</li>
+     * <li>{@link Result#getValues(Field, Converter)}</li>
+     * <li>{@link Result#getValues(int, Converter)}</li>
+     * <li>{@link Result#getValues(String, Converter)}</li>
+     * </ul>
+     * <p>
+     * Missing values result in <code>null</code>. Empty values result in empty
+     * <code>Strings</code>
+     *
+     * @param string The CSV string
+     * @param header Whether to parse the first line as a CSV header line
+     * @param delimiter The delimiter to expect between records
+     * @return The transformed result
+     * @throws DataAccessException If anything went wrong parsing the CSV file
+     * @see #fetchFromCSV(String)
+     * @see #fetchFromStringData(List)
+     */
+    @Support
+    Result<Record> fetchFromCSV(String string, boolean header, char delimiter) throws DataAccessException;
 
     /**
      * Fetch all data from a JSON string.
@@ -1728,6 +2740,25 @@ public interface DSLContext extends Scope {
      * @return The transformed result
      */
     Result<Record> fetchFromStringData(List<String[]> data);
+
+    /**
+     * Fetch all data from a list of strings.
+     * <p>
+     * This is used by methods such as
+     * <ul>
+     * <li>{@link #fetchFromCSV(String)}</li>
+     * <li>{@link #fetchFromTXT(String)}</li>
+     * </ul>
+     * The degree of all arrays contained in the argument should be the same,
+     * although this is not a requirement. jOOQ will ignore excess data, and
+     * fill missing data with <code>null</code>.
+     *
+     * @param data The data to be transformed into a <code>Result</code>
+     * @param header Whether to interpret the first line as a set of column
+     *            names.
+     * @return The transformed result
+     */
+    Result<Record> fetchFromStringData(List<String[]> data, boolean header);
 
     // -------------------------------------------------------------------------
     // XXX Global Query factory
@@ -3962,7 +4993,8 @@ public interface DSLContext extends Scope {
     // [jooq-tools] START [merge]
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -3970,23 +5002,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1> MergeKeyStep1<R, T1> mergeInto(Table<R> table, Field<T1> field1);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -3994,23 +5038,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2> MergeKeyStep2<R, T1, T2> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4018,23 +5074,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3> MergeKeyStep3<R, T1, T2, T3> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4042,23 +5110,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4> MergeKeyStep4<R, T1, T2, T3, T4> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4066,23 +5146,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5> MergeKeyStep5<R, T1, T2, T3, T4, T5> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4090,23 +5182,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6> MergeKeyStep6<R, T1, T2, T3, T4, T5, T6> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4114,23 +5218,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7> MergeKeyStep7<R, T1, T2, T3, T4, T5, T6, T7> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4138,23 +5254,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8> MergeKeyStep8<R, T1, T2, T3, T4, T5, T6, T7, T8> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4162,23 +5290,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9> MergeKeyStep9<R, T1, T2, T3, T4, T5, T6, T7, T8, T9> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4186,23 +5326,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> MergeKeyStep10<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4210,23 +5362,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> MergeKeyStep11<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4234,23 +5398,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> MergeKeyStep12<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4258,23 +5434,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> MergeKeyStep13<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4282,23 +5470,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> MergeKeyStep14<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4306,23 +5506,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> MergeKeyStep15<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4330,23 +5542,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> MergeKeyStep16<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4354,23 +5578,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> MergeKeyStep17<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4378,23 +5614,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> MergeKeyStep18<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4402,23 +5650,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> MergeKeyStep19<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4426,23 +5686,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20> MergeKeyStep20<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19, Field<T20> field20);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4450,23 +5722,35 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21> MergeKeyStep21<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19, Field<T20> field20, Field<T21> field21);
 
     /**
-     * Create a new DSL merge statement (H2-specific syntax).
+     * Create a new DSL UPSERT statement ({@link SQLDialect#H2}
+     * <code>MERGE</code>) or {@link SQLDialect#HANA} <code>UPSERT</code>).
      * <p>
      * This statement is available from DSL syntax only. It is known to be
      * supported in some way by any of these dialects:
@@ -4474,19 +5758,30 @@ public interface DSLContext extends Scope {
      * <tr>
      * <td>H2</td>
      * <td>H2 natively supports this special syntax</td>
-     * <td><a href= "www.h2database.com/html/grammar.html#merge"
-     * >www.h2database.com/html/grammar.html#merge</a></td>
+     * <td><a href="http://www.h2database.com/html/grammar.html#merge"
+     * >http://www.h2database.com/html/grammar.html#merge</a></td>
+     * </tr>
+     * <tr>
+     * <td>HANA</td>
+     * <td>HANA natively supports this syntax</td>
+     * <td><a href="http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm">http://help.sap.com/saphelp_hanaplatform/helpdata/en/20/fc06a7751910149892c0d09be21a38/content.htm</a></td>
+     * </tr>
+     * <tr>
+     * <td>PostgreSQL</td>
+     * <td>This database can emulate the H2-specific MERGE statement via
+     * <code>INSERT .. ON CONFLICT DO UPDATE</code></td>
+     * <td><a href="http://www.postgresql.org/docs/9.5/static/sql-insert.html">http://www.postgresql.org/docs/9.5/static/sql-insert.html</a></td>
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
      * </table>
      */
     @Generated("This method was generated using jOOQ-tools")
-    @Support({ CUBRID, H2, HSQLDB })
+    @Support({ CUBRID, H2, HSQLDB, POSTGRES_9_5 })
     <R extends Record, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22> MergeKeyStep22<R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22> mergeInto(Table<R> table, Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19, Field<T20> field20, Field<T21> field21, Field<T22> field22);
 
 // [jooq-tools] END [merge]
@@ -4505,7 +5800,7 @@ public interface DSLContext extends Scope {
      * </tr>
      * <tr>
      * <td>DB2, HSQLDB, Oracle, SQL Server, Sybase SQL Anywhere</td>
-     * <td>These databases can simulate the H2-specific MERGE statement using a
+     * <td>These databases can emulate the H2-specific MERGE statement using a
      * standard SQL MERGE statement, without restrictions</td>
      * <td>See {@link #mergeInto(Table)} for the standard MERGE statement</td>
      * </tr>
@@ -4847,7 +6142,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#createTable(String)
      */
-    @Support({ CUBRID, DERBY, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
     CreateTableAsStep<Record> createTable(String table);
 
     /**
@@ -4855,7 +6150,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#createTable(Name)
      */
-    @Support({ CUBRID, DERBY, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
     CreateTableAsStep<Record> createTable(Name table);
 
     /**
@@ -4863,7 +6158,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#createTable(Table)
      */
-    @Support({ CUBRID, DERBY, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
     CreateTableAsStep<Record> createTable(Table<?> table);
 
     /**
@@ -4871,7 +6166,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#createTemporaryTable(String)
      */
-    @Support({ POSTGRES })
+    @Support({ MARIADB, MYSQL, POSTGRES })
     CreateTableAsStep<Record> createTemporaryTable(String table);
 
     /**
@@ -4879,7 +6174,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#createTemporaryTable(Name)
      */
-    @Support({ POSTGRES })
+    @Support({ MARIADB, MYSQL, POSTGRES })
     CreateTableAsStep<Record> createTemporaryTable(Name table);
 
     /**
@@ -4887,7 +6182,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#createTemporaryTable(Table)
      */
-    @Support({ POSTGRES })
+    @Support({ MARIADB, MYSQL, POSTGRES })
     CreateTableAsStep<Record> createTemporaryTable(Table<?> table);
 
     /**
@@ -4895,7 +6190,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#createGlobalTemporaryTable(String)
      */
-    @Support({ POSTGRES })
+    @Support({ MARIADB, MYSQL, POSTGRES })
     CreateTableAsStep<Record> createGlobalTemporaryTable(String table);
 
     /**
@@ -4903,7 +6198,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#createGlobalTemporaryTable(Name)
      */
-    @Support({ POSTGRES })
+    @Support({ MARIADB, MYSQL, POSTGRES })
     CreateTableAsStep<Record> createGlobalTemporaryTable(Name table);
 
     /**
@@ -4911,7 +6206,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#createGlobalTemporaryTable(Table)
      */
-    @Support({ POSTGRES })
+    @Support({ MARIADB, MYSQL, POSTGRES })
     CreateTableAsStep<Record> createGlobalTemporaryTable(Table<?> table);
 
     /**
@@ -4943,7 +6238,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#createIndex(String)
      */
-    @Support
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
     CreateIndexStep createIndex(String index);
 
     /**
@@ -4951,7 +6246,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#createIndex(Name)
      */
-    @Support
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
     CreateIndexStep createIndex(Name index);
 
     @Support
@@ -4989,7 +6284,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#alterSequence(String)
      */
-    @Support({ FIREBIRD, H2, HSQLDB, POSTGRES })
+    @Support({ CUBRID, FIREBIRD, H2, HSQLDB, POSTGRES })
     AlterSequenceRestartStep<BigInteger> alterSequence(String sequence);
 
     /**
@@ -4997,7 +6292,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#alterSequence(Name)
      */
-    @Support({ FIREBIRD, H2, HSQLDB, POSTGRES })
+    @Support({ CUBRID, FIREBIRD, H2, HSQLDB, POSTGRES })
     AlterSequenceRestartStep<BigInteger> alterSequence(Name sequence);
 
     /**
@@ -5005,7 +6300,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#alterSequence(Sequence)
      */
-    @Support({ FIREBIRD, H2, HSQLDB, POSTGRES })
+    @Support({ CUBRID, FIREBIRD, H2, HSQLDB, POSTGRES })
     <T extends Number> AlterSequenceRestartStep<T> alterSequence(Sequence<T> sequence);
 
     /**
@@ -5151,7 +6446,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#dropIndex(String)
      */
-    @Support
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
     DropIndexOnStep dropIndex(String index);
 
     /**
@@ -5159,7 +6454,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#dropIndex(Name)
      */
-    @Support
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
     DropIndexOnStep dropIndex(Name index);
 
     /**
@@ -5189,7 +6484,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#dropSequence(String)
      */
-    @Support({ DERBY, FIREBIRD, H2, HSQLDB, POSTGRES })
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, POSTGRES })
     DropSequenceFinalStep dropSequence(String sequence);
 
     /**
@@ -5197,7 +6492,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#dropSequence(Name)
      */
-    @Support({ DERBY, FIREBIRD, H2, HSQLDB, POSTGRES })
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, POSTGRES })
     DropSequenceFinalStep dropSequence(Name sequence);
 
     /**
@@ -5205,7 +6500,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#dropSequence(Sequence)
      */
-    @Support({ DERBY, FIREBIRD, H2, HSQLDB, POSTGRES })
+    @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, POSTGRES })
     DropSequenceFinalStep dropSequence(Sequence<?> sequence);
 
     /**
@@ -5216,7 +6511,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#dropSequenceIfExists(String)
      */
-    @Support({ FIREBIRD, H2, HSQLDB, POSTGRES })
+    @Support({ CUBRID, FIREBIRD, H2, HSQLDB, POSTGRES })
     DropSequenceFinalStep dropSequenceIfExists(String sequence);
 
     /**
@@ -5227,7 +6522,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#dropSequenceIfExists(Name)
      */
-    @Support({ FIREBIRD, H2, HSQLDB, POSTGRES })
+    @Support({ CUBRID, FIREBIRD, H2, HSQLDB, POSTGRES })
     DropSequenceFinalStep dropSequenceIfExists(Name sequence);
 
     /**
@@ -5238,7 +6533,7 @@ public interface DSLContext extends Scope {
      *
      * @see DSL#dropSequenceIfExists(Sequence)
      */
-    @Support({ FIREBIRD, H2, HSQLDB, POSTGRES })
+    @Support({ CUBRID, FIREBIRD, H2, HSQLDB, POSTGRES })
     DropSequenceFinalStep dropSequenceIfExists(Sequence<?> sequence);
 
     /**
@@ -5252,10 +6547,10 @@ public interface DSLContext extends Scope {
      * create.truncate(table)
      *       .execute();
      * </pre></code>
-     * <h3>Simulation of <code>TRUNCATE</code></h3>
+     * <h3>Emulation of <code>TRUNCATE</code></h3>
      * <p>
      * Most dialects implement the <code>TRUNCATE</code> statement. If it is not
-     * supported, it is simulated using an equivalent <code>DELETE</code>
+     * supported, it is emulated using an equivalent <code>DELETE</code>
      * statement. This is particularly true for these dialects:
      * <ul>
      * <li> {@link SQLDialect#FIREBIRD}</li>
@@ -5274,7 +6569,7 @@ public interface DSLContext extends Scope {
      *       .execute();
      * </pre></code>
      * <p>
-     * These vendor-specific extensions are currently not simulated for those
+     * These vendor-specific extensions are currently not emulated for those
      * dialects that do not support them natively.
      *
      * @see #truncate(Table)
@@ -5293,10 +6588,10 @@ public interface DSLContext extends Scope {
      * create.truncate(table)
      *       .execute();
      * </pre></code>
-     * <h3>Simulation of <code>TRUNCATE</code></h3>
+     * <h3>Emulation of <code>TRUNCATE</code></h3>
      * <p>
      * Most dialects implement the <code>TRUNCATE</code> statement. If it is not
-     * supported, it is simulated using an equivalent <code>DELETE</code>
+     * supported, it is emulated using an equivalent <code>DELETE</code>
      * statement. This is particularly true for these dialects:
      * <ul>
      * <li> {@link SQLDialect#FIREBIRD}</li>
@@ -5315,7 +6610,7 @@ public interface DSLContext extends Scope {
      *       .execute();
      * </pre></code>
      * <p>
-     * These vendor-specific extensions are currently not simulated for those
+     * These vendor-specific extensions are currently not emulated for those
      * dialects that do not support them natively.
      *
      * @see #truncate(Name)
@@ -5334,10 +6629,10 @@ public interface DSLContext extends Scope {
      * create.truncate(table)
      *       .execute();
      * </pre></code>
-     * <h3>Simulation of <code>TRUNCATE</code></h3>
+     * <h3>Emulation of <code>TRUNCATE</code></h3>
      * <p>
      * Most dialects implement the <code>TRUNCATE</code> statement. If it is not
-     * supported, it is simulated using an equivalent <code>DELETE</code>
+     * supported, it is emulated using an equivalent <code>DELETE</code>
      * statement. This is particularly true for these dialects:
      * <ul>
      * <li> {@link SQLDialect#FIREBIRD}</li>
@@ -5356,7 +6651,7 @@ public interface DSLContext extends Scope {
      *       .execute();
      * </pre></code>
      * <p>
-     * These vendor-specific extensions are currently not simulated for those
+     * These vendor-specific extensions are currently not emulated for those
      * dialects that do not support them natively.
      */
     @Support
@@ -5386,6 +6681,7 @@ public interface DSLContext extends Scope {
      * <li>{@link SQLDialect#SQLITE}: Using <code>last_insert_rowid()</code></li>
      * <li>{@link SQLDialect#SQLSERVER}: Using <code>@@identity</code></li>
      * <li>{@link SQLDialect#SYBASE}: Using <code>@@identity</code></li>
+     * <li>{@link SQLDialect#VERTICA}: Using <code>last_insert_id()</code></li>
      * </ul>
      *
      * @return The last inserted ID. This may be <code>null</code> in some
@@ -6087,6 +7383,19 @@ public interface DSLContext extends Scope {
      */
     <R extends Record> Cursor<R> fetchLazy(ResultQuery<R> query) throws DataAccessException;
 
+
+    /**
+     * Execute a {@link ResultQuery} in the context of this <code>DSLContext</code> and return
+     * a stream.
+     *
+     * @param query The query to execute
+     * @return The stream
+     * @throws DataAccessException if something went wrong executing the query
+     * @see ResultQuery#stream()
+     */
+    <R extends Record> Stream<R> fetchStream(ResultQuery<R> query) throws DataAccessException;
+
+
     /**
      * Execute a {@link ResultQuery} in the context of this <code>DSLContext</code> and return
      * a cursor.
@@ -6096,7 +7405,7 @@ public interface DSLContext extends Scope {
      * @throws DataAccessException if something went wrong executing the query
      * @see ResultQuery#fetchMany()
      */
-    <R extends Record> List<Result<Record>> fetchMany(ResultQuery<R> query) throws DataAccessException;
+    <R extends Record> Results fetchMany(ResultQuery<R> query) throws DataAccessException;
 
     /**
      * Execute a {@link ResultQuery} in the context of this <code>DSLContext</code> and return
@@ -6110,6 +7419,20 @@ public interface DSLContext extends Scope {
      */
     <R extends Record> R fetchOne(ResultQuery<R> query) throws DataAccessException, TooManyRowsException;
 
+
+    /**
+     * Execute a {@link ResultQuery} in the context of this <code>DSLContext</code> and return
+     * a record.
+     *
+     * @param query The query to execute
+     * @return The record
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @see ResultQuery#fetchOptional()
+     */
+    <R extends Record> Optional<R> fetchOptional(ResultQuery<R> query) throws DataAccessException, TooManyRowsException;
+
+
     /**
      * Execute a {@link ResultQuery} in the context of this
      * <code>DSLContext</code> and return a single value.
@@ -6121,7 +7444,49 @@ public interface DSLContext extends Scope {
      * @throws InvalidResultException if the query returned a record with more
      *             than one value
      */
-    <T, R extends Record1<T>> T fetchValue(ResultQuery<R> query) throws DataAccessException, TooManyRowsException, InvalidResultException;
+    <T, R extends Record1<T>> T fetchValue(ResultQuery<R> query)
+        throws DataAccessException, TooManyRowsException, InvalidResultException;
+
+    /**
+     * Execute a {@link ResultQuery} in the context of this
+     * <code>DSLContext</code> and return a single value.
+     *
+     * @param field The field for which to fetch a single value.
+     * @return The value.
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @throws InvalidResultException if the query returned a record with more
+     *             than one value
+     */
+    <T> T fetchValue(TableField<?, T> field) throws DataAccessException, TooManyRowsException, InvalidResultException;
+
+
+    /**
+     * Execute a {@link ResultQuery} in the context of this
+     * <code>DSLContext</code> and return a single value.
+     *
+     * @param query The query to execute
+     * @return The value.
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @throws InvalidResultException if the query returned a record with more
+     *             than one value
+     */
+    <T, R extends Record1<T>> Optional<T> fetchOptionalValue(ResultQuery<R> query) throws DataAccessException, TooManyRowsException, InvalidResultException;
+
+    /**
+     * Execute a {@link ResultQuery} in the context of this
+     * <code>DSLContext</code> and return a single value.
+     *
+     * @param field The field for which to fetch a single value.
+     * @return The value.
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     * @throws InvalidResultException if the query returned a record with more
+     *             than one value
+     */
+    <T> Optional<T> fetchOptionalValue(TableField<?, T> field) throws DataAccessException, TooManyRowsException, InvalidResultException;
+
 
     /**
      * Execute a {@link ResultQuery} in the context of this
@@ -6301,6 +7666,38 @@ public interface DSLContext extends Scope {
     @Support
     <R extends Record> R fetchOne(Table<R> table, Condition condition) throws DataAccessException, TooManyRowsException;
 
+
+    /**
+     * Execute and return zero or one record for
+     * <code><pre>SELECT * FROM [table]</pre></code>.
+     * <p>
+     * The resulting record is attached to this {@link Configuration} by
+     * default. Use {@link Settings#isAttachRecords()} to override this
+     * behaviour.
+     *
+     * @return The record
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     */
+    @Support
+    <R extends Record> Optional<R> fetchOptional(Table<R> table) throws DataAccessException, TooManyRowsException;
+
+    /**
+     * Execute and return zero or one record for
+     * <code><pre>SELECT * FROM [table] WHERE [condition] </pre></code>.
+     * <p>
+     * The resulting record is attached to this {@link Configuration} by
+     * default. Use {@link Settings#isAttachRecords()} to override this
+     * behaviour.
+     *
+     * @return The record
+     * @throws DataAccessException if something went wrong executing the query
+     * @throws TooManyRowsException if the query returned more than one record
+     */
+    @Support
+    <R extends Record> Optional<R> fetchOptional(Table<R> table, Condition condition) throws DataAccessException, TooManyRowsException;
+
+
     /**
      * Execute and return zero or one record for
      * <code><pre>SELECT * FROM [table] LIMIT 1</pre></code>.
@@ -6354,6 +7751,34 @@ public interface DSLContext extends Scope {
      */
     @Support
     <R extends Record> Cursor<R> fetchLazy(Table<R> table, Condition condition) throws DataAccessException;
+
+
+    /**
+     * Execute and return all records lazily for
+     * <code><pre>SELECT * FROM [table]</pre></code>.
+     * <p>
+     * The result and its contained records are attached to this
+     * {@link Configuration} by default. Use {@link Settings#isAttachRecords()}
+     * to override this behaviour.
+     *
+     * @throws DataAccessException if something went wrong executing the query
+     */
+    @Support
+    <R extends Record> Stream<R> fetchStream(Table<R> table) throws DataAccessException;
+
+    /**
+     * Execute and return all records lazily for
+     * <code><pre>SELECT * FROM [table] WHERE [condition] </pre></code>.
+     * <p>
+     * The result and its contained records are attached to this
+     * {@link Configuration} by default. Use {@link Settings#isAttachRecords()}
+     * to override this behaviour.
+     *
+     * @throws DataAccessException if something went wrong executing the query
+     */
+    @Support
+    <R extends Record> Stream<R> fetchStream(Table<R> table, Condition condition) throws DataAccessException;
+
 
     /**
      * Insert one record.

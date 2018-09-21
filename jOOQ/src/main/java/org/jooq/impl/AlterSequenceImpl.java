@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,6 +44,7 @@ import static java.util.Arrays.asList;
 import static org.jooq.Clause.ALTER_SEQUENCE;
 import static org.jooq.Clause.ALTER_SEQUENCE_RESTART;
 import static org.jooq.Clause.ALTER_SEQUENCE_SEQUENCE;
+import static org.jooq.SQLDialect.CUBRID;
 // ...
 // ...
 
@@ -100,7 +101,9 @@ class AlterSequenceImpl<T extends Number> extends AbstractQuery implements
     @Override
     public final void accept(Context<?> ctx) {
         ctx.start(ALTER_SEQUENCE_SEQUENCE)
-           .keyword("alter sequence")
+           .keyword("alter")
+           .sql(' ')
+           .keyword(ctx.family() == CUBRID ? "serial" : "sequence")
            .sql(' ').visit(sequence)
            .end(ALTER_SEQUENCE_SEQUENCE)
            .start(ALTER_SEQUENCE_RESTART);
@@ -108,16 +111,20 @@ class AlterSequenceImpl<T extends Number> extends AbstractQuery implements
         T with = restartWith;
         if (with == null) {
 
-            /* [pro] xx
-            xx xxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                xxxxxxxxx xxxxxxxxxxxxxxxxxxx xxxx xxxx
-            xxxx
-            xx [/pro] */
+
+
+
+
+
                 ctx.sql(' ').keyword("restart");
         }
         else {
-            ctx.sql(' ').keyword("restart with")
-               .sql(' ').sql(with.toString());
+            if (ctx.family() == CUBRID)
+                ctx.sql(' ').keyword("start with")
+                   .sql(' ').sql(with.toString());
+            else
+                ctx.sql(' ').keyword("restart with")
+                   .sql(' ').sql(with.toString());
         }
 
         ctx.end(ALTER_SEQUENCE_RESTART);

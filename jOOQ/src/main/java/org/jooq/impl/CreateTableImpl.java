@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,11 +50,15 @@ import static org.jooq.Clause.CREATE_TABLE_NAME;
 import static org.jooq.SQLDialect.DERBY;
 import static org.jooq.SQLDialect.FIREBIRD;
 // ...
+import static org.jooq.SQLDialect.HSQLDB;
+import static org.jooq.SQLDialect.MARIADB;
+import static org.jooq.SQLDialect.MYSQL;
 import static org.jooq.SQLDialect.POSTGRES;
+// ...
 // ...
 import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.name;
-import static org.jooq.impl.Utils.DATA_SELECT_INTO_TABLE;
+import static org.jooq.impl.Tools.DataKey.DATA_SELECT_INTO_TABLE;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -153,12 +157,12 @@ class CreateTableImpl<R extends Record> extends AbstractQuery implements
 
         if (select != null) {
 
-            /* [pro] xx
-            xx xxxxxxxxxxxxxxx xxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
-                xxxxxxxxxxxxxxxxxxxxxx
-            x
-            xxxx
-            xx [/pro] */
+
+
+
+
+
+
             {
                 acceptCreateTableAsSelect(ctx);
             }
@@ -179,9 +183,15 @@ class CreateTableImpl<R extends Record> extends AbstractQuery implements
 
                 ctx.visit(columnFields.get(i))
                    .sql(' ');
-                Utils.toSQLDDLTypeDeclaration(ctx, type);
+                Tools.toSQLDDLTypeDeclaration(ctx, type);
 
-                if (!type.nullable()) {
+                if (type.nullable()) {
+
+                    // [#4321] Not all dialects support explicit NULL type declarations
+                    if (!asList(DERBY, FIREBIRD).contains(ctx.family()))
+                        ctx.sql(' ').keyword("null");
+                }
+                else {
                     ctx.sql(' ').keyword("not null");
                 }
 
@@ -206,15 +216,12 @@ class CreateTableImpl<R extends Record> extends AbstractQuery implements
         ctx.formatSeparator()
            .keyword("as");
 
-        /* [pro] xx
-        xx xxxxxxxxxxxxx xx xxxxx x
-            xxxxxxxxx xxx
-               xxxxxxxxxxxxxxxxxxxx
-               xxxxxxxxxxxxxxxxx
-        x
-        xxxx
-        xx [/pro] */
-        {
+        if (asList(HSQLDB).contains(ctx.family())) {
+            ctx.sql(" (")
+               .formatIndentStart()
+               .formatNewLine();
+        }
+        else {
             ctx.formatSeparator();
         }
 
@@ -222,13 +229,15 @@ class CreateTableImpl<R extends Record> extends AbstractQuery implements
            .visit(select)
            .end(CREATE_TABLE_AS);
 
-        /* [pro] xx
-        xx xxxxxxxxxxxxx xx xxxxx x
-            xxxxxxxxxxxxxxxxxxxxx
-               xxxxxxxxxxxxxxxx
-               xxxxxxxxxx
-        x
-        xx [/pro] */
+        if (asList(HSQLDB).contains(ctx.family())) {
+            ctx.formatIndentEnd()
+               .formatNewLine()
+               .sql(')');
+
+            if (ctx.family() == HSQLDB)
+                ctx.sql(' ')
+                   .keyword("with data");
+        }
 
         ctx.end(CREATE_TABLE);
     }
@@ -239,7 +248,7 @@ class CreateTableImpl<R extends Record> extends AbstractQuery implements
            .sql(' ');
 
         if (temporary)
-            if (ctx.family() == POSTGRES)
+            if (asList(MARIADB, MYSQL, POSTGRES).contains(ctx.family()))
                 ctx.keyword("temporary").sql(' ');
             else
                 ctx.keyword("global temporary").sql(' ');

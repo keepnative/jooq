@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -95,24 +95,22 @@ class Values<R extends Record> extends AbstractTable<R> {
     public final void accept(Context<?> ctx) {
         switch (ctx.family()) {
 
-            // [#915] Simulate VALUES(..) with SELECT .. UNION ALL SELECT ..
+            // [#915] Emulate VALUES(..) with SELECT .. UNION ALL SELECT ..
             // for those dialects that do not support a VALUES() constructor
-            /* [pro] xx
-            xxxx xxxxxxx
-            xxxx xxxxx
-            xxxx xxxxxxxxx
-            xxxx xxxxxxx
-            xxxx xxxxxxx
-            xxxx xxxxxxx
-            xx [/pro] */
+
+
+
+
+
+
+
+
+
+
             case FIREBIRD:
             case MARIADB:
             case MYSQL:
-            case SQLITE:
-
-            // [#1801] H2 knows a native VALUES(..) constructor, but doesn't
-            // have any means to rename it using derived column lists
-            case H2: {
+            case SQLITE: {
                 Select<Record> selects = null;
                 boolean subquery = ctx.subquery();
 
@@ -140,14 +138,15 @@ class Values<R extends Record> extends AbstractTable<R> {
             // [#915] Native support of VALUES(..)
             case CUBRID:
             case DERBY:
+            case H2:
             case HSQLDB:
             case POSTGRES:
-            /* [pro] xx
-            xxxx xxxx
-            xxxx xxxx
-            xxxx xxxxxxxxxx
 
-            xx [/pro] */
+
+
+
+
+
             default: {
                 ctx.start(TABLE_VALUES)
                    .keyword("values")

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -72,6 +72,13 @@ public interface UDT<R extends UDTRecord<R>> extends QueryPart {
     /**
      * Get a specific field from this UDT.
      *
+     * @see Row#field(Name)
+     */
+    Field<?> field(Name name);
+
+    /**
+     * Get a specific field from this UDT.
+     *
      * @see Row#field(int)
      */
     Field<?> field(int index);
@@ -82,6 +89,38 @@ public interface UDT<R extends UDTRecord<R>> extends QueryPart {
      * @see Row#fields()
      */
     Field<?>[] fields();
+
+    /**
+     * Get all fields from this UDT, providing some fields.
+     *
+     * @return All available fields
+     * @see Row#fields(Field...)
+     */
+    Field<?>[] fields(Field<?>... fields);
+
+    /**
+     * Get all fields from this UDT, providing some field names.
+     *
+     * @return All available fields
+     * @see Row#fields(String...)
+     */
+    Field<?>[] fields(String... fieldNames);
+
+    /**
+     * Get all fields from this UDT, providing some field names.
+     *
+     * @return All available fields
+     * @see Row#fields(Name...)
+     */
+    Field<?>[] fields(Name... fieldNames);
+
+    /**
+     * Get all fields from this UDT, providing some field indexes.
+     *
+     * @return All available fields
+     * @see Row#fields(int...)
+     */
+    Field<?>[] fields(int... fieldIndexes);
 
     /**
      * Get the UDT schema

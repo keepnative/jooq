@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,6 +47,7 @@ import static org.jooq.impl.DSL.table;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.annotation.Generated;
 
@@ -101,6 +102,8 @@ import org.jooq.Row6;
 import org.jooq.Row7;
 import org.jooq.Row8;
 import org.jooq.Row9;
+import org.jooq.RowN;
+import org.jooq.SQL;
 import org.jooq.Select;
 import org.jooq.Table;
 import org.jooq.TableLike;
@@ -132,8 +135,8 @@ final class UpdateImpl<R extends Record>
      */
     private static final long    serialVersionUID = -2444876472650065331L;
 
-    UpdateImpl(Configuration configuration, Table<R> table) {
-        super(new UpdateQueryImpl<R>(configuration, table));
+    UpdateImpl(Configuration configuration, WithImpl with, Table<R> table) {
+        super(new UpdateQueryImpl<R>(configuration, with, table));
     }
 
     @Override
@@ -150,7 +153,10 @@ final class UpdateImpl<R extends Record>
 
     @Override
     public final <T> UpdateImpl<R> set(Field<T> field, Select<? extends Record1<T>> value) {
-        return set(field, value.<T>asField());
+        if (value == null)
+            return set(field, (T) null);
+        else
+            return set(field, value.<T>asField());
     }
 
     @Override
@@ -161,7 +167,7 @@ final class UpdateImpl<R extends Record>
 
     @Override
     public final UpdateImpl<R> set(Record record) {
-        return set(Utils.mapOfChangedValues(record));
+        return set(Tools.mapOfChangedValues(record));
     }
 
 // [jooq-tools] START [set]
@@ -322,6 +328,13 @@ final class UpdateImpl<R extends Record>
 
     @Generated("This method was generated using jOOQ-tools")
     @Override
+    public final UpdateFromStep<R> set(RowN row, RowN value) {
+        getDelegate().addValues(row, value);
+        return this;
+    }
+
+    @Generated("This method was generated using jOOQ-tools")
+    @Override
     public final <T1> UpdateFromStep<R> set(Row1<T1> row, Select<? extends Record1<T1>> select) {
         getDelegate().addValues(row, select);
         return this;
@@ -474,6 +487,13 @@ final class UpdateImpl<R extends Record>
         return this;
     }
 
+    @Generated("This method was generated using jOOQ-tools")
+    @Override
+    public final UpdateFromStep<R> set(RowN row, Select<?> select) {
+        getDelegate().addValues(row, select);
+        return this;
+    }
+
 // [jooq-tools] END [set]
 
     @Override
@@ -492,6 +512,11 @@ final class UpdateImpl<R extends Record>
     public final UpdateWhereStep<R> from(Collection<? extends TableLike<?>> tables) {
         getDelegate().addFrom(tables);
         return this;
+    }
+
+    @Override
+    public final UpdateWhereStep<R> from(SQL sql) {
+        return from(table(sql));
     }
 
     @Override
@@ -524,6 +549,16 @@ final class UpdateImpl<R extends Record>
     @Override
     public final UpdateImpl<R> where(Field<Boolean> condition) {
         return where(condition(condition));
+    }
+
+    @Override
+    public final UpdateImpl<R> where(Boolean condition) {
+        return where(condition(condition));
+    }
+
+    @Override
+    public final UpdateImpl<R> where(SQL sql) {
+        return where(condition(sql));
     }
 
     @Override
@@ -563,6 +598,16 @@ final class UpdateImpl<R extends Record>
     }
 
     @Override
+    public final UpdateImpl<R> and(Boolean condition) {
+        return and(condition(condition));
+    }
+
+    @Override
+    public final UpdateImpl<R> and(SQL sql) {
+        return and(condition(sql));
+    }
+
+    @Override
     public final UpdateImpl<R> and(String sql) {
         return and(condition(sql));
     }
@@ -588,6 +633,11 @@ final class UpdateImpl<R extends Record>
     }
 
     @Override
+    public final UpdateImpl<R> andNot(Boolean condition) {
+        return andNot(condition(condition));
+    }
+
+    @Override
     public final UpdateImpl<R> andExists(Select<?> select) {
         return and(exists(select));
     }
@@ -606,6 +656,16 @@ final class UpdateImpl<R extends Record>
     @Override
     public final UpdateImpl<R> or(Field<Boolean> condition) {
         return or(condition(condition));
+    }
+
+    @Override
+    public final UpdateImpl<R> or(Boolean condition) {
+        return or(condition(condition));
+    }
+
+    @Override
+    public final UpdateImpl<R> or(SQL sql) {
+        return or(condition(sql));
     }
 
     @Override
@@ -630,6 +690,11 @@ final class UpdateImpl<R extends Record>
 
     @Override
     public final UpdateImpl<R> orNot(Field<Boolean> condition) {
+        return orNot(condition(condition));
+    }
+
+    @Override
+    public final UpdateImpl<R> orNot(Boolean condition) {
         return orNot(condition(condition));
     }
 
@@ -672,4 +737,11 @@ final class UpdateImpl<R extends Record>
         getDelegate().execute();
         return getDelegate().getReturnedRecord();
     }
+
+
+    @Override
+    public final Optional<R> fetchOptional() {
+        return Optional.ofNullable(fetchOne());
+    }
+
 }

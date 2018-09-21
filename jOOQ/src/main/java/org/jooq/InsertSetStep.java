@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -330,5 +330,5 @@ public interface InsertSetStep<R extends Record> {
      * define a field set for insertion.
      */
     @Support
-    Insert<R> select(Select<?> select);
+    InsertReturningStep<R> select(Select<?> select);
 }

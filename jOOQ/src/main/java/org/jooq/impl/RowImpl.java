@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -78,6 +78,7 @@ import org.jooq.Condition;
 import org.jooq.Context;
 import org.jooq.DataType;
 import org.jooq.Field;
+import org.jooq.Name;
 import org.jooq.QuantifiedSelect;
 import org.jooq.Record;
 import org.jooq.Record1;
@@ -193,11 +194,11 @@ implements
     @Override
     public final void accept(Context<?> context) {
 
-        /* [pro] xx
-        xx xxxxxxxxxxxxxxxxx xx xxxxxxxxx
-            xxxxxxxxxxxxxxxxxxxxxxxxxxxx xxx
 
-        xx [/pro] */
+
+
+
+
         context.sql("(");
 
         String separator = "";
@@ -246,6 +247,21 @@ implements
     }
 
     @Override
+    public final Field<?> field(Name name) {
+        return fields.field(name);
+    }
+
+    @Override
+    public final <T> Field<T> field(Name name, Class<T> type) {
+        return fields.field(name, type);
+    }
+
+    @Override
+    public final <T> Field<T> field(Name name, DataType<T> dataType) {
+        return fields.field(name, dataType);
+    }
+
+    @Override
     public final Field<?> field(int index) {
         return fields.field(index);
     }
@@ -276,6 +292,11 @@ implements
     }
 
     @Override
+    public final Field<?>[] fields(Name... fieldNames) {
+        return fields.fields(fieldNames);
+    }
+
+    @Override
     public final Field<?>[] fields(int... fieldIndexes) {
         return fields.fields(fieldIndexes);
     }
@@ -287,6 +308,11 @@ implements
 
     @Override
     public final int indexOf(String fieldName) {
+        return fields.indexOf(fieldName);
+    }
+
+    @Override
+    public final int indexOf(Name fieldName) {
         return fields.indexOf(fieldName);
     }
 
@@ -306,6 +332,11 @@ implements
     }
 
     @Override
+    public final Class<?> type(Name fieldName) {
+        return fields.type(fieldName);
+    }
+
+    @Override
     public final DataType<?>[] dataTypes() {
         return fields.dataTypes();
     }
@@ -317,6 +348,11 @@ implements
 
     @Override
     public final DataType<?> dataType(String fieldName) {
+        return fields.dataType(fieldName);
+    }
+
+    @Override
+    public final DataType<?> dataType(Name fieldName) {
         return fields.dataType(fieldName);
     }
 
@@ -9962,7 +9998,7 @@ implements
 
     @Override
     public final Condition in(Result result) {
-        QueryPartList<Row> list = new QueryPartList<Row>(Utils.rows(result));
+        QueryPartList<Row> list = new QueryPartList<Row>(Tools.rows(result));
         return new RowInCondition(this, list, Comparator.IN);
     }
 
@@ -9974,7 +10010,7 @@ implements
 
     @Override
     public final Condition notIn(Result result) {
-        QueryPartList<Row> list = new QueryPartList<Row>(Utils.rows(result));
+        QueryPartList<Row> list = new QueryPartList<Row>(Tools.rows(result));
         return new RowInCondition(this, list, Comparator.NOT_IN);
     }
 

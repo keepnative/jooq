@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,32 +62,35 @@ class Space extends AbstractFunction<String> {
     @Override
     final QueryPart getFunction0(Configuration configuration) {
         switch (configuration.family()) {
-            /* [pro] xx
-            xxxx xxxx
-            xxxx xxxxxxx
-            xxxx xxxx
-            xxxx xxxxxxxxxx
-            xxxx xxxxxxx
-            xx [/pro] */
 
-            case CUBRID:
-            case MARIADB:
-            case MYSQL:
-            case H2:
-                return DSL.field("{space}({0})", getDataType(), count);
 
-            /* [pro] xx
-            xxxx xxxxxxx
-            xxxx xxxxxxx
-            xx [/pro] */
+
+
+
+
+
 
             case DERBY:
             case FIREBIRD:
             case HSQLDB:
             case POSTGRES:
             case SQLITE:
-            default:
                 return DSL.repeat(DSL.inline(" "), count);
+
+
+
+
+
+
+
+
+
+            case CUBRID:
+            case MARIADB:
+            case MYSQL:
+            case H2:
+            default:
+                return DSL.field("{space}({0})", getDataType(), count);
         }
     }
 

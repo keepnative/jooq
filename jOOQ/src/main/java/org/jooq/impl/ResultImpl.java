@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,7 +46,7 @@ import static java.lang.Math.min;
 import static org.jooq.impl.DSL.insertInto;
 import static org.jooq.impl.DSL.name;
 import static org.jooq.impl.DSL.table;
-import static org.jooq.impl.Utils.indexOrFail;
+import static org.jooq.impl.Tools.indexOrFail;
 import static org.jooq.tools.StringUtils.abbreviate;
 import static org.jooq.tools.StringUtils.leftPad;
 import static org.jooq.tools.StringUtils.rightPad;
@@ -83,6 +83,7 @@ import org.jooq.DataType;
 import org.jooq.EnumType;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
+import org.jooq.Name;
 import org.jooq.Record;
 import org.jooq.Record1;
 import org.jooq.Record10;
@@ -111,7 +112,9 @@ import org.jooq.RecordMapper;
 import org.jooq.RecordType;
 import org.jooq.Result;
 import org.jooq.Row;
+import org.jooq.Schema;
 import org.jooq.Table;
+import org.jooq.TableField;
 import org.jooq.TableRecord;
 import org.jooq.UpdatableRecord;
 import org.jooq.exception.IOException;
@@ -166,11 +169,9 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
     public final void attach(Configuration c) {
         this.configuration = c;
 
-        for (R record : records) {
-            if (record != null) {
+        for (R record : records)
+            if (record != null)
                 record.attach(c);
-            }
-        }
     }
 
     @Override
@@ -218,6 +219,21 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
     }
 
     @Override
+    public final Field<?> field(Name name) {
+        return fields.field(name);
+    }
+
+    @Override
+    public final <T> Field<T> field(Name name, Class<T> type) {
+        return fields.field(name, type);
+    }
+
+    @Override
+    public final <T> Field<T> field(Name name, DataType<T> dataType) {
+        return fields.field(name, dataType);
+    }
+
+    @Override
     public final Field<?> field(int index) {
         return fields.field(index);
     }
@@ -237,34 +253,24 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
         return fields.fields().clone();
     }
 
-    // @Override [#4113] TODO: Make this public
-    final Field<?>[] fields(Field<?>... f) {
-        Field<?>[] result = new Field[f.length];
-
-        for (int i = 0; i < f.length; i++)
-            result[i] = field(f[i]);
-
-        return result;
+    @Override
+    public final Field<?>[] fields(Field<?>... f) {
+        return fields.fields(f);
     }
 
-    // @Override [#4113] TODO: Make this public
-    final Field<?>[] fields(int... indexes) {
-        Field<?>[] result = new Field[indexes.length];
-
-        for (int i = 0; i < indexes.length; i++)
-            result[i] = field(indexes[i]);
-
-        return result;
+    @Override
+    public final Field<?>[] fields(int... indexes) {
+        return fields.fields(indexes);
     }
 
-    // @Override [#4113] TODO: Make this public
-    final Field<?>[] fields(String... names) {
-        Field<?>[] result = new Field[names.length];
+    @Override
+    public final Field<?>[] fields(String... names) {
+        return fields.fields(names);
+    }
 
-        for (int i = 0; i < names.length; i++)
-            result[i] = field(names[i]);
-
-        return result;
+    @Override
+    public final Field<?>[] fields(Name... names) {
+        return fields.fields(names);
     }
 
     @Override
@@ -358,6 +364,21 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final <U> List<U> getValues(String fieldName, Converter<?, U> converter) {
+        return Convert.convert(getValues(fieldName), converter);
+    }
+
+    @Override
+    public final List<?> getValues(Name fieldName) {
+        return getValues(field(fieldName));
+    }
+
+    @Override
+    public final <T> List<T> getValues(Name fieldName, Class<? extends T> type) {
+        return Convert.convert(getValues(fieldName), type);
+    }
+
+    @Override
+    public final <U> List<U> getValues(Name fieldName, Converter<?, U> converter) {
         return Convert.convert(getValues(fieldName), converter);
     }
 
@@ -534,6 +555,8 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
                 writer.append("" + (size() - maxRecords));
                 writer.append(" record(s) truncated...");
             }
+
+            writer.flush();
         }
         catch (java.io.IOException e) {
             throw new IOException("Exception while writing TEXT", e);
@@ -589,7 +612,7 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
             for (Field<?> field : fields.fields) {
                 writer.append("<th>");
-                writer.append(field.getName());
+                writer.append(escapeXML(field.getName()));
                 writer.append("</th>");
             }
 
@@ -602,7 +625,7 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
                 for (int index = 0; index < fields.fields.length; index++) {
                     writer.append("<td>");
-                    writer.append(format0(record.getValue(index), false, true));
+                    writer.append(escapeXML(format0(record.getValue(index), false, true)));
                     writer.append("</td>");
                 }
 
@@ -611,6 +634,8 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
             writer.append("</tbody>");
             writer.append("</table>");
+
+            writer.flush();
         }
         catch (java.io.IOException e) {
             throw new IOException("Exception while writing HTML", e);
@@ -619,23 +644,43 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final String formatCSV() {
+        return formatCSV(true);
+    }
+
+    @Override
+    public final String formatCSV(boolean header) {
         StringWriter writer = new StringWriter();
-        formatCSV(writer);
+        formatCSV(writer, header);
         return writer.toString();
     }
 
     @Override
     public final void formatCSV(OutputStream stream) {
-        formatCSV(new OutputStreamWriter(stream));
+        formatCSV(stream, true);
+    }
+
+    @Override
+    public final void formatCSV(OutputStream stream, boolean header) {
+        formatCSV(new OutputStreamWriter(stream), header);
     }
 
     @Override
     public final void formatCSV(Writer writer) {
-        formatCSV(writer, ',', "");
+        formatCSV(writer, true);
+    }
+
+    @Override
+    public final void formatCSV(Writer writer, boolean header) {
+        formatCSV(writer, header, ',', "");
     }
 
     @Override
     public final String formatCSV(char delimiter) {
+        return formatCSV(true, delimiter);
+    }
+
+    @Override
+    public final String formatCSV(boolean header, char delimiter) {
         StringWriter writer = new StringWriter();
         formatCSV(writer, delimiter);
         return writer.toString();
@@ -643,38 +688,65 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final void formatCSV(OutputStream stream, char delimiter) {
+        formatCSV(stream, true, delimiter);
+    }
+
+    @Override
+    public final void formatCSV(OutputStream stream, boolean header, char delimiter) {
         formatCSV(new OutputStreamWriter(stream), delimiter);
     }
 
     @Override
     public final void formatCSV(Writer writer, char delimiter) {
-        formatCSV(writer, delimiter, "");
+        formatCSV(writer, true, delimiter);
+    }
+
+    @Override
+    public final void formatCSV(Writer writer, boolean header, char delimiter) {
+        formatCSV(writer, header, delimiter, "");
     }
 
     @Override
     public final String formatCSV(char delimiter, String nullString) {
+        return formatCSV(true, delimiter, nullString);
+    }
+
+    @Override
+    public final String formatCSV(boolean header, char delimiter, String nullString) {
         StringWriter writer = new StringWriter();
-        formatCSV(writer, delimiter, nullString);
+        formatCSV(writer, header, delimiter, nullString);
         return writer.toString();
     }
 
     @Override
     public final void formatCSV(OutputStream stream, char delimiter, String nullString) {
-        formatCSV(new OutputStreamWriter(stream), delimiter, nullString);
+        formatCSV(stream, true, delimiter, nullString);
+    }
+
+    @Override
+    public final void formatCSV(OutputStream stream, boolean header, char delimiter, String nullString) {
+        formatCSV(new OutputStreamWriter(stream), header, delimiter, nullString);
     }
 
     @Override
     public final void formatCSV(Writer writer, char delimiter, String nullString) {
+        formatCSV(writer, true, delimiter, nullString);
+    }
+
+    @Override
+    public final void formatCSV(Writer writer, boolean header, char delimiter, String nullString) {
         try {
-            String sep1 = "";
-            for (Field<?> field : fields.fields) {
-                writer.append(sep1);
-                writer.append(formatCSV0(field.getName(), ""));
+            if (header) {
+                String sep1 = "";
+                for (Field<?> field : fields.fields) {
+                    writer.append(sep1);
+                    writer.append(formatCSV0(field.getName(), ""));
 
-                sep1 = Character.toString(delimiter);
+                    sep1 = Character.toString(delimiter);
+                }
+
+                writer.append("\n");
             }
-
-            writer.append("\n");
 
             for (Record record : this) {
                 String sep2 = "";
@@ -688,6 +760,8 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
                 writer.append("\n");
             }
+
+            writer.flush();
         }
         catch (java.io.IOException e) {
             throw new IOException("Exception while writing CSV", e);
@@ -774,6 +848,21 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
             Map<String, String> fieldMap;
             for (Field<?> field : fields.fields) {
                 fieldMap = new LinkedHashMap<String, String>();
+
+                if (field instanceof TableField) {
+                    Table<?> table = ((TableField<?, ?>) field).getTable();
+
+                    if (table != null) {
+                        Schema schema = table.getSchema();
+
+                        if (schema != null) {
+                            fieldMap.put("schema", schema.getName());
+                        }
+
+                        fieldMap.put("table", table.getName());
+                    }
+                }
+
                 fieldMap.put("name", field.getName());
                 fieldMap.put("type", field.getDataType().getTypeName().toUpperCase());
 
@@ -796,6 +885,8 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
             map.put("records", r);
 
             writer.append(JSONObject.toJSONString(map));
+
+            writer.flush();
         }
         catch (java.io.IOException e) {
             throw new IOException("Exception while writing JSON", e);
@@ -817,14 +908,34 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
     @Override
     public final void formatXML(Writer writer) {
         try {
-            writer.append("<result xmlns=\"http://www.jooq.org/xsd/jooq-export-2.6.0.xsd\">");
+            writer.append("<result xmlns=\"http://www.jooq.org/xsd/jooq-export-3.7.0.xsd\">");
             writer.append("<fields>");
 
             for (Field<?> field : fields.fields) {
-                writer.append("<field name=\"");
+                writer.append("<field");
+
+                if (field instanceof TableField) {
+                    Table<?> table = ((TableField<?, ?>) field).getTable();
+
+                    if (table != null) {
+                        Schema schema = table.getSchema();
+
+                        if (schema != null) {
+                            writer.append(" schema=\"");
+                            writer.append(escapeXML(schema.getName()));
+                            writer.append("\"");
+                        }
+
+                        writer.append(" table=\"");
+                        writer.append(escapeXML(table.getName()));
+                        writer.append("\"");
+                    }
+                }
+
+                writer.append(" name=\"");
                 writer.append(escapeXML(field.getName()));
-                writer.append("\" ");
-                writer.append("type=\"");
+                writer.append("\"");
+                writer.append(" type=\"");
                 writer.append(field.getDataType().getTypeName().toUpperCase());
                 writer.append("\"/>");
             }
@@ -857,6 +968,8 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
             writer.append("</records>");
             writer.append("</result>");
+
+            writer.flush();
         }
         catch (java.io.IOException e) {
             throw new IOException("Exception while writing XML", e);
@@ -909,6 +1022,8 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
                 writer.append(ctx.renderInlined(insertInto(table, f).values(record.intoArray())));
                 writer.append(";\n");
             }
+
+            writer.flush();
         }
         catch (java.io.IOException e) {
             throw new IOException("Exception while writing INSERTs", e);
@@ -923,7 +1038,7 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
             Document document = builder.newDocument();
 
             Element eResult = document.createElement("result");
-            eResult.setAttribute("xmlns", "http://www.jooq.org/xsd/jooq-export-2.6.0.xsd");
+            eResult.setAttribute("xmlns", "http://www.jooq.org/xsd/jooq-export-3.7.0.xsd");
             document.appendChild(eResult);
 
             Element eFields = document.createElement("fields");
@@ -931,6 +1046,21 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
             for (Field<?> field : fields.fields) {
                 Element eField = document.createElement("field");
+
+                if (field instanceof TableField<?, ?>) {
+                    Table<?> table = ((TableField) field).getTable();
+
+                    if (table != null) {
+                        Schema schema = table.getSchema();
+
+                        if (schema != null) {
+                            eField.setAttribute("schema", schema.getName());
+                        }
+
+                        eField.setAttribute("table", table.getName());
+                    }
+                }
+
                 eField.setAttribute("name", field.getName());
                 eField.setAttribute("type", field.getDataType().getTypeName().toUpperCase());
                 eFields.appendChild(eField);
@@ -969,12 +1099,27 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
         Attributes empty = new AttributesImpl();
 
         handler.startDocument();
-        handler.startPrefixMapping("", "http://www.jooq.org/xsd/jooq-export-2.6.0.xsd");
+        handler.startPrefixMapping("", "http://www.jooq.org/xsd/jooq-export-3.7.0.xsd");
         handler.startElement("", "", "result", empty);
         handler.startElement("", "", "fields", empty);
 
         for (Field<?> field : fields.fields) {
             AttributesImpl attrs = new AttributesImpl();
+
+            if (field instanceof TableField<?, ?>) {
+                Table<?> table = ((TableField) field).getTable();
+
+                if (table != null) {
+                    Schema schema = table.getSchema();
+
+                    if (schema != null) {
+                        attrs.addAttribute("", "", "schema", "CDATA", schema.getName());
+                    }
+
+                    attrs.addAttribute("", "", "table", "CDATA", table.getName());
+                }
+            }
+
             attrs.addAttribute("", "", "name", "CDATA", field.getName());
             attrs.addAttribute("", "", "type", "CDATA", field.getDataType().getTypeName().toUpperCase());
 
@@ -1046,6 +1191,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
         return intoMap(field(keyFieldName));
     }
 
+    @Override
+    public final Map<?, R> intoMap(Name keyFieldName) {
+        return intoMap(field(keyFieldName));
+    }
+
     private final <K> Map<K, R> intoMap0(int keyFieldIndex) {
         Map<K, R> map = new LinkedHashMap<K, R>();
 
@@ -1074,6 +1224,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
         return intoMap(field(keyFieldName), field(valueFieldName));
     }
 
+    @Override
+    public final Map<?, ?> intoMap(Name keyFieldName, Name valueFieldName) {
+        return intoMap(field(keyFieldName), field(valueFieldName));
+    }
+
     private final <K, V> Map<K, V> intoMap0(int kIndex, int vIndex) {
         Map<K, V> map = new LinkedHashMap<K, V>();
 
@@ -1095,6 +1250,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
     }
 
     @Override
+    public final Map<Record, R> intoMap(Name[] keyFieldNames) {
+        return intoMap(fields(keyFieldNames));
+    }
+
+    @Override
     public final Map<Record, R> intoMap(Field<?>[] keys) {
         if (keys == null) {
             keys = new Field[0];
@@ -1105,7 +1265,7 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
             RecordImpl key = new RecordImpl(keys);
 
             for (Field<?> field : keys) {
-                Utils.copyValue(key, field, record, field);
+                Tools.copyValue(key, field, record, field);
             }
 
             if (map.put(key, record) != null) {
@@ -1127,8 +1287,13 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
     }
 
     @Override
+    public final <E> Map<List<?>, E> intoMap(Name[] keyFieldNames, Class<? extends E> type) {
+        return intoMap(fields(keyFieldNames), type);
+    }
+
+    @Override
     public final <E> Map<List<?>, E> intoMap(Field<?>[] keys, Class<? extends E> type) {
-        return intoMap(keys, Utils.configuration(this).recordMapperProvider().provide(fields, type));
+        return intoMap(keys, Tools.configuration(this).recordMapperProvider().provide(fields, type));
     }
 
     @Override
@@ -1138,6 +1303,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final <E> Map<List<?>, E> intoMap(String[] keyFieldNames, RecordMapper<? super R, E> mapper) {
+        return intoMap(fields(keyFieldNames), mapper);
+    }
+
+    @Override
+    public final <E> Map<List<?>, E> intoMap(Name[] keyFieldNames, RecordMapper<? super R, E> mapper) {
         return intoMap(fields(keyFieldNames), mapper);
     }
 
@@ -1164,15 +1334,66 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
     }
 
     @Override
+    public final <K> Map<K, R> intoMap(Class<? extends K> keyType) {
+        return intoMap(Tools.configuration(this).recordMapperProvider().provide(fields, keyType));
+    }
+
+    @Override
+    public final <K, V> Map<K, V> intoMap(Class<? extends K> keyType, Class<? extends V> valueType) {
+        return intoMap(
+            Tools.configuration(this).recordMapperProvider().provide(fields, keyType),
+            Tools.configuration(this).recordMapperProvider().provide(fields, valueType)
+        );
+    }
+
+    @Override
+    public final <K, V> Map<K, V> intoMap(Class<? extends K> keyType, RecordMapper<? super R, V> valueMapper) {
+        return intoMap(Tools.configuration(this).recordMapperProvider().provide(fields, keyType), valueMapper);
+    }
+
+    @Override
+    public final <K> Map<K, R> intoMap(RecordMapper<? super R, K> keyMapper) {
+        Map<K, R> map = new LinkedHashMap<K, R>();
+
+        for (R record : this) {
+            K key = keyMapper.map(record);
+
+            if (map.put(key, record) != null)
+                throw new InvalidResultException("Key list " + key + " is not unique in Result for " + this);
+        }
+
+        return map;
+    }
+
+    @Override
+    public final <K, V> Map<K, V> intoMap(RecordMapper<? super R, K> keyMapper, Class<V> valueType) {
+        return intoMap(keyMapper, Tools.configuration(this).recordMapperProvider().provide(fields, valueType));
+    }
+
+    @Override
+    public final <K, V> Map<K, V> intoMap(RecordMapper<? super R, K> keyMapper, RecordMapper<? super R, V> valueMapper) {
+        Map<K, V> map = new LinkedHashMap<K, V>();
+
+        for (R record : this) {
+            K key = keyMapper.map(record);
+            V value = valueMapper.map(record);
+
+            if (map.put(key, value) != null)
+                throw new InvalidResultException("Key list " + key + " is not unique in Result for " + this);
+        }
+
+        return map;
+    }
+
+    @Override
     public final <S extends Record> Map<S, R> intoMap(Table<S> table) {
         Map<S, R> map = new LinkedHashMap<S, R>();
 
         for (R record : this) {
             S key = record.into(table);
 
-            if (map.put(key, record) != null) {
+            if (map.put(key, record) != null)
                 throw new InvalidResultException("Key list " + key + " is not unique in Result for " + this);
-            }
         }
 
         return map;
@@ -1180,7 +1401,7 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final <E, S extends Record> Map<S, E> intoMap(Table<S> table, Class<? extends E> type) {
-        return intoMap(table, Utils.configuration(this).recordMapperProvider().provide(fields, type));
+        return intoMap(table, Tools.configuration(this).recordMapperProvider().provide(fields, type));
     }
 
     @Override
@@ -1190,9 +1411,8 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
         for (R record : this) {
             S key = record.into(table);
 
-            if (map.put(key, mapper.map(record)) != null) {
+            if (map.put(key, mapper.map(record)) != null)
                 throw new InvalidResultException("Key list " + key + " is not unique in Result for " + this);
-            }
         }
 
         return map;
@@ -1200,17 +1420,22 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final <E> Map<?, E> intoMap(int keyFieldIndex, Class<? extends E> type) {
-        return intoMap(keyFieldIndex, Utils.configuration(this).recordMapperProvider().provide(fields, type));
+        return intoMap(keyFieldIndex, Tools.configuration(this).recordMapperProvider().provide(fields, type));
     }
 
     @Override
     public final <E> Map<?, E> intoMap(String keyFieldName, Class<? extends E> type) {
-        return intoMap(keyFieldName, Utils.configuration(this).recordMapperProvider().provide(fields, type));
+        return intoMap(keyFieldName, Tools.configuration(this).recordMapperProvider().provide(fields, type));
+    }
+
+    @Override
+    public final <E> Map<?, E> intoMap(Name keyFieldName, Class<? extends E> type) {
+        return intoMap(keyFieldName, Tools.configuration(this).recordMapperProvider().provide(fields, type));
     }
 
     @Override
     public final <K, E> Map<K, E> intoMap(Field<K> key, Class<? extends E> type) {
-        return intoMap(key, Utils.configuration(this).recordMapperProvider().provide(fields, type));
+        return intoMap(key, Tools.configuration(this).recordMapperProvider().provide(fields, type));
     }
 
     @Override
@@ -1220,6 +1445,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final <E> Map<?, E> intoMap(String keyFieldName, RecordMapper<? super R, E> mapper) {
+        return intoMap(field(keyFieldName), mapper);
+    }
+
+    @Override
+    public final <E> Map<?, E> intoMap(Name keyFieldName, RecordMapper<? super R, E> mapper) {
         return intoMap(field(keyFieldName), mapper);
     }
 
@@ -1250,6 +1480,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final Map<?, Result<R>> intoGroups(String keyFieldName) {
+        return intoGroups(field(keyFieldName));
+    }
+
+    @Override
+    public final Map<?, Result<R>> intoGroups(Name keyFieldName) {
         return intoGroups(field(keyFieldName));
     }
 
@@ -1289,6 +1524,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
         return (Map) intoGroups(field(keyFieldName), field(valueFieldName));
     }
 
+    @Override
+    public final Map<?, List<?>> intoGroups(Name keyFieldName, Name valueFieldName) {
+        return (Map) intoGroups(field(keyFieldName), field(valueFieldName));
+    }
+
     private final <K, V> Map<K, List<V>> intoGroups0(int kIndex, int vIndex) {
         Map<K, List<V>> map = new LinkedHashMap<K, List<V>>();
 
@@ -1310,17 +1550,22 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final <E> Map<?, List<E>> intoGroups(int keyFieldIndex, Class<? extends E> type) {
-        return intoGroups(keyFieldIndex, Utils.configuration(this).recordMapperProvider().provide(fields, type));
+        return intoGroups(keyFieldIndex, Tools.configuration(this).recordMapperProvider().provide(fields, type));
     }
 
     @Override
     public final <E> Map<?, List<E>> intoGroups(String keyFieldName, Class<? extends E> type) {
-        return intoGroups(keyFieldName, Utils.configuration(this).recordMapperProvider().provide(fields, type));
+        return intoGroups(keyFieldName, Tools.configuration(this).recordMapperProvider().provide(fields, type));
+    }
+
+    @Override
+    public final <E> Map<?, List<E>> intoGroups(Name keyFieldName, Class<? extends E> type) {
+        return intoGroups(keyFieldName, Tools.configuration(this).recordMapperProvider().provide(fields, type));
     }
 
     @Override
     public final <K, E> Map<K, List<E>> intoGroups(Field<K> key, Class<? extends E> type) {
-        return intoGroups(key, Utils.configuration(this).recordMapperProvider().provide(fields, type));
+        return intoGroups(key, Tools.configuration(this).recordMapperProvider().provide(fields, type));
     }
 
     @Override
@@ -1335,6 +1580,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final <E> Map<?, List<E>> intoGroups(String keyFieldName, RecordMapper<? super R, E> mapper) {
+        return intoGroups(field(keyFieldName), mapper);
+    }
+
+    @Override
+    public final <E> Map<?, List<E>> intoGroups(Name keyFieldName, RecordMapper<? super R, E> mapper) {
         return intoGroups(field(keyFieldName), mapper);
     }
 
@@ -1367,6 +1617,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
     }
 
     @Override
+    public final Map<Record, Result<R>> intoGroups(Name[] keyFieldNames) {
+        return intoGroups(fields(keyFieldNames));
+    }
+
+    @Override
     public final Map<Record, Result<R>> intoGroups(Field<?>[] keys) {
         if (keys == null) {
             keys = new Field[0];
@@ -1377,7 +1632,7 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
             RecordImpl key = new RecordImpl(keys);
 
             for (Field<?> field : keys) {
-                Utils.copyValue(key, field, record, field);
+                Tools.copyValue(key, field, record, field);
             }
 
             Result<R> result = map.get(key);
@@ -1393,18 +1648,23 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
     }
 
     @Override
-    public <E> Map<Record, List<E>> intoGroups(int[] keyFieldIndexes, Class<? extends E> type) {
-        return intoGroups(keyFieldIndexes, Utils.configuration(this).recordMapperProvider().provide(fields, type));
+    public final <E> Map<Record, List<E>> intoGroups(int[] keyFieldIndexes, Class<? extends E> type) {
+        return intoGroups(keyFieldIndexes, Tools.configuration(this).recordMapperProvider().provide(fields, type));
     }
 
     @Override
-    public <E> Map<Record, List<E>> intoGroups(String[] keyFieldNames, Class<? extends E> type) {
-        return intoGroups(keyFieldNames, Utils.configuration(this).recordMapperProvider().provide(fields, type));
+    public final <E> Map<Record, List<E>> intoGroups(String[] keyFieldNames, Class<? extends E> type) {
+        return intoGroups(keyFieldNames, Tools.configuration(this).recordMapperProvider().provide(fields, type));
+    }
+
+    @Override
+    public final <E> Map<Record, List<E>> intoGroups(Name[] keyFieldNames, Class<? extends E> type) {
+        return intoGroups(keyFieldNames, Tools.configuration(this).recordMapperProvider().provide(fields, type));
     }
 
     @Override
     public final <E> Map<Record, List<E>> intoGroups(Field<?>[] keys, Class<? extends E> type) {
-        return intoGroups(keys, Utils.configuration(this).recordMapperProvider().provide(fields, type));
+        return intoGroups(keys, Tools.configuration(this).recordMapperProvider().provide(fields, type));
     }
 
     @Override
@@ -1414,6 +1674,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final <E> Map<Record, List<E>> intoGroups(String[] keyFieldNames, RecordMapper<? super R, E> mapper) {
+        return intoGroups(fields(keyFieldNames), mapper);
+    }
+
+    @Override
+    public final <E> Map<Record, List<E>> intoGroups(Name[] keyFieldNames, RecordMapper<? super R, E> mapper) {
         return intoGroups(fields(keyFieldNames), mapper);
     }
 
@@ -1428,7 +1693,7 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
             RecordImpl key = new RecordImpl(keys);
 
             for (Field<?> field : keys) {
-                Utils.copyValue(key, field, record, field);
+                Tools.copyValue(key, field, record, field);
             }
 
             List<E> list = map.get(key);
@@ -1438,6 +1703,67 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
             }
 
             list.add(mapper.map(record));
+        }
+
+        return map;
+    }
+
+    @Override
+    public final <K> Map<K, Result<R>> intoGroups(Class<? extends K> keyType) {
+        return intoGroups(Tools.configuration(this).recordMapperProvider().provide(fields, keyType));
+    }
+
+    @Override
+    public final <K, V> Map<K, List<V>> intoGroups(Class<? extends K> keyType, Class<? extends V> valueType) {
+        return intoGroups(
+            Tools.configuration(this).recordMapperProvider().provide(fields, keyType),
+            Tools.configuration(this).recordMapperProvider().provide(fields, valueType)
+        );
+    }
+
+    @Override
+    public final <K, V> Map<K, List<V>> intoGroups(Class<? extends K> keyType, RecordMapper<? super R, V> valueMapper) {
+        return intoGroups(Tools.configuration(this).recordMapperProvider().provide(fields, keyType), valueMapper);
+    }
+
+    @Override
+    public final <K> Map<K, Result<R>> intoGroups(RecordMapper<? super R, K> keyMapper) {
+        Map<K, Result<R>> map = new LinkedHashMap<K, Result<R>>();
+
+        for (R record : this) {
+            K key = keyMapper.map(record);
+
+            Result<R> result = map.get(key);
+            if (result == null) {
+                result = new ResultImpl(configuration(), fields());
+                map.put(key, result);
+            }
+
+            result.add(record);
+        }
+
+        return map;
+    }
+
+    @Override
+    public final <K, V> Map<K, List<V>> intoGroups(RecordMapper<? super R, K> keyMapper, Class<V> valueType) {
+        return intoGroups(keyMapper, Tools.configuration(this).recordMapperProvider().provide(fields, valueType));
+    }
+
+    @Override
+    public final <K, V> Map<K, List<V>> intoGroups(RecordMapper<? super R, K> keyMapper, RecordMapper<? super R, V> valueMapper) {
+        Map<K, List<V>> map = new LinkedHashMap<K, List<V>>();
+
+        for (R record : this) {
+            K key = keyMapper.map(record);
+
+            List<V> list = map.get(key);
+            if (list == null) {
+                list = new ArrayList<V>();
+                map.put(key, list);
+            }
+
+            list.add(valueMapper.map(record));
         }
 
         return map;
@@ -1464,7 +1790,7 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final <E, S extends Record> Map<S, List<E>> intoGroups(Table<S> table, Class<? extends E> type) {
-        return intoGroups(table, Utils.configuration(this).recordMapperProvider().provide(fields, type));
+        return intoGroups(table, Tools.configuration(this).recordMapperProvider().provide(fields, type));
     }
 
     @Override
@@ -1539,6 +1865,23 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
     }
 
     @Override
+    public final Object[] intoArray(Name fieldName) {
+        Class<?> type = field(fieldName).getType();
+        List<?> list = getValues(fieldName);
+        return list.toArray((Object[]) Array.newInstance(type, list.size()));
+    }
+
+    @Override
+    public final <T> T[] intoArray(Name fieldName, Class<? extends T> type) {
+        return (T[]) Convert.convertArray(intoArray(fieldName), type);
+    }
+
+    @Override
+    public final <U> U[] intoArray(Name fieldName, Converter<?, U> converter) {
+        return Convert.convertArray(intoArray(fieldName), converter);
+    }
+
+    @Override
     public final <T> T[] intoArray(Field<T> field) {
         return getValues(field).toArray((T[]) Array.newInstance(field.getType(), 0));
     }
@@ -1584,6 +1927,21 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
     }
 
     @Override
+    public final Set<?> intoSet(Name fieldName) {
+        return new LinkedHashSet<Object>(getValues(fieldName));
+    }
+
+    @Override
+    public final <T> Set<T> intoSet(Name fieldName, Class<? extends T> type) {
+        return new LinkedHashSet<T>(getValues(fieldName, type));
+    }
+
+    @Override
+    public final <U> Set<U> intoSet(Name fieldName, Converter<?, U> converter) {
+        return new LinkedHashSet<U>(getValues(fieldName, converter));
+    }
+
+    @Override
     public final <T> Set<T> intoSet(Field<T> field) {
         return new LinkedHashSet<T>(getValues(field));
     }
@@ -1600,7 +1958,7 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final Result<Record> into(Field<?>... f) {
-        Result<Record> result = new ResultImpl<Record>(Utils.configuration(this), f);
+        Result<Record> result = new ResultImpl<Record>(Tools.configuration(this), f);
 
         for (Record record : this)
             result.add(record.into(f));
@@ -1609,113 +1967,112 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
     }
 
     // [jooq-tools] START [into-fields]
-
-/**/@Override
+    @Override
     public final <T1> Result<Record1<T1>> into(Field<T1> field1) {
         return (Result) into(new Field[] { field1 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2> Result<Record2<T1, T2>> into(Field<T1> field1, Field<T2> field2) {
         return (Result) into(new Field[] { field1, field2 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3> Result<Record3<T1, T2, T3>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3) {
         return (Result) into(new Field[] { field1, field2, field3 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4> Result<Record4<T1, T2, T3, T4>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4) {
         return (Result) into(new Field[] { field1, field2, field3, field4 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5> Result<Record5<T1, T2, T3, T4, T5>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6> Result<Record6<T1, T2, T3, T4, T5, T6>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7> Result<Record7<T1, T2, T3, T4, T5, T6, T7>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8> Result<Record8<T1, T2, T3, T4, T5, T6, T7, T8>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8, T9> Result<Record9<T1, T2, T3, T4, T5, T6, T7, T8, T9>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Result<Record10<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Result<Record11<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Result<Record12<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Result<Record13<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Result<Record14<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Result<Record15<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Result<Record16<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> Result<Record17<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> Result<Record18<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> Result<Record19<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20> Result<Record20<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19, Field<T20> field20) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21> Result<Record21<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19, Field<T20> field20, Field<T21> field21) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20, field21 });
     }
 
-/**/@Override
+    @Override
     public final <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22> Result<Record22<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19, Field<T20> field20, Field<T21> field21, Field<T22> field22) {
         return (Result) into(new Field[] { field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20, field21, field22 });
     }
@@ -1725,7 +2082,7 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
     @Override
     public final <E> List<E> into(Class<? extends E> type) {
         List<E> list = new ArrayList<E>(size());
-        RecordMapper<R, E> mapper = Utils.configuration(this).recordMapperProvider().provide(fields, type);
+        RecordMapper<R, E> mapper = Tools.configuration(this).recordMapperProvider().provide(fields, type);
 
         for (R record : this) {
             list.add(mapper.map(record));
@@ -1786,6 +2143,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
     }
 
     @Override
+    public final Result<R> sortAsc(Name fieldName) {
+        return sortAsc(fieldName, new NaturalComparator());
+    }
+
+    @Override
     public final <T> Result<R> sortAsc(Field<T> field, Comparator<? super T> comparator) {
         return sortAsc(indexOrFail(fieldsRow(), field), comparator);
     }
@@ -1797,6 +2159,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final Result<R> sortAsc(String fieldName, Comparator<?> comparator) {
+        return sortAsc(indexOrFail(fieldsRow(), fieldName), comparator);
+    }
+
+    @Override
+    public final Result<R> sortAsc(Name fieldName, Comparator<?> comparator) {
         return sortAsc(indexOrFail(fieldsRow(), fieldName), comparator);
     }
 
@@ -1822,6 +2189,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
     }
 
     @Override
+    public final Result<R> sortDesc(Name fieldName) {
+        return sortAsc(fieldName, Collections.reverseOrder(new NaturalComparator()));
+    }
+
+    @Override
     public final <T> Result<R> sortDesc(Field<T> field, Comparator<? super T> comparator) {
         return sortAsc(field, Collections.reverseOrder(comparator));
     }
@@ -1833,6 +2205,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final Result<R> sortDesc(String fieldName, Comparator<?> comparator) {
+        return sortAsc(fieldName, Collections.reverseOrder(comparator));
+    }
+
+    @Override
+    public final Result<R> sortDesc(Name fieldName, Comparator<?> comparator) {
         return sortAsc(fieldName, Collections.reverseOrder(comparator));
     }
 
@@ -1861,6 +2238,11 @@ class ResultImpl<R extends Record> implements Result<R>, AttachableInternal {
 
     @Override
     public final Result<R> intern(String... fieldNames) {
+        return intern(fields.indexesOf(fieldNames));
+    }
+
+    @Override
+    public final Result<R> intern(Name... fieldNames) {
         return intern(fields.indexesOf(fieldNames));
     }
 

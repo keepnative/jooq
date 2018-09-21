@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,6 +42,7 @@ package org.jooq;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import org.jooq.conf.Settings;
 import org.jooq.exception.DataAccessException;
@@ -258,6 +259,22 @@ public interface DAO<R extends TableRecord<R>, P, T> {
      *             </ul>
      */
     <Z> P fetchOne(Field<Z> field, Z value) throws DataAccessException;
+
+
+    /**
+     * Find a unique record by a given field and a value.
+     *
+     * @param field The field to compare value against
+     * @param value The accepted value
+     * @return A record fulfilling <code>field = value</code>
+     * @throws DataAccessException This exception is thrown
+     *             <ul>
+     *             <li>if something went wrong executing the query</li>
+     *             <li>if the query returned more than one value</li>
+     *             </ul>
+     */
+    <Z> Optional<P> fetchOptional(Field<Z> field, Z value) throws DataAccessException;
+
 
     /**
      * Get the underlying table

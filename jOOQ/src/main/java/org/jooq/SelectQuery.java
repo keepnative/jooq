@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,7 +55,9 @@ import static org.jooq.SQLDialect.MARIADB;
 import static org.jooq.SQLDialect.MYSQL;
 // ...
 import static org.jooq.SQLDialect.POSTGRES;
+import static org.jooq.SQLDialect.POSTGRES_9_5;
 import static org.jooq.SQLDialect.SQLITE;
+// ...
 // ...
 // ...
 
@@ -163,29 +165,29 @@ public interface SelectQuery<R extends Record> extends Select<R>, ConditionProvi
     @Support
     void addJoin(TableLike<?> table, JoinType type, Condition... conditions);
 
-    /* [pro] xx
-    xxx
-     x xxxxx xxx xxxxxxxx xxxxx xxxxxxx xx x xxx xxxxx xxxxx xxxxxxxxxxx
-     x xxxxxxxxxx xxxx xxxx xxxx xxxxx xxxx xxxxxx xxxxxxxxxxxxxx
-     x xxx
-     x xxxx xxxx x xxxxxxxxxxxxxxx xxxxxxxxx xxxxxx xx xxx xxxxx xxxx xxxx xx x
-     x xxxxxxxxxxx xxxxxxxxxxx xxxxxxxxxxx
-     x
-     x xxxxxx xxxxx xxx xxxxxx xxxxx
-     x xxxxxx xxxx xxx xxxx xx xxxx
-     x xxxxxx xxxxxxxxxx xxx xxxxxxx xxxxxxxxxx
-     x xxxxxx xxxxxxxxxxx xxx xxxxxxxxxxxxxxx xxxxxxxxx xxxxxxxxxx
-     x xxxx xxxxxxxxxxxxxxxxxxxx
-     xx
-    xxxxxxxxxxxxxxxx
-    xxxx xxxxxxxxxxxxxxxxxxxx xxxxxx xxxxxxxx xxxxx xxxxxxxxxxx xxxxxxxxxxx xxxxxxxxxx xxxxxxxxxxxxx
 
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     /**
      * Joins the existing table product to a new table with a <code>USING</code>
      * clause.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      *
      * @param table The joined table
@@ -198,7 +200,7 @@ public interface SelectQuery<R extends Record> extends Select<R>, ConditionProvi
      * Joins the existing table product to a new table with a <code>USING</code>
      * clause.
      * <p>
-     * If this is not supported by your RDBMS, then jOOQ will try to simulate
+     * If this is not supported by your RDBMS, then jOOQ will try to emulate
      * this behaviour using the information provided in this query.
      *
      * @param table The joined table
@@ -539,7 +541,7 @@ public interface SelectQuery<R extends Record> extends Select<R>, ConditionProvi
      * <p>
      * If there is no <code>LIMIT</code> or <code>TOP</code> clause in your
      * RDBMS, or the <code>LIMIT</code> or <code>TOP</code> clause does not
-     * support bind values, this may be simulated with a
+     * support bind values, this may be emulated with a
      * <code>ROW_NUMBER()</code> window function and nested <code>SELECT</code>
      * statements.
      * <p>
@@ -558,7 +560,7 @@ public interface SelectQuery<R extends Record> extends Select<R>, ConditionProvi
      * <p>
      * If there is no <code>LIMIT</code> or <code>TOP</code> clause in your
      * RDBMS, or if your RDBMS does not natively support offsets, this is
-     * simulated with a <code>ROW_NUMBER()</code> window function and nested
+     * emulated with a <code>ROW_NUMBER()</code> window function and nested
      * <code>SELECT</code> statements.
      *
      * @param offset The lowest offset starting at 0
@@ -576,7 +578,7 @@ public interface SelectQuery<R extends Record> extends Select<R>, ConditionProvi
      * If there is no <code>LIMIT</code> or <code>TOP</code> clause in your
      * RDBMS, or the <code>LIMIT</code> or <code>TOP</code> clause does not
      * support bind values, or if your RDBMS does not natively support offsets,
-     * this may be simulated with a <code>ROW_NUMBER()</code> window function
+     * this may be emulated with a <code>ROW_NUMBER()</code> window function
      * and nested <code>SELECT</code> statements.
      *
      * @param offset The lowest offset starting at 0
@@ -594,7 +596,7 @@ public interface SelectQuery<R extends Record> extends Select<R>, ConditionProvi
      * If there is no <code>LIMIT</code> or <code>TOP</code> clause in your
      * RDBMS, or the <code>LIMIT</code> or <code>TOP</code> clause does not
      * support bind values, or if your RDBMS does not natively support offsets,
-     * this may be simulated with a <code>ROW_NUMBER()</code> window function
+     * this may be emulated with a <code>ROW_NUMBER()</code> window function
      * and nested <code>SELECT</code> statements.
      *
      * @param offset The lowest offset starting at 0
@@ -612,7 +614,7 @@ public interface SelectQuery<R extends Record> extends Select<R>, ConditionProvi
      * If there is no <code>LIMIT</code> or <code>TOP</code> clause in your
      * RDBMS, or the <code>LIMIT</code> or <code>TOP</code> clause does not
      * support bind values, or if your RDBMS does not natively support offsets,
-     * this may be simulated with a <code>ROW_NUMBER()</code> window function
+     * this may be emulated with a <code>ROW_NUMBER()</code> window function
      * and nested <code>SELECT</code> statements.
      *
      * @param offset The lowest offset starting at 0
@@ -650,13 +652,13 @@ public interface SelectQuery<R extends Record> extends Select<R>, ConditionProvi
      * >Postgres FOR UPDATE / FOR SHARE</a></li>
      * </ul>
      * <p>
-     * <h5>Simulation</h5>
+     * <h5>emulation</h5>
      * <p>
-     * These dialects can simulate the <code>FOR UPDATE</code> clause using a
+     * These dialects can emulate the <code>FOR UPDATE</code> clause using a
      * cursor. The cursor is handled by the JDBC driver, at
      * {@link PreparedStatement} construction time, when calling
      * {@link Connection#prepareStatement(String, int, int)} with
-     * {@link ResultSet#CONCUR_UPDATABLE}. jOOQ handles simulation of a
+     * {@link ResultSet#CONCUR_UPDATABLE}. jOOQ handles emulation of a
      * <code>FOR UPDATE</code> clause using <code>CONCUR_UPDATABLE</code> for
      * these dialects:
      * <ul>
@@ -664,7 +666,7 @@ public interface SelectQuery<R extends Record> extends Select<R>, ConditionProvi
      * <li> {@link SQLDialect#SQLSERVER}</li>
      * </ul>
      * <p>
-     * Note: This simulation may not be efficient for large result sets!
+     * Note: This emulation may not be efficient for large result sets!
      * <p>
      * <h5>Not supported</h5>
      * <p>
@@ -737,7 +739,7 @@ public interface SelectQuery<R extends Record> extends Select<R>, ConditionProvi
      * <li>Sybase</li>
      * </ul>
      * <p>
-     * jOOQ simulates this by locking all known fields of [<code>tables</code>]
+     * jOOQ emulates this by locking all known fields of [<code>tables</code>]
      * for any of these dialects:
      * <ul>
      * <li>DB2</li>
@@ -751,27 +753,27 @@ public interface SelectQuery<R extends Record> extends Select<R>, ConditionProvi
     @Support({ DERBY, FIREBIRD, H2, HSQLDB, POSTGRES })
     void setForUpdateOf(Table<?>... tables);
 
-    /* [pro] xx
-    xxx
-     x xxxx xxxxx xxxxx xxx xxxxxxxxxx xxx xxxxxxx xxxx xxx xxx xxxxxxx
-     x xxxxxxxxx xxxxxxxxxxxxx xxxxxxx xx xxxx xxxxx xxx xxxxxxx xxxx xxxx xxx
-     x xxxx xxxxxxxxxxxxxxxxxxxxx xxxxxx xxxxxxxx xxx xxxx xxxxxxxxxxx xx xxx
-     x xxxx xx xxx xxxxxxxxxx
-     x xxx
-     x xxxx xxxxxxxxxxxxx xxxx xxx xxxxxx xxxxxxxxxxxxxxxxxxxxxxx xxxxx xxx
-     x xxxxxx xxx xxxxxx xxxxxxxxxxxxxxxxxxxxxx xxxxx xx xx xxx xxxxxxxxxx xxxx
-     x xxx
-     x xxxx xxx xxxx xxxxxxxx xx xx xxxxxxxxx xx xxx xx xxxxx xxxxxxxxx
-     x xxxx
-     x xxxxxxxxxxxxxxx
-     x xxxxx
-     x
-     x xxxxxx xxxxxxx xxx xxxxxx xx xxxxxxx xx xxxx xxx x xxxx
-     xx
-    xxxxxxxxxxxxxxxx
-    xxxx xxxxxxxxxxxxxxxxxxxx xxxxxxxxx
 
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     /**
      * Some RDBMS allow for specifying the locking mode for the applied
      * <code>FOR UPDATE</code> clause. In this case, the session will not wait
@@ -788,24 +790,22 @@ public interface SelectQuery<R extends Record> extends Select<R>, ConditionProvi
     @Support({ POSTGRES })
     void setForUpdateNoWait();
 
-    /* [pro] xx
-    xxx
-     x xxxx xxxxx xxxxx xxx xxxxxxxxxx xxx xxxxxxx xxxx xxx xxx xxxxxxx
-     x xxxxxxxxx xxxxxxxxxxxxx xxxxxxx xx xxxx xxxxx xxx xxxxxxx xxxx xxxx xxx
-     x xxxxxx xxxx xxxx xxx xxxxxx xxxxxxxxxx xxxxx xxxx xx xxx xxxxxxxxxx
-     x xxx
-     x xxxx xxxxxxxxxxxxx xxxx xxx xxxxxx xxxxxxxxxxxxxxxxxxxxxxx xxxxx xxx
-     x xxxxxx xxx xxxxxx xxxxxxxxxxxxxxxxxxxxxx xxxxx xx xx xxx xxxxxxxxxx xxxx
-     x xxx
-     x xxxx xxx xxxx xxxxxxxx xx xx xxxxxxxxx xx xxx xx xxxxx xxxxxxxxx
-     x xxxx
-     x xxxxxxxxxxxxxxx
-     x xxxxx
-     xx
-    xxxxxxxxxxxxxxxx
-    xxxx xxxxxxxxxxxxxxxxxxxxxxxxx
+    /**
+     * Some RDBMS allow for specifying the locking mode for the applied
+     * <code>FOR UPDATE</code> clause. In this case, the session will skip all
+     * locked rows from the select statement, whose lock is not available.
+     * <p>
+     * This automatically sets the {@link #setForUpdate(boolean)} flag, and
+     * unsets the {@link #setForShare(boolean)} flag, if it was previously set.
+     * <p>
+     * This has been observed to be supported by any of these dialects:
+     * <ul>
+     * <li>Oracle</li>
+     * </ul>
+     */
+    @Support({POSTGRES_9_5})
+    void setForUpdateSkipLocked();
 
-    xx [/pro] */
     /**
      * Sets the "FOR SHARE" flag onto the query.
      * <p>
@@ -830,18 +830,18 @@ public interface SelectQuery<R extends Record> extends Select<R>, ConditionProvi
     @Support({ MARIADB, MYSQL, POSTGRES })
     void setForShare(boolean forShare);
 
-    /* [pro] xx
-    xxx
-     x xxx x xxxxxxxxxx xxxxx xxxxxxxxxxxxx xxxxxx xx xxx xxx xx xxx xxxxxxxxx
-     xx
-    xxxxxxxxxx xxxxxx xx
-    xxxx xxxxxxxxxxxxxxxxxxxxx
 
-    xxx
-     x xxx x xxxxxxxxxx xxxx xxxxxxxxxxx xxxxxx xx xxx xxx xx xxx xxxxxxxxx
-     xx
-    xxxxxxxxxx xxxxxx xx
-    xxxx xxxxxxxxxxxxxxxxxx
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -91,5 +91,5 @@ public interface InsertValuesStep2<R extends Record, T1, T2> extends InsertOnDup
      * {@link DSLContext#insertInto(Table, Field, Field)}
      */
     @Support
-    Insert<R> select(Select<? extends Record2<T1, T2>> select);
+    InsertOnDuplicateStep<R> select(Select<? extends Record2<T1, T2>> select);
 }

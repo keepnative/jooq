@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -118,18 +118,39 @@ public enum SQLDialect {
 
     /**
      * The PostgreSQL dialect family.
+     * <p>
+     * While this family (and its dialects) have been observed to work to some
+     * extent on Amazon RedShift as well, we strongly suggest you use the
+     * official {@link #REDSHIFT} support, instead.
      */
     POSTGRES("Postgres", false),
 
     /**
-     * The PostgreSQL dialect family.
+     * The PostgreSQL 9.3 dialect.
+     * <p>
+     * While this family (and its dialects) have been observed to work to some
+     * extent on Amazon RedShift as well, we strongly suggest you use the
+     * official {@link #REDSHIFT} support, instead.
      */
     POSTGRES_9_3("Postgres", false, POSTGRES, null),
 
     /**
-     * The PostgreSQL dialect family.
+     * The PostgreSQL 9.4 dialect.
+     * <p>
+     * While this family (and its dialects) have been observed to work to some
+     * extent on Amazon RedShift as well, we strongly suggest you use the
+     * official {@link #REDSHIFT} support, instead.
      */
     POSTGRES_9_4("Postgres", false, POSTGRES, POSTGRES_9_3),
+
+    /**
+     * The PostgreSQL 9.5 dialect.
+     * <p>
+     * While this family (and its dialects) have been observed to work to some
+     * extent on Amazon RedShift as well, we strongly suggest you use the
+     * official {@link #REDSHIFT} support, instead.
+     */
+    POSTGRES_9_5("Postgres", false, POSTGRES, POSTGRES_9_4),
 
     /**
      * The SQLite dialect family.
@@ -155,135 +176,157 @@ public enum SQLDialect {
     // SQL dialects for commercial usage
     // -------------------------------------------------------------------------
 
-    /* [pro] xx
 
-    xxx
-     x xxx xx xxxxxx xxx xxxxxxx xxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxxxxxx xxxxxx
 
-    xxx
-     x xxx xx xxxxxx xxxx xxx xxxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxxxxxxxxxx xxxxx xxxxxxxx
 
-    xxx
-     x xxx xxxxxx xxxxxxxx xxxxxx xxx xxxxxxx xxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxx xxxxxx
 
-    xxx
-     x xxx xxx xxx xxx xxxxxxx xxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxx xxxxxx
 
-    xxx
-     x xxx xxx xxx xxx xxx xxxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxx xxxxx xxxxx
 
-    xxx
-     x xxx xxx xxx xxxx xxx xxxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxxx xxxxx xxxx xxxxxxx
 
-    xxx
-     x xxx xxx xxxx xxx xxxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxx xxxxxx
 
-    xxx
-     x xxx xxxxxxxx xxx xxxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxxxxxxxxxx xxxxxx
 
-    xxx
-     x xxx xxxxxx xxxxxxx xxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxxxxxx xxxxxx
 
-    xxx
-     x xxx xxxxxx xxxxxxx xxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxxxxxx xxxxxx
 
-    xxx
-     x xxx xxxxxx xxx xxxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxxxxxxxxx xxxxx xxxxxxxx
 
-    xxx
-     x xxx xxxxxx xxx xxxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxxxxxxxxx xxxxx xxxxxxx xxxxxxxxxxx
 
-    xxx
-     x xxx xxxxxx xxx xxxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxxxxxxxxx xxxxx xxxxxxx xxxxxxxxxxx
 
-    xxx
-     x xxx xxx xxxxxx xxxxxxx xxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxxxxxxxxxxxx xxxxxx
 
-    xxx
-     x xxx xxx xxxxxx xxxx xxxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxx xxxxxxxxxxx
 
-    xxx
-     x xxx xxx xxxxxx xxxx xxxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxx xxxxxxxxxx xxxxxxxxxxxxxxx
 
-    xxx
-     x xxx xxx xxxxxx xxxx xxxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxxxxxxxxxxxxxxxx xxxxx xxxxxxxxxx xxxxxxxxxxxxxxx
 
-    xxx
-     x xxx xxxxxx xxx xxxxxxxx xxxxxxx xxxxxxx
-     x xxx
-     x xxxx xxxxxxx xx xxxxxxxxx xx xxxxxxxxxx xxxx xxxxxxxxxxxxxx xxxxx
-     xx
-    xxxxxxxxxxxxxxxx xxxxxx
 
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     ;
 
@@ -303,6 +346,7 @@ public enum SQLDialect {
     private final boolean             commercial;
     private final SQLDialect          family;
     private SQLDialect                predecessor;
+    private final ThirdParty          thirdParty;
 
     private SQLDialect(String name, boolean commercial) {
         this(name, commercial, null, null);
@@ -320,6 +364,8 @@ public enum SQLDialect {
 
         if (family != null)
             family.predecessor = this;
+
+        this.thirdParty = new ThirdParty();
     }
 
     /**
@@ -430,5 +476,100 @@ public enum SQLDialect {
      */
     public static final SQLDialect[] families() {
         return FAMILIES.clone();
+    }
+
+    /**
+     * Get access to third party representations of this {@link SQLDialect}.
+     */
+    public final ThirdParty thirdParty() {
+        return thirdParty;
+    }
+
+    /**
+     * Third party representations of the enclosing {@link SQLDialect}.
+     */
+    public final class ThirdParty {
+
+        /**
+         * The Spring DB name or <code>null</code>, if the db name is not
+         * supported by Spring.
+         * <p>
+         * The name returned by this method corresponds to the DB id as
+         * referenced in
+         * <code>org/springframework/jdbc/support/sql-error-codes.xml</code>
+         */
+        public final String springDbName() {
+            switch (SQLDialect.this.family) {
+
+
+
+
+
+
+
+
+
+                case DERBY:     return "Derby";
+                case H2:        return "H2";
+                case HSQLDB:    return "HSQL";
+                case MARIADB:
+                case MYSQL:     return "MySQL";
+                case POSTGRES:  return "PostgreSQL";
+
+                default:        return null;
+            }
+        }
+
+        /**
+         * The Hibernate dialect name or <code>null</code>, if the dialect is
+         * not supported by Hibernate.
+         * <p>
+         *
+         * @see <a href=
+         *      "http://docs.jboss.org/hibernate/orm/5.0/javadocs/org/hibernate/dialect/package-summary.html">
+         *      http://docs.jboss.org/hibernate/orm/5.0/javadocs/org/hibernate/
+         *      dialect/package-summary.html</a>
+         */
+        public final String hibernateDialect() {
+            switch (SQLDialect.this) {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                case CUBRID:        return "org.hibernate.dialect.CUBRIDDialect";
+                case DERBY:         return "org.hibernate.dialect.DerbyTenSevenDialect";
+                case FIREBIRD:      return "org.hibernate.dialect.FirebirdDialect";
+                case H2:            return "org.hibernate.dialect.H2Dialect";
+                case HSQLDB:        return "org.hibernate.dialect.HSQLDialect";
+                case MARIADB:
+                case MYSQL:         return "org.hibernate.dialect.MySQL5Dialect";
+                case POSTGRES_9_3:  return "org.hibernate.dialect.PostgreSQL92Dialect";
+                case POSTGRES_9_4:
+                case POSTGRES_9_5:
+                case POSTGRES:      return "org.hibernate.dialect.PostgreSQL94Dialect";
+                case SQLITE:        return null;
+
+                default:            return null;
+            }
+        }
     }
 }

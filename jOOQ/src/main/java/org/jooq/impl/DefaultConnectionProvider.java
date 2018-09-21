@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,7 +65,7 @@ public class DefaultConnectionProvider implements ConnectionProvider {
 
     private static final JooqLogger log = JooqLogger.getLogger(DefaultConnectionProvider.class);
     Connection                      connection;
-    private boolean                 finalize;
+    final boolean                   finalize;
 
     public DefaultConnectionProvider(Connection connection) {
         this(connection, false);

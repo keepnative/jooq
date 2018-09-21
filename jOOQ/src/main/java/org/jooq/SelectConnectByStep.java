@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -104,6 +104,35 @@ public interface SelectConnectByStep<R extends Record> extends SelectGroupByStep
 
     /**
      * Add an Oracle-specific <code>CONNECT BY</code> clause to the query
+     *
+     * @deprecated - 3.8.0 - [#4763] - Use {@link #connectBy(Condition)} or
+     *             {@link #connectBy(Field)} instead. Due to ambiguity between
+     *             calling this method using {@link Field#equals(Object)}
+     *             argument, vs. calling the other method via a
+     *             {@link Field#equal(Object)} argument, this method will be
+     *             removed in the future.
+     */
+    @Deprecated
+    @Support({ CUBRID })
+    SelectConnectByConditionStep<R> connectBy(Boolean condition);
+
+    /**
+     * Add an Oracle-specific <code>CONNECT BY</code> clause to the query
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#condition(SQL)
+     * @see SQL
+     */
+    @Support({ CUBRID })
+    @PlainSQL
+    SelectConnectByConditionStep<R> connectBy(SQL sql);
+
+    /**
+     * Add an Oracle-specific <code>CONNECT BY</code> clause to the query
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
      * guarantee syntax integrity. You may also create the possibility of
@@ -111,6 +140,7 @@ public interface SelectConnectByStep<R extends Record> extends SelectGroupByStep
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String)
+     * @see SQL
      */
     @Support({ CUBRID })
     @PlainSQL
@@ -125,6 +155,7 @@ public interface SelectConnectByStep<R extends Record> extends SelectGroupByStep
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String, Object...)
+     * @see SQL
      */
     @Support({ CUBRID })
     @PlainSQL
@@ -139,6 +170,7 @@ public interface SelectConnectByStep<R extends Record> extends SelectGroupByStep
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String, QueryPart...)
+     * @see SQL
      */
     @Support({ CUBRID })
     @PlainSQL
@@ -161,6 +193,37 @@ public interface SelectConnectByStep<R extends Record> extends SelectGroupByStep
     /**
      * Add an Oracle-specific <code>CONNECT BY NOCYCLE</code> clause to the
      * query
+     *
+     * @deprecated - 3.8.0 - [#4763] - Use {@link #connectByNoCycle(Condition)}
+     *             or {@link #connectByNoCycle(Field)} instead. Due to ambiguity
+     *             between calling this method using
+     *             {@link Field#equals(Object)} argument, vs. calling the other
+     *             method via a {@link Field#equal(Object)} argument, this
+     *             method will be removed in the future.
+     */
+    @Deprecated
+    @Support({ CUBRID })
+    SelectConnectByConditionStep<R> connectByNoCycle(Boolean condition);
+
+    /**
+     * Add an Oracle-specific <code>CONNECT BY NOCYCLE</code> clause to the
+     * query
+     * <p>
+     * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
+     * guarantee syntax integrity. You may also create the possibility of
+     * malicious SQL injection. Be sure to properly use bind variables and/or
+     * escape literals when concatenated into SQL clauses!
+     *
+     * @see DSL#condition(SQL)
+     * @see SQL
+     */
+    @Support({ CUBRID })
+    @PlainSQL
+    SelectConnectByConditionStep<R> connectByNoCycle(SQL sql);
+
+    /**
+     * Add an Oracle-specific <code>CONNECT BY NOCYCLE</code> clause to the
+     * query
      * <p>
      * <b>NOTE</b>: When inserting plain SQL into jOOQ objects, you must
      * guarantee syntax integrity. You may also create the possibility of
@@ -168,6 +231,7 @@ public interface SelectConnectByStep<R extends Record> extends SelectGroupByStep
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String)
+     * @see SQL
      */
     @Support({ CUBRID })
     @PlainSQL
@@ -183,6 +247,7 @@ public interface SelectConnectByStep<R extends Record> extends SelectGroupByStep
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String, Object...)
+     * @see SQL
      */
     @Support({ CUBRID })
     @PlainSQL
@@ -198,6 +263,7 @@ public interface SelectConnectByStep<R extends Record> extends SelectGroupByStep
      * escape literals when concatenated into SQL clauses!
      *
      * @see DSL#condition(String, QueryPart...)
+     * @see SQL
      */
     @Support({ CUBRID })
     @PlainSQL

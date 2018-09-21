@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -99,13 +99,13 @@ public interface DataType<T> extends Serializable {
      */
     DataType<T[]> getArrayDataType();
 
-    /* [pro] xx
-    xxx
-     x xxxxxxxx xxx xxxx xxxx xxx xx xxxxxxxxxxxx xxxxx xx xxxx xxxx xxxxx
-     xx
-    xx xxxxxxx xxxxxxxxxxxxxxx xxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxx
 
-    xx [/pro] */
+
+
+
+
+
+
     /**
      * Retrieve the data type for a given enum data type.
      */
@@ -345,6 +345,11 @@ public interface DataType<T> extends Serializable {
      * <li> {@link SQLDataType#DATE}</li>
      * <li> {@link SQLDataType#TIME}</li>
      * <li> {@link SQLDataType#TIMESTAMP}</li>
+     * <li> {@link SQLDataType#LOCALDATE}</li>
+     * <li> {@link SQLDataType#LOCALTIME}</li>
+     * <li> {@link SQLDataType#LOCALDATETIME}</li>
+     * <li> {@link SQLDataType#OFFSETTIME}</li>
+     * <li> {@link SQLDataType#OFFSETDATETIME}</li>
      * </ul>
      */
     boolean isDateTime();
@@ -357,6 +362,11 @@ public interface DataType<T> extends Serializable {
      * <li> {@link SQLDataType#DATE}</li>
      * <li> {@link SQLDataType#TIME}</li>
      * <li> {@link SQLDataType#TIMESTAMP}</li>
+     * <li> {@link SQLDataType#LOCALDATE}</li>
+     * <li> {@link SQLDataType#LOCALTIME}</li>
+     * <li> {@link SQLDataType#LOCALDATETIME}</li>
+     * <li> {@link SQLDataType#OFFSETTIME}</li>
+     * <li> {@link SQLDataType#OFFSETDATETIME}</li>
      * <li> {@link YearToMonth}</li>
      * <li> {@link DayToSecond}</li>
      * </ul>

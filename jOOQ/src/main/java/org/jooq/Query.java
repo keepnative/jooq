@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,7 +58,7 @@ import org.jooq.impl.DSL;
  *
  * @author Lukas Eder
  */
-public interface Query extends QueryPart, Attachable {
+public interface Query extends QueryPart, Attachable , AutoCloseable  {
 
     /**
      * Execute the query, if it has been created with a proper configuration.
@@ -282,6 +282,9 @@ public interface Query extends QueryPart, Attachable {
      * @throws DataAccessException If something went wrong closing the statement
      * @see Statement#close()
      */
+
+    @Override
+
     void close() throws DataAccessException;
 
     /**

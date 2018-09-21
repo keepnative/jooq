@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,8 +43,6 @@ package org.jooq.impl;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -56,6 +54,7 @@ import java.nio.charset.CharsetDecoder;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -75,7 +74,9 @@ import org.jooq.LoaderJSONOptionsStep;
 import org.jooq.LoaderJSONStep;
 import org.jooq.LoaderOptionsStep;
 import org.jooq.LoaderRowListener;
+import org.jooq.LoaderRowsStep;
 import org.jooq.LoaderXMLStep;
+import org.jooq.Record;
 import org.jooq.SelectQuery;
 import org.jooq.Table;
 import org.jooq.TableRecord;
@@ -95,6 +96,7 @@ class LoaderImpl<R extends TableRecord<R>> implements
 
     // Cascading interface implementations for Loader behaviour
     LoaderOptionsStep<R>,
+    LoaderRowsStep<R>,
     LoaderXMLStep<R>,
     LoaderCSVStep<R>,
     LoaderCSVOptionsStep<R>,
@@ -104,58 +106,60 @@ class LoaderImpl<R extends TableRecord<R>> implements
 
     // Configuration constants
     // -----------------------
-    private static final int        ON_DUPLICATE_KEY_ERROR  = 0;
-    private static final int        ON_DUPLICATE_KEY_IGNORE = 1;
-    private static final int        ON_DUPLICATE_KEY_UPDATE = 2;
+    private static final int ON_DUPLICATE_KEY_ERROR  = 0;
+    private static final int ON_DUPLICATE_KEY_IGNORE = 1;
+    private static final int ON_DUPLICATE_KEY_UPDATE = 2;
 
-    private static final int        ON_ERROR_ABORT          = 0;
-    private static final int        ON_ERROR_IGNORE         = 1;
+    private static final int ON_ERROR_ABORT  = 0;
+    private static final int ON_ERROR_IGNORE = 1;
 
-    private static final int        COMMIT_NONE             = 0;
-    private static final int        COMMIT_AFTER            = 1;
-    private static final int        COMMIT_ALL              = 2;
+    private static final int COMMIT_NONE  = 0;
+    private static final int COMMIT_AFTER = 1;
+    private static final int COMMIT_ALL   = 2;
 
-    private static final int        BATCH_NONE              = 0;
-    private static final int        BATCH_AFTER             = 1;
-    private static final int        BATCH_ALL               = 2;
+    private static final int BATCH_NONE  = 0;
+    private static final int BATCH_AFTER = 1;
+    private static final int BATCH_ALL   = 2;
 
-    private static final int        BULK_NONE               = 0;
-    private static final int        BULK_AFTER              = 1;
-    private static final int        BULK_ALL                = 2;
+    private static final int BULK_NONE  = 0;
+    private static final int BULK_AFTER = 1;
+    private static final int BULK_ALL   = 2;
 
-    private static final int        CONTENT_CSV             = 0;
-    private static final int        CONTENT_XML             = 1;
-    private static final int        CONTENT_JSON            = 2;
+    private static final int CONTENT_CSV    = 0;
+    private static final int CONTENT_XML    = 1;
+    private static final int CONTENT_JSON   = 2;
+    private static final int CONTENT_ARRAYS = 3;
 
     // Configuration data
     // ------------------
-    private final DSLContext        create;
-    private final Configuration     configuration;
-    private final Table<R>          table;
-    private int                     onDuplicate             = ON_DUPLICATE_KEY_ERROR;
-    private int                     onError                 = ON_ERROR_ABORT;
-    private int                     commit                  = COMMIT_NONE;
-    private int                     commitAfter             = 1;
-    private int                     batch                   = BATCH_NONE;
-    private int                     batchAfter              = 1;
-    private int                     bulk                    = BULK_NONE;
-    private int                     bulkAfter               = 1;
-    private int                     content                 = CONTENT_CSV;
-    private BufferedReader          data;
+    private final DSLContext             create;
+    private final Configuration          configuration;
+    private final Table<R>               table;
+    private int                          onDuplicate = ON_DUPLICATE_KEY_ERROR;
+    private int                          onError     = ON_ERROR_ABORT;
+    private int                          commit      = COMMIT_NONE;
+    private int                          commitAfter = 1;
+    private int                          batch       = BATCH_NONE;
+    private int                          batchAfter  = 1;
+    private int                          bulk        = BULK_NONE;
+    private int                          bulkAfter   = 1;
+    private int                          content     = CONTENT_CSV;
+    private final InputDelay           data        = new InputDelay();
+    private Iterator<? extends Object[]> arrays;
 
     // CSV configuration data
     // ----------------------
-    private int                     ignoreRows              = 1;
-    private char                    quote                   = CSVParser.DEFAULT_QUOTE_CHARACTER;
-    private char                    separator               = CSVParser.DEFAULT_SEPARATOR;
-    private String                  nullString              = null;
-    private Field<?>[]              fields;
-    private boolean[]               primaryKey;
+    private int        ignoreRows = 1;
+    private char       quote      = CSVParser.DEFAULT_QUOTE_CHARACTER;
+    private char       separator  = CSVParser.DEFAULT_SEPARATOR;
+    private String     nullString = null;
+    private Field<?>[] fields;
+    private boolean[]  primaryKey;
 
     // Result data
     // -----------
     private LoaderRowListener       listener;
-    private LoaderContext           result                  = new DefaultLoaderContext();
+    private LoaderContext           result = new DefaultLoaderContext();
     private int                     ignored;
     private int                     processed;
     private int                     stored;
@@ -276,23 +280,68 @@ class LoaderImpl<R extends TableRecord<R>> implements
     }
 
     @Override
-    public final LoaderImpl<R> loadCSV(File file) throws FileNotFoundException {
-        return loadCSV(new FileReader(file));
+    public final LoaderRowsStep<R> loadArrays(Object[]... a) {
+        return loadArrays(Arrays.asList(a));
     }
 
     @Override
-    public final LoaderImpl<R> loadCSV(File file, String charsetName) throws FileNotFoundException, UnsupportedEncodingException {
-        return loadCSV(new FileInputStream(file), charsetName);
+    public final LoaderRowsStep<R> loadArrays(Iterable<? extends Object[]> a) {
+        return loadArrays(a.iterator());
     }
 
     @Override
-    public final LoaderImpl<R> loadCSV(File file, Charset cs) throws FileNotFoundException {
-        return loadCSV(new FileInputStream(file), cs);
+    public final LoaderRowsStep<R> loadArrays(Iterator<? extends Object[]> a) {
+        content = CONTENT_ARRAYS;
+        this.arrays = a;
+        return this;
     }
 
     @Override
-    public final LoaderImpl<R> loadCSV(File file, CharsetDecoder dec) throws FileNotFoundException {
-        return loadCSV(new FileInputStream(file), dec);
+    public final LoaderRowsStep<R> loadRecords(Record... records) {
+        return loadRecords(Arrays.asList(records));
+    }
+
+    @Override
+    public final LoaderRowsStep<R> loadRecords(Iterable<? extends Record> records) {
+        return loadRecords(records.iterator());
+    }
+
+    @Override
+    public final LoaderRowsStep<R> loadRecords(Iterator<? extends Record> records) {
+        return loadArrays(new MappingIterator<Record, Object[]>(records, new MappingIterator.Function<Record, Object[]>() {
+            @Override
+            public final Object[] map(Record value) {
+                if (value == null)
+                    return null;
+
+                return value.intoArray();
+            }
+        }));
+    }
+
+    @Override
+    public final LoaderImpl<R> loadCSV(File file) {
+        content = CONTENT_CSV;
+        data.file = file;
+        return this;
+    }
+
+    @Override
+    public final LoaderImpl<R> loadCSV(File file, String charsetName) {
+        data.charsetName = charsetName;
+        return loadCSV(file);
+    }
+
+    @Override
+    public final LoaderImpl<R> loadCSV(File file, Charset cs) {
+        data.cs = cs;
+        return loadCSV(file);
+    }
+
+    @Override
+    public final LoaderImpl<R> loadCSV(File file, CharsetDecoder dec) {
+        data.dec = dec;
+        return loadCSV(file);
     }
 
     @Override
@@ -323,28 +372,33 @@ class LoaderImpl<R extends TableRecord<R>> implements
     @Override
     public final LoaderImpl<R> loadCSV(Reader reader) {
         content = CONTENT_CSV;
-        data = new BufferedReader(reader);
+        data.reader = new BufferedReader(reader);
         return this;
     }
 
     @Override
-    public final LoaderImpl<R> loadXML(File file) throws FileNotFoundException {
-        return loadXML(new FileReader(file));
+    public final LoaderImpl<R> loadXML(File file) {
+        content = CONTENT_XML;
+        data.file = file;
+        return this;
     }
 
     @Override
-    public final LoaderImpl<R> loadXML(File file, String charsetName) throws FileNotFoundException, UnsupportedEncodingException {
-        return loadXML(new FileInputStream(file), charsetName);
+    public final LoaderImpl<R> loadXML(File file, String charsetName) {
+        data.charsetName = charsetName;
+        return loadXML(file);
     }
 
     @Override
-    public final LoaderImpl<R> loadXML(File file, Charset cs) throws FileNotFoundException {
-        return loadXML(new FileInputStream(file), cs);
+    public final LoaderImpl<R> loadXML(File file, Charset cs) {
+        data.cs = cs;
+        return loadXML(file);
     }
 
     @Override
-    public final LoaderImpl<R> loadXML(File file, CharsetDecoder dec) throws FileNotFoundException {
-        return loadXML(new FileInputStream(file), dec);
+    public final LoaderImpl<R> loadXML(File file, CharsetDecoder dec) {
+        data.dec = dec;
+        return loadXML(file);
     }
 
     @Override
@@ -385,23 +439,28 @@ class LoaderImpl<R extends TableRecord<R>> implements
     }
 
     @Override
-    public final LoaderImpl<R> loadJSON(File file) throws FileNotFoundException {
-        return loadJSON(new FileReader(file));
+    public final LoaderImpl<R> loadJSON(File file) {
+        content = CONTENT_JSON;
+        data.file = file;
+        return this;
     }
 
     @Override
-    public final LoaderImpl<R> loadJSON(File file, String charsetName) throws FileNotFoundException, UnsupportedEncodingException {
-        return loadJSON(new FileInputStream(file), charsetName);
+    public final LoaderImpl<R> loadJSON(File file, String charsetName) {
+        data.charsetName = charsetName;
+        return loadJSON(file);
     }
 
     @Override
-    public final LoaderImpl<R> loadJSON(File file, Charset cs) throws FileNotFoundException {
-        return loadJSON(new FileInputStream(file), cs);
+    public final LoaderImpl<R> loadJSON(File file, Charset cs) {
+        data.cs = cs;
+        return loadJSON(file);
     }
 
     @Override
-    public final LoaderImpl<R> loadJSON(File file, CharsetDecoder dec) throws FileNotFoundException {
-        return loadJSON(new FileInputStream(file), dec);
+    public final LoaderImpl<R> loadJSON(File file, CharsetDecoder dec) {
+        data.dec = dec;
+        return loadJSON(file);
     }
 
     @Override
@@ -432,7 +491,7 @@ class LoaderImpl<R extends TableRecord<R>> implements
     @Override
     public final LoaderImpl<R> loadJSON(Reader reader) {
         content = CONTENT_JSON;
-        data = new BufferedReader(reader);
+        data.reader = new BufferedReader(reader);
         return this;
     }
 
@@ -520,6 +579,9 @@ class LoaderImpl<R extends TableRecord<R>> implements
         else if (content == CONTENT_JSON) {
             executeJSON();
         }
+        else if (content == CONTENT_ARRAYS) {
+            executeRows();
+        }
         else {
             throw new IllegalStateException();
         }
@@ -536,9 +598,10 @@ class LoaderImpl<R extends TableRecord<R>> implements
     }
 
     private void executeJSON() throws IOException {
-        JSONReader reader = new JSONReader(data);
+        JSONReader reader = null;
 
         try {
+            reader = new JSONReader(data.reader());
 
             // The current json format is not designed for streaming. Thats why
             // all records are loaded at once.
@@ -549,37 +612,52 @@ class LoaderImpl<R extends TableRecord<R>> implements
         // SQLExceptions originating from rollbacks or commits are always fatal
         // They are propagated, and not swallowed
         catch (SQLException e) {
-            throw Utils.translate(null, e);
+            throw Tools.translate(null, e);
         }
         finally {
-            reader.close();
+            if (reader != null)
+                reader.close();
         }
     }
 
     private final void executeCSV() throws IOException {
-        CSVReader reader = new CSVReader(data, separator, quote, ignoreRows);
+        CSVReader reader = null;
 
         try {
+            reader = new CSVReader(data.reader(), separator, quote, ignoreRows);
             executeSQL(reader);
         }
 
         // SQLExceptions originating from rollbacks or commits are always fatal
         // They are propagated, and not swallowed
         catch (SQLException e) {
-            throw Utils.translate(null, e);
+            throw Tools.translate(null, e);
         }
         finally {
-            reader.close();
+            if (reader != null)
+                reader.close();
         }
     }
 
-    private void executeSQL(Iterator<String[]> reader) throws SQLException {
-        String[] row = null;
+    private void executeRows() {
+        try {
+            executeSQL(arrays);
+        }
+
+        // SQLExceptions originating from rollbacks or commits are always fatal
+        // They are propagated, and not swallowed
+        catch (SQLException e) {
+            throw Tools.translate(null, e);
+        }
+    }
+
+    private void executeSQL(Iterator<? extends Object[]> iterator) throws SQLException {
+        Object[] row = null;
         BatchBindStep bind = null;
         InsertQuery<R> insert = null;
 
         execution: {
-            rows: while (reader.hasNext() && ((row = reader.next()) != null)) {
+            rows: while (iterator.hasNext() && ((row = iterator.next()) != null)) {
                 try {
 
                     // [#1627] Handle NULL values
@@ -760,21 +838,21 @@ class LoaderImpl<R extends TableRecord<R>> implements
     /**
      * Type-safety...
      */
-    private <T> void addValue0(InsertQuery<R> insert, Field<T> field, String row) {
+    private <T> void addValue0(InsertQuery<R> insert, Field<T> field, Object row) {
         insert.addValue(field, field.getDataType().convert(row));
     }
 
     /**
      * Type-safety...
      */
-    private <T> void addValueForUpdate0(InsertQuery<R> insert, Field<T> field, String row) {
+    private <T> void addValueForUpdate0(InsertQuery<R> insert, Field<T> field, Object row) {
         insert.addValueForUpdate(field, field.getDataType().convert(row));
     }
 
     /**
      * Get a type-safe condition
      */
-    private <T> Condition getCondition(Field<T> field, String string) {
+    private <T> Condition getCondition(Field<T> field, Object string) {
         return field.equal(field.getDataType().convert(string));
     }
 
@@ -836,6 +914,50 @@ class LoaderImpl<R extends TableRecord<R>> implements
         @Override
         public final int stored() {
             return stored;
+        }
+    }
+
+    /**
+     * An "input delay" type.
+     * <p>
+     * [#4593] To make sure we do not spill file handles due to improper
+     * resource shutdown (e.g. when a loader is created but never executed),
+     * this type helps delaying creating resources from input until the input is
+     * really needed.
+     */
+    private class InputDelay {
+
+        // Either, we already have an external Reader resource, in case of which
+        // client code is responsible for resource management...
+        BufferedReader reader;
+
+        // ... or we create the resource explicitly as late as possible
+        File           file;
+        String         charsetName;
+        Charset        cs;
+        CharsetDecoder dec;
+
+        BufferedReader reader() throws IOException {
+            if (reader != null)
+                return reader;
+
+            if (file != null) {
+                try {
+                    if (charsetName != null)
+                        return new BufferedReader(new InputStreamReader(new FileInputStream(file), charsetName));
+                    else if (cs != null)
+                        return new BufferedReader(new InputStreamReader(new FileInputStream(file), cs));
+                    else if (dec != null)
+                        return new BufferedReader(new InputStreamReader(new FileInputStream(file), dec));
+                    else
+                        return new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+                }
+                catch (Exception e) {
+                    throw new IOException(e);
+                }
+            }
+
+            return null;
         }
     }
 }

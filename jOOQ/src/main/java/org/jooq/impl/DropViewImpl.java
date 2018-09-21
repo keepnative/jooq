@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +45,6 @@ import static org.jooq.Clause.DROP_VIEW;
 import static org.jooq.Clause.DROP_VIEW_TABLE;
 // ...
 // ...
-import static org.jooq.SQLDialect.CUBRID;
 // ...
 import static org.jooq.SQLDialect.DERBY;
 import static org.jooq.SQLDialect.FIREBIRD;
@@ -94,15 +93,15 @@ class DropViewImpl extends AbstractQuery implements
     // ------------------------------------------------------------------------
 
     private final boolean supportsIfExists(Context<?> ctx) {
-        return !asList(CUBRID, DERBY, FIREBIRD).contains(ctx.family());
+        return !asList(DERBY, FIREBIRD).contains(ctx.family());
     }
 
     @Override
     public final void accept(Context<?> ctx) {
         if (ifExists && !supportsIfExists(ctx)) {
-            Utils.executeImmediateBegin(ctx, VIEW);
+            Tools.executeImmediateBegin(ctx, VIEW);
             accept0(ctx);
-            Utils.executeImmediateEnd(ctx, VIEW);
+            Tools.executeImmediateEnd(ctx, VIEW);
         }
         else {
             accept0(ctx);

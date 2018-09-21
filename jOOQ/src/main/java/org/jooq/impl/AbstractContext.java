@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,8 +40,13 @@
  */
 package org.jooq.impl;
 
+import static java.util.Arrays.asList;
+// ...
+// ...
+// ...
+// ...
 import static org.jooq.conf.ParamType.INDEXED;
-import static org.jooq.impl.Utils.DATA_OMIT_CLAUSE_EVENT_EMISSION;
+import static org.jooq.impl.Tools.DataKey.DATA_OMIT_CLAUSE_EVENT_EMISSION;
 
 import java.sql.PreparedStatement;
 import java.util.ArrayDeque;
@@ -92,21 +97,38 @@ abstract class AbstractContext<C extends Context<C>> extends AbstractScope imple
 
     AbstractContext(Configuration configuration, PreparedStatement stmt) {
         super(configuration);
-
         this.stmt = stmt;
-        this.visitClauses = new ArrayDeque<Clause>();
 
         VisitListenerProvider[] providers = configuration.visitListenerProviders();
+        boolean userInternalVisitListener =
+            false
 
-        this.visitListeners = new VisitListener[providers.length + 1];
-        this.visitContext = new DefaultVisitContext();
-        this.visitParts = new ArrayDeque<QueryPart>();
 
-        for (int i = 0; i < providers.length; i++) {
+
+
+
+            ;
+
+        this.visitListeners = new VisitListener[providers.length + (userInternalVisitListener ? 1 : 0)];
+
+        for (int i = 0; i < providers.length; i++)
             this.visitListeners[i] = providers[i].provide();
-        }
 
-        this.visitListeners[providers.length] = new InternalVisitListener();
+
+
+
+
+
+        if (this.visitListeners.length > 0) {
+            this.visitContext = new DefaultVisitContext();
+            this.visitParts = new ArrayDeque<QueryPart>();
+            this.visitClauses = new ArrayDeque<Clause>();
+        }
+        else {
+            this.visitContext = null;
+            this.visitParts = null;
+            this.visitClauses = null;
+        }
     }
 
     // ------------------------------------------------------------------------
@@ -172,12 +194,11 @@ abstract class AbstractContext<C extends Context<C>> extends AbstractScope imple
 
     @Override
     public final C start(Clause clause) {
-        if (clause != null) {
+        if (clause != null && visitClauses != null) {
             visitClauses.addLast(clause);
 
-            for (VisitListener listener : visitListeners) {
+            for (VisitListener listener : visitListeners)
                 listener.clauseStart(visitContext);
-            }
         }
 
         return (C) this;
@@ -185,10 +206,9 @@ abstract class AbstractContext<C extends Context<C>> extends AbstractScope imple
 
     @Override
     public final C end(Clause clause) {
-        if (clause != null) {
-            for (VisitListener listener : visitListeners) {
+        if (clause != null && visitClauses != null) {
+            for (VisitListener listener : visitListeners)
                 listener.clauseEnd(visitContext);
-            }
 
             if (visitClauses.removeLast() != clause)
                 throw new IllegalStateException("Mismatch between visited clauses!");
@@ -198,22 +218,27 @@ abstract class AbstractContext<C extends Context<C>> extends AbstractScope imple
     }
 
     private final QueryPart start(QueryPart part) {
-        visitParts.addLast(part);
+        if (visitParts != null) {
+            visitParts.addLast(part);
 
-        for (VisitListener listener : visitListeners) {
-            listener.visitStart(visitContext);
+            for (VisitListener listener : visitListeners)
+                listener.visitStart(visitContext);
+
+            return visitParts.peekLast();
         }
-
-        return visitParts.peekLast();
+        else {
+            return part;
+        }
     }
 
     private final void end(QueryPart part) {
-        for (VisitListener listener : visitListeners) {
-            listener.visitEnd(visitContext);
-        }
+        if (visitParts != null) {
+            for (VisitListener listener : visitListeners)
+                listener.visitEnd(visitContext);
 
-        if (visitParts.removeLast() != part)
-            throw new RuntimeException("Mismatch between visited query parts");
+            if (visitParts.removeLast() != part)
+                throw new RuntimeException("Mismatch between visited query parts");
+        }
     }
 
     /**
@@ -244,12 +269,12 @@ abstract class AbstractContext<C extends Context<C>> extends AbstractScope imple
 
         @Override
         public final Settings settings() {
-            return Utils.settings(configuration());
+            return Tools.settings(configuration());
         }
 
         @Override
         public final SQLDialect dialect() {
-            return Utils.configuration(configuration()).dialect();
+            return Tools.configuration(configuration()).dialect();
         }
 
         @Override
@@ -346,6 +371,14 @@ abstract class AbstractContext<C extends Context<C>> extends AbstractScope imple
                 declareCTE(false);
                 visit0(internal);
                 declareCTE(true);
+            }
+
+            else if (castMode() != CastMode.DEFAULT && !internal.generatesCast()) {
+                CastMode previous = castMode();
+
+                castMode(CastMode.DEFAULT);
+                visit0(internal);
+                castMode(previous);
             }
 
             // We're not declaring, or "part" can declare

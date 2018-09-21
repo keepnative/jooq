@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,6 +62,9 @@ class UniqueKeyImpl<R extends Record> extends AbstractKey<R> implements UniqueKe
     private static final long   serialVersionUID = 162853300137140844L;
 
     final List<ForeignKey<?, R>> references;
+
+
+    @SafeVarargs
 
     UniqueKeyImpl(Table<R> table, TableField<R, ?>... fields) {
         super(table, fields);

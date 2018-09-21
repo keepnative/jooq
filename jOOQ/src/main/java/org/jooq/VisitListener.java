@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -82,11 +82,17 @@ import java.util.EventListener;
  * <p>
  * Whatever is not a {@link Clause} in the above example is a {@link QueryPart}.
  * <p>
- * Note: [#2694] [#2695] As of jOOQ 3.2, {@link VisitListener} receive events
- * only in the context of a {@link RenderContext}, not of a {@link BindContext}.
+ * <h3>A remark about performance</h3>
  * <p>
- * <h3>Disclaimer</h3> This SPI is still <strong>experimental</strong>! Some SPI
- * elements and/or behavioural elements may change in future minor releases.
+ * Implementors of this SPI should be wary of performance implications of their
+ * implementations. The below methods are called for every AST element of every
+ * query, which produces a lot of calls throughout an application. What would
+ * otherwise be premature optimisations may have great effect inside the
+ * <code>VisitListener</code>. For more details, please refer to this article:
+ * <a href=
+ * "http://blog.jooq.org/2015/02/05/top-10-easy-performance-optimisations-in-java/">
+ * http://blog.jooq.org/2015/02/05/top-10-easy-performance-optimisations-in-
+ * java/</a>.
  *
  * @author Lukas Eder
  */

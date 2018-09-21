@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,11 +54,22 @@ class LoaderErrorImpl implements LoaderError {
     private final String[]            row;
     private final Query               query;
 
-    LoaderErrorImpl(DataAccessException exception, String[] row, int rowIndex, Query query) {
+    LoaderErrorImpl(DataAccessException exception, Object[] row, int rowIndex, Query query) {
         this.exception = exception;
-        this.row = row;
+        this.row = strings(row);
         this.rowIndex = rowIndex;
         this.query = query;
+    }
+
+    private static String[] strings(Object[] row) {
+        if (row == null)
+            return null;
+
+        String[] result = new String[row.length];
+        for (int i = 0; i < result.length; i++)
+            result[i] = row[i] == null ? null : row[i].toString();
+
+        return result;
     }
 
     @Override

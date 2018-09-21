@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -113,6 +113,27 @@ public interface Result<R extends Record> extends List<R>, Attachable {
     /**
      * Get a specific field from this Result.
      *
+     * @see Row#field(Name)
+     */
+    Field<?> field(Name name);
+
+    /**
+     * Get a specific field from this Result, coerced to <code>type</code>.
+     *
+     * @see Row#field(Name, Class)
+     */
+    <T> Field<T> field(Name name, Class<T> type);
+
+    /**
+     * Get a specific field from this Result, coerced to <code>dataType</code>.
+     *
+     * @see Row#field(Name, DataType)
+     */
+    <T> Field<T> field(Name name, DataType<T> dataType);
+
+    /**
+     * Get a specific field from this Result.
+     *
      * @see Row#field(int)
      */
     Field<?> field(int index);
@@ -137,6 +158,38 @@ public interface Result<R extends Record> extends List<R>, Attachable {
      * @see Row#fields()
      */
     Field<?>[] fields();
+
+    /**
+     * Get all fields from this Result, providing some fields.
+     *
+     * @return All available fields
+     * @see Row#fields(Field...)
+     */
+    Field<?>[] fields(Field<?>... fields);
+
+    /**
+     * Get all fields from this Result, providing some field names.
+     *
+     * @return All available fields
+     * @see Row#fields(String...)
+     */
+    Field<?>[] fields(String... fieldNames);
+
+    /**
+     * Get all fields from this Result, providing some field names.
+     *
+     * @return All available fields
+     * @see Row#fields(Name...)
+     */
+    Field<?>[] fields(Name... fieldNames);
+
+    /**
+     * Get all fields from this Result, providing some field indexes.
+     *
+     * @return All available fields
+     * @see Row#fields(int...)
+     */
+    Field<?>[] fields(int... fieldIndexes);
 
     /**
      * Convenience method to fetch a value at a given position in the result.
@@ -358,6 +411,50 @@ public interface Result<R extends Record> extends List<R>, Attachable {
         DataTypeException;
 
     /**
+     * Convenience method to fetch all values for a given field. This is
+     * especially useful, when selecting only a single field.
+     *
+     * @param fieldName The values' field name
+     * @return The values
+     * @throws IllegalArgumentException If the argument fieldName is not
+     *             contained in {@link #fieldsRow()}
+     */
+    List<?> getValues(Name fieldName) throws IllegalArgumentException;
+
+    /**
+     * Convenience method to fetch all values for a given field. This is
+     * especially useful, when selecting only a single field.
+     *
+     * @param fieldName The values' field name
+     * @param type The type used for type conversion
+     * @return The values
+     * @see Record#getValue(Name, Class)
+     * @see Convert#convert(Object, Class)
+     * @throws IllegalArgumentException If the argument fieldName is not
+     *             contained in {@link #fieldsRow()}
+     * @throws DataTypeException wrapping any data type conversion exception
+     *             that might have occurred
+     */
+    <T> List<T> getValues(Name fieldName, Class<? extends T> type) throws IllegalArgumentException, DataTypeException;
+
+    /**
+     * Convenience method to fetch all values for a given field. This is
+     * especially useful, when selecting only a single field.
+     *
+     * @param fieldName The values' field name
+     * @param converter The data type converter used for type conversion
+     * @return The values
+     * @see Record#getValue(Name, Converter)
+     * @see Convert#convert(Object, Converter)
+     * @throws IllegalArgumentException If the argument fieldName is not
+     *             contained in {@link #fieldsRow()}
+     * @throws DataTypeException wrapping any data type conversion exception
+     *             that might have occurred
+     */
+    <U> List<U> getValues(Name fieldName, Converter<?, U> converter) throws IllegalArgumentException,
+        DataTypeException;
+
+    /**
      * Whether there are any records contained in this <code>Result</code>.
      */
     @Override
@@ -425,7 +522,7 @@ public interface Result<R extends Record> extends List<R>, Attachable {
     /**
      * Get a simple formatted representation of this result as CSV.
      * <p>
-     * This is the same as calling <code>formatCSV(',', "")</code>
+     * This is the same as calling <code>formatCSV(true, ',', "")</code>
      *
      * @return The formatted result
      */
@@ -434,7 +531,7 @@ public interface Result<R extends Record> extends List<R>, Attachable {
     /**
      * Get a simple formatted representation of this result as CSV.
      * <p>
-     * This is the same as calling <code>formatCSV(delimiter, "")</code>
+     * This is the same as calling <code>formatCSV(true, delimiter, "")</code>
      *
      * @param delimiter The delimiter to use between records
      * @return The formatted result
@@ -443,12 +540,45 @@ public interface Result<R extends Record> extends List<R>, Attachable {
 
     /**
      * Get a simple formatted representation of this result as CSV.
+     * <p>
+     * This is the same as calling <code>formatCSV(true, delimiter, nullString)</code>
      *
      * @param delimiter The delimiter to use between records
      * @param nullString A special string for encoding <code>NULL</code> values.
      * @return The formatted result
      */
     String formatCSV(char delimiter, String nullString);
+
+    /**
+     * Get a simple formatted representation of this result as CSV.
+     * <p>
+     * This is the same as calling <code>formatCSV(',', "")</code>
+     *
+     * @param header Whether to emit a CSV header line
+     * @return The formatted result
+     */
+    String formatCSV(boolean header);
+
+    /**
+     * Get a simple formatted representation of this result as CSV.
+     * <p>
+     * This is the same as calling <code>formatCSV(delimiter, "")</code>
+     *
+     * @param header Whether to emit a CSV header line
+     * @param delimiter The delimiter to use between records
+     * @return The formatted result
+     */
+    String formatCSV(boolean header, char delimiter);
+
+    /**
+     * Get a simple formatted representation of this result as CSV.
+     *
+     * @param header Whether to emit a CSV header line
+     * @param delimiter The delimiter to use between records
+     * @param nullString A special string for encoding <code>NULL</code> values.
+     * @return The formatted result
+     */
+    String formatCSV(boolean header, char delimiter, String nullString);
 
     /**
      * Get a simple formatted representation of this result as a JSON array of
@@ -537,6 +667,27 @@ public interface Result<R extends Record> extends List<R>, Attachable {
     void formatCSV(OutputStream stream, char delimiter, String nullString) throws IOException;
 
     /**
+     * Like {@link #formatCSV(boolean)}, but the data is output onto an {@link OutputStream}.
+     *
+     * @throws IOException - an unchecked wrapper for {@link java.io.IOException}, if anything goes wrong.
+     */
+    void formatCSV(OutputStream stream, boolean header) throws IOException;
+
+    /**
+     * Like {@link #formatCSV(boolean, char)}, but the data is output onto an {@link OutputStream}.
+     *
+     * @throws IOException - an unchecked wrapper for {@link java.io.IOException}, if anything goes wrong.
+     */
+    void formatCSV(OutputStream stream, boolean header, char delimiter) throws IOException;
+
+    /**
+     * Like {@link #formatCSV(boolean, char, String)}, but the data is output onto an {@link OutputStream}.
+     *
+     * @throws IOException - an unchecked wrapper for {@link java.io.IOException}, if anything goes wrong.
+     */
+    void formatCSV(OutputStream stream, boolean header, char delimiter, String nullString) throws IOException;
+
+    /**
      * Like {@link #formatJSON()}, but the data is output onto an {@link OutputStream}.
      *
      * @throws IOException - an unchecked wrapper for {@link java.io.IOException}, if anything goes wrong.
@@ -605,6 +756,27 @@ public interface Result<R extends Record> extends List<R>, Attachable {
      * @throws IOException - an unchecked wrapper for {@link java.io.IOException}, if anything goes wrong.
      */
     void formatCSV(Writer writer, char delimiter, String nullString) throws IOException;
+
+    /**
+     * Like {@link #formatCSV(boolean)}, but the data is output onto a {@link Writer}.
+     *
+     * @throws IOException - an unchecked wrapper for {@link java.io.IOException}, if anything goes wrong.
+     */
+    void formatCSV(Writer writer, boolean header) throws IOException;
+
+    /**
+     * Like {@link #formatCSV(boolean, char)}, but the data is output onto a {@link Writer}.
+     *
+     * @throws IOException - an unchecked wrapper for {@link java.io.IOException}, if anything goes wrong.
+     */
+    void formatCSV(Writer writer, boolean header, char delimiter) throws IOException;
+
+    /**
+     * Like {@link #formatCSV(boolean, char, String)}, but the data is output onto a {@link Writer}.
+     *
+     * @throws IOException - an unchecked wrapper for {@link java.io.IOException}, if anything goes wrong.
+     */
+    void formatCSV(Writer writer, boolean header, char delimiter, String nullString) throws IOException;
 
     /**
      * Like {@link #formatJSON()}, but the data is output onto a {@link Writer}.
@@ -718,6 +890,24 @@ public interface Result<R extends Record> extends List<R>, Attachable {
     Map<?, R> intoMap(String keyFieldName) throws IllegalArgumentException, InvalidResultException;
 
     /**
+     * Return a {@link Map} with one of the result's columns as key and the
+     * corresponding records as value.
+     * <p>
+     * An {@link InvalidResultException} is thrown, if the key turns out to be
+     * non-unique in the result set. Use {@link #intoGroups(Name)} instead, if
+     * your keys are non-unique
+     *
+     * @param keyFieldName The key field name. Client code must assure that this
+     *            field is unique in the result set.
+     * @return A Map containing the results
+     * @throws IllegalArgumentException If the argument keyFieldName is not
+     *             contained in {@link #fieldsRow()}
+     * @throws InvalidResultException if the key field returned two or more
+     *             equal values from the result set.
+     */
+    Map<?, R> intoMap(Name keyFieldName) throws IllegalArgumentException, InvalidResultException;
+
+    /**
      * Return a {@link Map} with one of the result's columns as key and another
      * one of the result's columns as value
      * <p>
@@ -776,6 +966,26 @@ public interface Result<R extends Record> extends List<R>, Attachable {
      *             equal values from the result set.
      */
     Map<?, ?> intoMap(String keyFieldName, String valueFieldName) throws IllegalArgumentException,
+        InvalidResultException;
+
+    /**
+     * Return a {@link Map} with one of the result's columns as key and another
+     * one of the result's columns as value
+     * <p>
+     * An {@link InvalidResultException} is thrown, if the key turns out to be
+     * non-unique in the result set. Use {@link #intoGroups(Name, Name)}
+     * instead, if your keys are non-unique
+     *
+     * @param key The key field name. Client code must assure that this field is
+     *            unique in the result set.
+     * @param value The value field name
+     * @return A Map containing the results
+     * @throws IllegalArgumentException If any of the argument field names is
+     *             not contained in {@link #fieldsRow()}
+     * @throws InvalidResultException if the key field returned two or more
+     *             equal values from the result set.
+     */
+    Map<?, ?> intoMap(Name keyFieldName, Name valueFieldName) throws IllegalArgumentException,
         InvalidResultException;
 
     /**
@@ -848,6 +1058,29 @@ public interface Result<R extends Record> extends List<R>, Attachable {
         InvalidResultException, MappingException;
 
     /**
+     * Return a {@link Map} with results grouped by the given key and mapped
+     * into the given entity type.
+     * <p>
+     * An {@link InvalidResultException} is thrown, if the key is non-unique in
+     * the result set. Use {@link #intoGroups(Name, Class)} instead, if your
+     * key is non-unique.
+     *
+     * @param keyFieldName The key. Client code must assure that key is unique
+     *            in the result set.
+     * @param type The entity type.
+     * @return A Map containing the result.
+     * @throws IllegalArgumentException If the argument field name is not
+     *             contained in {@link #fieldsRow()}
+     * @throws InvalidResultException if the key is non-unique in the result
+     *             set.
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @see DefaultRecordMapper
+     */
+    <E> Map<?, E> intoMap(Name keyFieldName, Class<? extends E> type) throws IllegalArgumentException,
+        InvalidResultException, MappingException;
+
+    /**
      * Return a {@link Map} with results grouped by the given key and mapped by
      * the given mapper.
      * <p>
@@ -917,6 +1150,29 @@ public interface Result<R extends Record> extends List<R>, Attachable {
         InvalidResultException, MappingException;
 
     /**
+     * Return a {@link Map} with results grouped by the given key and mapped by
+     * the given mapper.
+     * <p>
+     * An {@link InvalidResultException} is thrown, if the key is non-unique in
+     * the result set. Use {@link #intoGroups(Name, Class)} instead, if your key
+     * is non-unique.
+     *
+     * @param keyFieldName The key. Client code must assure that key is unique
+     *            in the result set.
+     * @param mapper The mapper callback.
+     * @return A Map containing the result.
+     * @throws IllegalArgumentException If the argument field name is not
+     *             contained in {@link #fieldsRow()}
+     * @throws InvalidResultException if the key is non-unique in the result
+     *             set.
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @see DefaultRecordMapper
+     */
+    <E> Map<?, E> intoMap(Name keyFieldName, RecordMapper<? super R, E> mapper) throws IllegalArgumentException,
+        InvalidResultException, MappingException;
+
+    /**
      * Return a {@link Map} with the given keys as a map key and the
      * corresponding record as value.
      * <p>
@@ -972,6 +1228,25 @@ public interface Result<R extends Record> extends List<R>, Attachable {
      *             set.
      */
     Map<Record, R> intoMap(String[] keyFieldNames) throws IllegalArgumentException, InvalidResultException;
+
+    /**
+     * Return a {@link Map} with the given keys as a map key and the
+     * corresponding record as value.
+     * <p>
+     * An {@link InvalidResultException} is thrown, if the keys are non-unique
+     * in the result set. Use {@link #intoGroups(Name[])} instead, if your
+     * keys are non-unique.
+     *
+     * @param keyFieldNames The keys. Client code must assure that keys are
+     *            unique in the result set. If this is <code>null</code> or an
+     *            empty array, the resulting map will contain at most one entry.
+     * @return A Map containing the results.
+     * @throws IllegalArgumentException If any of the argument field names is
+     *             not contained in {@link #fieldsRow()}
+     * @throws InvalidResultException if the keys are non-unique in the result
+     *             set.
+     */
+    Map<Record, R> intoMap(Name[] keyFieldNames) throws IllegalArgumentException, InvalidResultException;
 
     /**
      * Return a {@link Map} with results grouped by the given keys and mapped
@@ -1046,6 +1321,30 @@ public interface Result<R extends Record> extends List<R>, Attachable {
         InvalidResultException, MappingException;
 
     /**
+     * Return a {@link Map} with results grouped by the given keys and mapped
+     * into the given entity type.
+     * <p>
+     * An {@link InvalidResultException} is thrown, if the keys are non-unique
+     * in the result set. Use {@link #intoGroups(Name[], Class)} instead, if your
+     * keys are non-unique.
+     *
+     * @param keyFieldNames The keys. Client code must assure that keys are
+     *            unique in the result set. If this is <code>null</code> or an
+     *            empty array, the resulting map will contain at most one entry.
+     * @param type The entity type.
+     * @return A Map containing the results.
+     * @throws IllegalArgumentException If any of the argument field names is
+     *             not contained in {@link #fieldsRow()}
+     * @throws InvalidResultException if the keys are non-unique in the result
+     *             set.
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @see DefaultRecordMapper
+     */
+    <E> Map<List<?>, E> intoMap(Name[] keyFieldNames, Class<? extends E> type) throws IllegalArgumentException,
+        InvalidResultException, MappingException;
+
+    /**
      * Return a {@link Map} with results grouped by the given keys and mapped by
      * the given mapper.
      * <p>
@@ -1116,6 +1415,172 @@ public interface Result<R extends Record> extends List<R>, Attachable {
      */
     <E> Map<List<?>, E> intoMap(String[] keyFieldNames, RecordMapper<? super R, E> mapper) throws IllegalArgumentException,
         InvalidResultException, MappingException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given keys and mapped by
+     * the given mapper.
+     * <p>
+     * An {@link InvalidResultException} is thrown, if the keys are non-unique
+     * in the result set. Use {@link #intoGroups(Name[], Class)} instead, if
+     * your keys are non-unique.
+     *
+     * @param keyFieldNames The keys. Client code must assure that keys are
+     *            unique in the result set. If this is <code>null</code> or an
+     *            empty array, the resulting map will contain at most one entry.
+     * @param mapper The mapper callback.
+     * @return A Map containing the results.
+     * @throws IllegalArgumentException If any of the argument field names is
+     *             not contained in {@link #fieldsRow()}
+     * @throws InvalidResultException if the keys are non-unique in the result
+     *             set.
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @see DefaultRecordMapper
+     */
+    <E> Map<List<?>, E> intoMap(Name[] keyFieldNames, RecordMapper<? super R, E> mapper) throws IllegalArgumentException,
+        InvalidResultException, MappingException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given key entity.
+     * <p>
+     * The grouping semantics is governed by the key type's
+     * {@link Object#equals(Object)} and {@link Object#hashCode()}
+     * implementation, not necessarily the values as fetched from the database.
+     * <p>
+     * An {@link InvalidResultException} is thrown, if the keys are non-unique
+     * in the result set. Use {@link #intoGroups(Class)} instead, if your keys
+     * are non-unique.
+     *
+     * @param keyType The key type. If this is <code>null</code>, the resulting
+     *            map will contain at most one entry.
+     * @return A Map containing grouped results
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @throws InvalidResultException if the keys are non-unique in the result
+     *             set.
+     * @see DefaultRecordMapper
+     */
+    <K> Map<K, R> intoMap(Class<? extends K> keyType) throws MappingException, InvalidResultException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given key entity and
+     * mapped into the given entity type.
+     * <p>
+     * The grouping semantics is governed by the key type's
+     * {@link Object#equals(Object)} and {@link Object#hashCode()}
+     * implementation, not necessarily the values as fetched from the database.
+     * <p>
+     * An {@link InvalidResultException} is thrown, if the keys are non-unique
+     * in the result set. Use {@link #intoGroups(Class, Class)} instead, if your
+     * keys are non-unique.
+     *
+     * @param keyType The key type. If this is <code>null</code>, the resulting
+     *            map will contain at most one entry.
+     * @param valueType The value type.
+     * @return A Map containing grouped results
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @throws InvalidResultException if the keys are non-unique in the result
+     *             set.
+     * @see DefaultRecordMapper
+     */
+    <K, V> Map<K, V> intoMap(Class<? extends K> keyType, Class<? extends V> valueType)
+        throws MappingException, InvalidResultException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given key entity and
+     * mapped into the given entity type.
+     * <p>
+     * The grouping semantics is governed by the key type's
+     * {@link Object#equals(Object)} and {@link Object#hashCode()}
+     * implementation, not necessarily the values as fetched from the database.
+     * <p>
+     * An {@link InvalidResultException} is thrown, if the keys are non-unique
+     * in the result set. Use {@link #intoGroups(Class, RecordMapper)} instead,
+     * if your keys are non-unique.
+     *
+     * @param keyType The key type. If this is <code>null</code>, the resulting
+     *            map will contain at most one entry.
+     * @param valueMapper The value mapper.
+     * @return A Map containing grouped results
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @throws InvalidResultException if the keys are non-unique in the result
+     *             set.
+     * @see DefaultRecordMapper
+     */
+    <K, V> Map<K, V> intoMap(Class<? extends K> keyType, RecordMapper<? super R, V> valueMapper)
+        throws InvalidResultException, MappingException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given key entity and
+     * mapped into the given entity type.
+     * <p>
+     * The grouping semantics is governed by the key type's
+     * {@link Object#equals(Object)} and {@link Object#hashCode()}
+     * implementation, not necessarily the values as fetched from the database.
+     * <p>
+     * An {@link InvalidResultException} is thrown, if the keys are non-unique
+     * in the result set. Use {@link #intoGroups(RecordMapper)} instead, if your
+     * keys are non-unique.
+     *
+     * @param keyMapper The key mapper.
+     * @return A Map containing grouped results
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @throws InvalidResultException if the keys are non-unique in the result
+     *             set.
+     * @see DefaultRecordMapper
+     */
+    <K> Map<K, R> intoMap(RecordMapper<? super R, K> keyMapper) throws InvalidResultException, MappingException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given key entity and
+     * mapped into the given entity type.
+     * <p>
+     * The grouping semantics is governed by the key type's
+     * {@link Object#equals(Object)} and {@link Object#hashCode()}
+     * implementation, not necessarily the values as fetched from the database.
+     * <p>
+     * An {@link InvalidResultException} is thrown, if the keys are non-unique
+     * in the result set. Use {@link #intoGroups(RecordMapper, Class)} instead,
+     * if your keys are non-unique.
+     *
+     * @param keyMapper The key mapper.
+     * @param valueType The value type.
+     * @return A Map containing grouped results
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @throws InvalidResultException if the keys are non-unique in the result
+     *             set.
+     * @see DefaultRecordMapper
+     */
+    <K, V> Map<K, V> intoMap(RecordMapper<? super R, K> keyMapper, Class<V> valueType)
+        throws InvalidResultException, MappingException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given key entity and
+     * mapped into the given entity type.
+     * <p>
+     * The grouping semantics is governed by the key type's
+     * {@link Object#equals(Object)} and {@link Object#hashCode()}
+     * implementation, not necessarily the values as fetched from the database.
+     * <p>
+     * An {@link InvalidResultException} is thrown, if the keys are non-unique
+     * in the result set. Use {@link #intoGroups(RecordMapper, RecordMapper)}
+     * instead, if your keys are non-unique.
+     *
+     * @param keyMapper The key mapper.
+     * @param valueMapper The value mapper.
+     * @return A Map containing grouped results
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @throws InvalidResultException if the keys are non-unique in the result
+     *             set.
+     * @see DefaultRecordMapper
+     */
+    <K, V> Map<K, V> intoMap(RecordMapper<? super R, K> keyMapper, RecordMapper<? super R, V> valueMapper)
+        throws InvalidResultException, MappingException;
 
     /**
      * Return a {@link Map} with the given key table as a map key and the
@@ -1225,6 +1690,20 @@ public interface Result<R extends Record> extends List<R>, Attachable {
     Map<?, Result<R>> intoGroups(String keyFieldName) throws IllegalArgumentException;
 
     /**
+     * Return a {@link Map} with one of the result's columns as key and a list
+     * of corresponding records as value.
+     * <p>
+     * Unlike {@link #intoMap(Name)}, this method allows for non-unique keys in
+     * the result set.
+     *
+     * @param keyFieldName The key field name.
+     * @return A Map containing the results
+     * @throws IllegalArgumentException If the argument field name is not
+     *             contained in {@link #fieldsRow()}
+     */
+    Map<?, Result<R>> intoGroups(Name keyFieldName) throws IllegalArgumentException;
+
+    /**
      * Return a {@link Map} with one of the result's columns as key and another
      * one of the result's columns as value.
      * <p>
@@ -1270,6 +1749,21 @@ public interface Result<R extends Record> extends List<R>, Attachable {
      *             not contained in {@link #fieldsRow()}
      */
     Map<?, List<?>> intoGroups(String keyFieldName, String valueFieldName) throws IllegalArgumentException;
+
+    /**
+     * Return a {@link Map} with one of the result's columns as key and another
+     * one of the result's columns as value.
+     * <p>
+     * Unlike {@link #intoMap(Name, Name)}, this method allows for
+     * non-unique keys in the result set.
+     *
+     * @param keyFieldName The key field name.
+     * @param valueFieldName The value field name.
+     * @return A Map containing the results
+     * @throws IllegalArgumentException If any of the argument field names is
+     *             not contained in {@link #fieldsRow()}
+     */
+    Map<?, List<?>> intoGroups(Name keyFieldName, Name valueFieldName) throws IllegalArgumentException;
 
     /**
      * Return a {@link Map} with results grouped by the given key and mapped
@@ -1322,6 +1816,22 @@ public interface Result<R extends Record> extends List<R>, Attachable {
         MappingException;
 
     /**
+     * Return a {@link Map} with results grouped by the given key and mapped
+     * into the given entity type.
+     * <p>
+     *
+     * @param keyFieldName The key field name.
+     * @param type The entity type.
+     * @throws IllegalArgumentException If the argument field name is not
+     *             contained in {@link #fieldsRow()}
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @see DefaultRecordMapper
+     */
+    <E> Map<?, List<E>> intoGroups(Name keyFieldName, Class<? extends E> type) throws IllegalArgumentException,
+        MappingException;
+
+    /**
      * Return a {@link Map} with results grouped by the given key and mapped by
      * the given mapper.
      *
@@ -1366,6 +1876,20 @@ public interface Result<R extends Record> extends List<R>, Attachable {
         MappingException;
 
     /**
+     * Return a {@link Map} with results grouped by the given key and mapped by
+     * the given mapper.
+     *
+     * @param keyFieldName The key field name.
+     * @param mapper The mapper callback.
+     * @throws IllegalArgumentException If the argument field name is not
+     *             contained in {@link #fieldsRow()}
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     */
+    <E> Map<?, List<E>> intoGroups(Name keyFieldName, RecordMapper<? super R, E> mapper) throws IllegalArgumentException,
+        MappingException;
+
+    /**
      * Return a {@link Map} with the result grouped by the given keys.
      * <p>
      * Unlike {@link #intoMap(Field[])}, this method allows for non-unique keys
@@ -1406,6 +1930,20 @@ public interface Result<R extends Record> extends List<R>, Attachable {
      *             not contained in {@link #fieldsRow()}
      */
     Map<Record, Result<R>> intoGroups(String[] keyFieldNames) throws IllegalArgumentException;
+
+    /**
+     * Return a {@link Map} with the result grouped by the given keys.
+     * <p>
+     * Unlike {@link #intoMap(Name[])}, this method allows for non-unique keys
+     * in the result set.
+     *
+     * @param keyFieldNames The keys. If this is <code>null</code> or an empty
+     *            array, the resulting map will contain at most one entry.
+     * @return A Map containing grouped results
+     * @throws IllegalArgumentException If any of the argument field names is
+     *             not contained in {@link #fieldsRow()}
+     */
+    Map<Record, Result<R>> intoGroups(Name[] keyFieldNames) throws IllegalArgumentException;
 
     /**
      * Return a {@link Map} with results grouped by the given keys and mapped
@@ -1471,6 +2009,26 @@ public interface Result<R extends Record> extends List<R>, Attachable {
      * Return a {@link Map} with results grouped by the given keys and mapped
      * into the given entity type.
      * <p>
+     * Unlike {@link #intoMap(Name[], Class)}, this method allows for
+     * non-unique keys in the result set.
+     *
+     * @param keyFieldNames The keys. If this is <code>null</code> or an empty
+     *            array, the resulting map will contain at most one entry.
+     * @param type The entity type.
+     * @return A Map containing grouped results
+     * @throws IllegalArgumentException If the any of the argument field names
+     *             is not contained in {@link #fieldsRow()}
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @see DefaultRecordMapper
+     */
+    <E> Map<Record, List<E>> intoGroups(Name[] keyFieldNames, Class<? extends E> type) throws IllegalArgumentException,
+        MappingException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given keys and mapped
+     * into the given entity type.
+     * <p>
      * Unlike {@link #intoMap(Field[], RecordMapper)}, this method allows for
      * non-unique keys in the result set.
      *
@@ -1526,6 +2084,148 @@ public interface Result<R extends Record> extends List<R>, Attachable {
      */
     <E> Map<Record, List<E>> intoGroups(String[] keyFieldNames, RecordMapper<? super R, E> mapper)
         throws IllegalArgumentException, MappingException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given keys and mapped
+     * into the given entity type.
+     * <p>
+     * Unlike {@link #intoMap(Name[], RecordMapper)}, this method allows for
+     * non-unique keys in the result set.
+     *
+     * @param keyFieldNames The keys. If this is <code>null</code> or an empty
+     *            array, the resulting map will contain at most one entry.
+     * @param mapper The mapper callback.
+     * @return A Map containing grouped results
+     * @throws IllegalArgumentException If the any of the argument field indexes
+     *             is not contained in {@link #fieldsRow()}
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @see DefaultRecordMapper
+     */
+    <E> Map<Record, List<E>> intoGroups(Name[] keyFieldNames, RecordMapper<? super R, E> mapper)
+        throws IllegalArgumentException, MappingException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given key entity.
+     * <p>
+     * The grouping semantics is governed by the key type's
+     * {@link Object#equals(Object)} and {@link Object#hashCode()}
+     * implementation, not necessarily the values as fetched from the database.
+     * <p>
+     * Unlike {@link #intoMap(Class)}, this method allows for non-unique keys in
+     * the result set.
+     *
+     * @param keyType The key type. If this is <code>null</code>, the resulting
+     *            map will contain at most one entry.
+     * @return A Map containing grouped results
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @see DefaultRecordMapper
+     */
+    <K> Map<K, Result<R>> intoGroups(Class<? extends K> keyType) throws MappingException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given key entity and
+     * mapped into the given entity type.
+     * <p>
+     * The grouping semantics is governed by the key type's
+     * {@link Object#equals(Object)} and {@link Object#hashCode()}
+     * implementation, not necessarily the values as fetched from the database.
+     * <p>
+     * Unlike {@link #intoMap(Class, Class)}, this method allows for non-unique
+     * keys in the result set.
+     *
+     * @param keyType The key type. If this is <code>null</code>, the resulting
+     *            map will contain at most one entry.
+     * @param valueType The value type.
+     * @return A Map containing grouped results
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @see DefaultRecordMapper
+     */
+    <K, V> Map<K, List<V>> intoGroups(Class<? extends K> keyType, Class<? extends V> valueType) throws MappingException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given key entity and
+     * mapped into the given entity type.
+     * <p>
+     * The grouping semantics is governed by the key type's
+     * {@link Object#equals(Object)} and {@link Object#hashCode()}
+     * implementation, not necessarily the values as fetched from the database.
+     * <p>
+     * Unlike {@link #intoMap(Class, RecordMapper)}, this method allows for
+     * non-unique keys in the result set.
+     *
+     * @param keyType The key type. If this is <code>null</code>, the resulting
+     *            map will contain at most one entry.
+     * @param valueMapper The value mapper.
+     * @return A Map containing grouped results
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @see DefaultRecordMapper
+     */
+    <K, V> Map<K, List<V>> intoGroups(Class<? extends K> keyType, RecordMapper<? super R, V> valueMapper)
+        throws MappingException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given key entity and
+     * mapped into the given entity type.
+     * <p>
+     * The grouping semantics is governed by the key type's
+     * {@link Object#equals(Object)} and {@link Object#hashCode()}
+     * implementation, not necessarily the values as fetched from the database.
+     * <p>
+     * Unlike {@link #intoMap(RecordMapper, RecordMapper)}, this method allows
+     * for non-unique keys in the result set.
+     *
+     * @param keyMapper The key mapper.
+     * @return A Map containing grouped results
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @see DefaultRecordMapper
+     */
+    <K> Map<K, Result<R>> intoGroups(RecordMapper<? super R, K> keyMapper) throws MappingException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given key entity and
+     * mapped into the given entity type.
+     * <p>
+     * The grouping semantics is governed by the key type's
+     * {@link Object#equals(Object)} and {@link Object#hashCode()}
+     * implementation, not necessarily the values as fetched from the database.
+     * <p>
+     * Unlike {@link #intoMap(RecordMapper, Class)}, this method allows for
+     * non-unique keys in the result set.
+     *
+     * @param keyMapper The key mapper.
+     * @param valueType The value type.
+     * @return A Map containing grouped results
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @see DefaultRecordMapper
+     */
+    <K, V> Map<K, List<V>> intoGroups(RecordMapper<? super R, K> keyMapper, Class<V> valueType) throws MappingException;
+
+    /**
+     * Return a {@link Map} with results grouped by the given key entity and
+     * mapped into the given entity type.
+     * <p>
+     * The grouping semantics is governed by the key type's
+     * {@link Object#equals(Object)} and {@link Object#hashCode()}
+     * implementation, not necessarily the values as fetched from the database.
+     * <p>
+     * Unlike {@link #intoMap(RecordMapper, RecordMapper)}, this method allows
+     * for non-unique keys in the result set.
+     *
+     * @param keyMapper The key mapper.
+     * @param valueMapper The value mapper.
+     * @return A Map containing grouped results
+     * @throws MappingException wrapping any reflection or data type conversion
+     *             exception that might have occurred while mapping records
+     * @see DefaultRecordMapper
+     */
+    <K, V> Map<K, List<V>> intoGroups(RecordMapper<? super R, K> keyMapper, RecordMapper<? super R, V> valueMapper)
+        throws MappingException;
 
     /**
      * Return a {@link Map} with the result grouped by the given key table.
@@ -1693,6 +2393,51 @@ public interface Result<R extends Record> extends List<R>, Attachable {
     <U> U[] intoArray(String fieldName, Converter<?, U> converter) throws IllegalArgumentException, DataTypeException;
 
     /**
+     * Return all values for a field name from the result.
+     * <p>
+     * You can access data like this
+     * <code><pre>result.intoArray(fieldName)[recordIndex]</pre></code>
+     *
+     * @return The resulting values. This may be an array type more concrete
+     *         than <code>Object[]</code>, depending on whether jOOQ has any
+     *         knowledge about <code>fieldName</code>'s actual type.
+     * @see #getValues(Name)
+     * @throws IllegalArgumentException If the argument fieldName is not
+     *             contained in {@link #fieldsRow()}
+     */
+    Object[] intoArray(Name fieldName) throws IllegalArgumentException;
+
+    /**
+     * Return all values for a field name from the result.
+     * <p>
+     * You can access data like this
+     * <code><pre>result.intoArray(fieldName)[recordIndex]</pre></code>
+     *
+     * @return The resulting values.
+     * @see #getValues(Name, Class)
+     * @throws IllegalArgumentException If the argument fieldName is not
+     *             contained in {@link #fieldsRow()}
+     * @throws DataTypeException wrapping any data type conversion exception
+     *             that might have occurred
+     */
+    <T> T[] intoArray(Name fieldName, Class<? extends T> type) throws IllegalArgumentException, DataTypeException;
+
+    /**
+     * Return all values for a field name from the result.
+     * <p>
+     * You can access data like this
+     * <code><pre>result.intoArray(fieldName)[recordIndex]</pre></code>
+     *
+     * @return The resulting values.
+     * @see #getValues(Name, Converter)
+     * @throws IllegalArgumentException If the argument fieldName is not
+     *             contained in {@link #fieldsRow()}
+     * @throws DataTypeException wrapping any data type conversion exception
+     *             that might have occurred
+     */
+    <U> U[] intoArray(Name fieldName, Converter<?, U> converter) throws IllegalArgumentException, DataTypeException;
+
+    /**
      * Return all values for a field from the result.
      * <p>
      * You can access data like this
@@ -1809,6 +2554,42 @@ public interface Result<R extends Record> extends List<R>, Attachable {
     <U> Set<U> intoSet(String fieldName, Converter<?, U> converter) throws IllegalArgumentException, DataTypeException;
 
     /**
+     * Return all values for a field name from the result.
+     *
+     * @return The resulting values. This may be an array type more concrete
+     *         than <code>Object[]</code>, depending on whether jOOQ has any
+     *         knowledge about <code>fieldName</code>'s actual type.
+     * @see #getValues(Name)
+     * @throws IllegalArgumentException If the argument fieldName is not
+     *             contained in {@link #fieldsRow()}
+     */
+    Set<?> intoSet(Name fieldName) throws IllegalArgumentException;
+
+    /**
+     * Return all values for a field name from the result.
+     *
+     * @return The resulting values.
+     * @see #getValues(Name, Class)
+     * @throws IllegalArgumentException If the argument fieldName is not
+     *             contained in {@link #fieldsRow()}
+     * @throws DataTypeException wrapping any data type conversion exception
+     *             that might have occurred
+     */
+    <T> Set<T> intoSet(Name fieldName, Class<? extends T> type) throws IllegalArgumentException, DataTypeException;
+
+    /**
+     * Return all values for a field name from the result.
+     *
+     * @return The resulting values.
+     * @see #getValues(Name, Converter)
+     * @throws IllegalArgumentException If the argument fieldName is not
+     *             contained in {@link #fieldsRow()}
+     * @throws DataTypeException wrapping any data type conversion exception
+     *             that might have occurred
+     */
+    <U> Set<U> intoSet(Name fieldName, Converter<?, U> converter) throws IllegalArgumentException, DataTypeException;
+
+    /**
      * Return all values for a field from the result.
      *
      * @return The resulting values.
@@ -1853,222 +2634,199 @@ public interface Result<R extends Record> extends List<R>, Attachable {
     Result<Record> into(Field<?>... fields);
 
     // [jooq-tools] START [into-fields]
-
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1> Result<Record1<T1>> into(Field<T1> field1);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2> Result<Record2<T1, T2>> into(Field<T1> field1, Field<T2> field2);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3> Result<Record3<T1, T2, T3>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4> Result<Record4<T1, T2, T3, T4>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5> Result<Record5<T1, T2, T3, T4, T5>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6> Result<Record6<T1, T2, T3, T4, T5, T6>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7> Result<Record7<T1, T2, T3, T4, T5, T6, T7>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7, T8> Result<Record8<T1, T2, T3, T4, T5, T6, T7, T8>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7, T8, T9> Result<Record9<T1, T2, T3, T4, T5, T6, T7, T8, T9>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Result<Record10<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Result<Record11<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Result<Record12<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Result<Record13<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Result<Record14<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Result<Record15<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Result<Record16<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> Result<Record17<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> Result<Record18<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> Result<Record19<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20> Result<Record20<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19, Field<T20> field20);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
     <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21> Result<Record21<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21>> into(Field<T1> field1, Field<T2> field2, Field<T3> field3, Field<T4> field4, Field<T5> field5, Field<T6> field6, Field<T7> field7, Field<T8> field8, Field<T9> field9, Field<T10> field10, Field<T11> field11, Field<T12> field12, Field<T13> field13, Field<T14> field14, Field<T15> field15, Field<T16> field16, Field<T17> field17, Field<T18> field18, Field<T19> field19, Field<T20> field20, Field<T21> field21);
 
-/**//**
+    /**
      * Copy all records from this result into a new result with new records
      * holding only a subset of the previous fields.
      *
-     * @param fields The fields of the new records
      * @return The new result
      */
     @Generated("This class was generated using jOOQ-tools")
@@ -2224,6 +2982,30 @@ public interface Result<R extends Record> extends List<R>, Attachable {
     Result<R> sortDesc(String fieldName) throws IllegalArgumentException;
 
     /**
+     * Sort this result by one of its contained fields.
+     * <p>
+     * <code>nulls</code> are sorted last by this method.
+     *
+     * @param fieldName The sort field name
+     * @return The result itself
+     * @throws IllegalArgumentException If the argument field is not contained
+     *             in {@link #fieldsRow()}
+     */
+    Result<R> sortAsc(Name fieldName) throws IllegalArgumentException;
+
+    /**
+     * Reverse-sort this result by one of its contained fields.
+     * <p>
+     * <code>nulls</code> are sorted last by this method.
+     *
+     * @param fieldName The sort field name
+     * @return The result itself
+     * @throws IllegalArgumentException If the argument field is not contained
+     *             in {@link #fieldsRow()}
+     */
+    Result<R> sortDesc(Name fieldName) throws IllegalArgumentException;
+
+    /**
      * Sort this result by one of its contained fields using a comparator.
      * <p>
      * <code>null</code> sorting must be handled by the supplied
@@ -2311,6 +3093,35 @@ public interface Result<R extends Record> extends List<R>, Attachable {
     Result<R> sortDesc(String fieldName, java.util.Comparator<?> comparator) throws IllegalArgumentException;
 
     /**
+     * Sort this result by one of its contained fields using a comparator.
+     * <p>
+     * <code>null</code> sorting must be handled by the supplied
+     * <code>comparator</code>.
+     *
+     * @param fieldName The sort field name
+     * @param comparator The comparator used to sort this result.
+     * @return The result itself
+     * @throws IllegalArgumentException If the argument field is not contained
+     *             in {@link #fieldsRow()}
+     */
+    Result<R> sortAsc(Name fieldName, java.util.Comparator<?> comparator) throws IllegalArgumentException;
+
+    /**
+     * Reverse-sort this result by one of its contained fields using a
+     * comparator.
+     * <p>
+     * <code>null</code> sorting must be handled by the supplied
+     * <code>comparator</code>.
+     *
+     * @param fieldName The sort field name
+     * @param comparator The comparator used to sort this result.
+     * @return The result itself
+     * @throws IllegalArgumentException If the argument field is not contained
+     *             in {@link #fieldsRow()}
+     */
+    Result<R> sortDesc(Name fieldName, java.util.Comparator<?> comparator) throws IllegalArgumentException;
+
+    /**
      * Sort this result using a comparator that can compare records.
      *
      * @param comparator The comparator used to sort this result.
@@ -2370,6 +3181,18 @@ public interface Result<R extends Record> extends List<R>, Attachable {
      * @see String#intern()
      */
     Result<R> intern(String... fieldNames);
+
+    /**
+     * Specify a set of field names whose values should be interned.
+     * <p>
+     * See {@link Result#intern(int...)} for more details.
+     *
+     * @param fieldNames The field names whose values should be interned
+     * @return The same result
+     * @see Result#intern(Field...)
+     * @see String#intern()
+     */
+    Result<R> intern(Name... fieldNames);
 
     // ------------------------------------------------------------------------
     // Fetching of new results based on records in this result

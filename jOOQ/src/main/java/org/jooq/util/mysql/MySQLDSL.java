@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,7 +58,7 @@ public class MySQLDSL extends DSL {
     /**
      * No instances
      */
-    private MySQLDSL() {
+    protected MySQLDSL() {
     }
 
     // -------------------------------------------------------------------------
@@ -405,6 +405,24 @@ public class MySQLDSL extends DSL {
     @Support({ MYSQL })
     public static <T> Field<T> password(Field<T> string) {
         return function("password", string.getType(), string);
+    }
+
+    // -------------------------------------------------------------------------
+    // Other functions
+    // -------------------------------------------------------------------------
+
+    /**
+     * Get the MySQL-specific <code>VALUES()</code> function for use with
+     * <code>INSERT .. ON DUPLICATE KEY UPDATE</code> statements.
+     *
+     * @see <a href=
+     *      "http://dev.mysql.com/doc/refman/5.7/en/miscellaneous-functions.html#function_values">
+     *      http://dev.mysql.com/doc/refman/5.7/en/miscellaneous-functions.html#
+     *      function_values</a>
+     */
+    @Support({ MYSQL })
+    public static <T> Field<T> values(Field<T> values) {
+        return function("values", values.getDataType(), values);
     }
 
     // -------------------------------------------------------------------------

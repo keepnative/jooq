@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,6 +41,7 @@
 package org.jooq.impl;
 
 import static org.jooq.conf.SettingsTools.executeStaticStatements;
+import static org.jooq.impl.Tools.DataKey.DATA_OMIT_RETURNING_CLAUSE;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -105,13 +106,13 @@ class BatchCRUD implements Batch {
         QueryCollector collector = new QueryCollector();
 
         // Add the QueryCollector to intercept query execution after rendering
-        Configuration local = configuration.derive(Utils.combine(
+        Configuration local = configuration.derive(Tools.combine(
             configuration.executeListenerProviders(),
             new DefaultExecuteListenerProvider(collector)
         ));
 
         // [#1537] Communicate with UpdatableRecordImpl
-        local.data(Utils.DATA_OMIT_RETURNING_CLAUSE, true);
+        local.data(DATA_OMIT_RETURNING_CLAUSE, true);
 
         // [#1529] Avoid DEBUG logging of single INSERT / UPDATE statements
         local.settings().setExecuteLogging(false);
@@ -174,7 +175,7 @@ class BatchCRUD implements Batch {
         List<Query> queries = new ArrayList<Query>();
         QueryCollector collector = new QueryCollector();
 
-        Configuration local = configuration.derive(Utils.combine(
+        Configuration local = configuration.derive(Tools.combine(
             configuration.executeListenerProviders(),
             new DefaultExecuteListenerProvider(collector)
         ));

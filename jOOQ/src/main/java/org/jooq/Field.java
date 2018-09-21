@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2015, Data Geekery GmbH (http://www.datageekery.com)
+ * Copyright (c) 2009-2016, Data Geekery GmbH (http://www.datageekery.com)
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,7 +56,9 @@ import static org.jooq.SQLDialect.MARIADB;
 import static org.jooq.SQLDialect.MYSQL;
 // ...
 import static org.jooq.SQLDialect.POSTGRES;
+// ...
 import static org.jooq.SQLDialect.SQLITE;
+// ...
 // ...
 // ...
 
@@ -78,7 +80,7 @@ import org.jooq.types.Interval;
  * @param <T> The field type
  * @author Lukas Eder
  */
-public interface Field<T> extends SelectField<T>, GroupField {
+public interface Field<T> extends SelectField<T>, GroupField, FieldOrRow {
 
     // ------------------------------------------------------------------------
     // API
@@ -855,7 +857,7 @@ public interface Field<T> extends SelectField<T>, GroupField {
      * @see DSL#power(Field, Number)
      */
     @Support({ CUBRID, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
-    Field<T> shl(T value);
+    Field<T> shl(Number value);
 
     /**
      * The bitwise left shift operator.
@@ -864,7 +866,7 @@ public interface Field<T> extends SelectField<T>, GroupField {
      * @see DSL#power(Field, Number)
      */
     @Support({ CUBRID, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
-    Field<T> shl(Field<T> value);
+    Field<T> shl(Field<? extends Number> value);
 
     /**
      * The bitwise right shift operator.
@@ -873,7 +875,7 @@ public interface Field<T> extends SelectField<T>, GroupField {
      * @see DSL#power(Field, Number)
      */
     @Support({ CUBRID, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
-    Field<T> shr(T value);
+    Field<T> shr(Number value);
 
     /**
      * The bitwise right shift operator.
@@ -882,7 +884,7 @@ public interface Field<T> extends SelectField<T>, GroupField {
      * @see DSL#power(Field, Number)
      */
     @Support({ CUBRID, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES, SQLITE })
-    Field<T> shr(Field<T> value);
+    Field<T> shr(Field<? extends Number> value);
 
     // ------------------------------------------------------------------------
     // NULL predicates
@@ -3290,27 +3292,27 @@ public interface Field<T> extends SelectField<T>, GroupField {
     @Support
     Field<T> coalesce(Field<T> option, Field<?>... options);
 
-    /* [pro] xx
-    xxx
-     x xxxx xxxx xxxxx xxxx xx xxxxxxxxxxxxxxx xxxxx xxx xxx xx xxxxxxxxxx
-     x xxxxxxxxxxx
-     x xxx
-     x xxxxxxxx
-     x xxx
-     x xxxxxxxxxxx
-     x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-     x xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-     x xxxxxxxxxxxxx
-     x xxx
-     x xxx xxxxx xxxx xxxxxxxx
-     x xxx
-     x xxxxxxxxxxx
-     x xxxxxxxxxxxxx x xxxxxxxxxx
-     x xxxxxxxxxx x xxxxxxxxxxxxx
-     x xxxxxxxxxxxxx
-     xx
-    xxxxxxxxxxxxxxxx
-    xxxxxxxx xxxxxxx
-    xx [/pro] */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }
