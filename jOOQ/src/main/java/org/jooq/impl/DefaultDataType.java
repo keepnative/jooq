@@ -40,28 +40,6 @@
  */
 package org.jooq.impl;
 
-import static java.util.Collections.unmodifiableCollection;
-import static org.jooq.impl.SQLDataType.BLOB;
-import static org.jooq.impl.SQLDataType.CLOB;
-import static org.jooq.impl.SQLDataType.NCLOB;
-import static org.jooq.tools.reflect.Reflect.wrapper;
-
-import java.lang.reflect.Array;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.sql.Blob;
-import java.sql.Clob;
-import java.sql.Date;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.sql.Types;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
-
-// ...
 import org.jooq.Binding;
 import org.jooq.Configuration;
 import org.jooq.Converter;
@@ -79,6 +57,29 @@ import org.jooq.types.UByte;
 import org.jooq.types.UInteger;
 import org.jooq.types.ULong;
 import org.jooq.types.UShort;
+
+import java.lang.reflect.Array;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.Blob;
+import java.sql.Clob;
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.sql.Types;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+import static java.util.Collections.unmodifiableCollection;
+import static org.jooq.impl.SQLDataType.BLOB;
+import static org.jooq.impl.SQLDataType.CLOB;
+import static org.jooq.impl.SQLDataType.NCLOB;
+import static org.jooq.tools.reflect.Reflect.wrapper;
+
+// ...
 
 /**
  * A common base class for data types.
@@ -274,7 +275,7 @@ public class DefaultDataType<T> implements DataType<T> {
 
         this.nullable = nullable;
         this.defaulted = defaulted;
-        this.precision = precision0(type, precision);
+        this.precision = precision0(type, precision, this.dialect);
         this.scale = scale;
         this.length = length;
 
@@ -327,14 +328,14 @@ public class DefaultDataType<T> implements DataType<T> {
 
         this.nullable = nullable;
         this.defaulted = defaulted;
-        this.precision = precision0(type, precision);
+        this.precision = precision0(type, precision, this.dialect);
         this.scale = scale;
         this.length = length;
 
         this.binding = t.binding;
     }
 
-    private static final int precision0(Class<?> type, int precision) {
+    private static final int precision0(Class<?> type, int precision, SQLDialect dialect) {
         if (precision == 0) {
             if (type == Long.class || type == ULong.class) {
                 precision = LONG_PRECISION;
@@ -347,6 +348,9 @@ public class DefaultDataType<T> implements DataType<T> {
             }
             else if (type == Byte.class || type == UByte.class) {
                 precision = BYTE_PRECISION;
+            }
+            else if (type == Boolean.class && SQLDialect.ORACLE.equals(dialect)) {
+                precision = 1;
             }
         }
 
