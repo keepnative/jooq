@@ -91,7 +91,7 @@ class CreateSequenceImpl extends AbstractQuery implements
 
         // Some databases default to sequences starting with MIN_VALUE
         if (asList(DERBY, SQL_SERVER).contains(ctx.family()))
-            ctx.keyword("start with").sql(" 1");
+            ctx.sql(' ').keyword("start with").sql(' ').sql(1);
 
         ctx.end(CREATE_SEQUENCE_SEQUENCE);
     }
