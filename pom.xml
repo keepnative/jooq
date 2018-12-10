@@ -44,6 +44,19 @@
         <connection>scm:git:https://github.com/jOOQ/jOOQ.git</connection>
     </scm>
 
+    <distributionManagement>
+        <repository>
+            <id>keepnative-releases</id>
+            <name>KeepNative Releases Repository</name>
+            <url>http://repository.keepnative.io/repository/maven-releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>keepnative-snapshots</id>
+            <name>KeepNative Snapshots Repository</name>
+            <url>http://repository.keepnative.io/repository/maven-snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
+
     <issueManagement>
         <system>GitHub</system>
         <url>http://github.com/jOOQ/jOOQ/issues</url>
