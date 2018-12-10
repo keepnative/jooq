@@ -1218,8 +1218,7 @@ final class AlterTableImpl extends AbstractQuery implements
                 case HSQLDB:
                 case POSTGRES:
                 case SQL_SERVER:
-                    ctx.sql(' ')
-                            .keyword("drop")
+                    ctx.visit(K_DROP_CONSTRAINT)
                             .sql(' ')
                             .visit(primaryKey);
                     break;
