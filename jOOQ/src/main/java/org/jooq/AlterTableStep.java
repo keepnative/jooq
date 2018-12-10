@@ -574,4 +574,8 @@ public interface AlterTableStep {
      */
     @Support({ CUBRID, DERBY, FIREBIRD, H2, HSQLDB, MARIADB, MYSQL, POSTGRES })
     AlterTableFinalStep dropConstraint(String constraint);
+
+    @Support
+    AlterTableFinalStep dropPrimaryKey(String primaryKey);
+
 }

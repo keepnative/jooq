@@ -110,6 +110,9 @@ final class Substring extends AbstractFunction<String> {
 
 
 
+
+            case ORACLE:
+            case DB2:
             case DERBY:
             case SQLITE:
                 functionName = "substr";

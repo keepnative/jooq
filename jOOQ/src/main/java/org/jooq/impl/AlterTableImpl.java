@@ -216,6 +216,7 @@ final class AlterTableImpl extends AbstractQuery implements
     private QueryPartList<Field<?>>          dropColumns;
     private boolean                          dropColumnCascade;
     private Constraint                       dropConstraint;
+    private Constraint                       primaryKey;
 
     AlterTableImpl(Configuration configuration, Table<?> table) {
         this(configuration, table, false);
@@ -652,6 +653,12 @@ final class AlterTableImpl extends AbstractQuery implements
     }
 
     @Override
+    public final AlterTableImpl dropPrimaryKey(String primaryKey) {
+        this.primaryKey = DSL.constraint(primaryKey);
+        return this;
+    }
+
+    @Override
     public final AlterTableFinalStep cascade() {
         dropColumnCascade = true;
         return this;
@@ -1059,6 +1066,14 @@ final class AlterTableImpl extends AbstractQuery implements
                     break;
                 }
 
+                case SQL_SERVER:
+                    ctx.sql(' ').keyword("alter column");
+                    break;
+
+                case ORACLE:
+                    ctx.sql(' ').keyword("modify");
+                    break;
+
                 default:
                     ctx.visit(K_ALTER);
                     break;
@@ -1080,8 +1095,9 @@ final class AlterTableImpl extends AbstractQuery implements
                         ctx.sql(' ').visit(K_SET_DATA_TYPE);
                         break;
 
-
-
+                    case DB2:
+                        ctx.sql(' ').visit(K_SET_DATA_TYPE);
+                        break;
 
                     case FIREBIRD:
                     case POSTGRES:
@@ -1194,6 +1210,30 @@ final class AlterTableImpl extends AbstractQuery implements
             ctx.data().remove(DATA_CONSTRAINT_REFERENCE);
             ctx.end(ALTER_TABLE_DROP);
         }
+        else if (primaryKey != null) {
+            ctx.start(ALTER_TABLE_DROP);
+            ctx.data(DATA_CONSTRAINT_REFERENCE, true);
+
+            switch (family) {
+                case HSQLDB:
+                case POSTGRES:
+                case SQL_SERVER:
+                    ctx.sql(' ')
+                            .keyword("drop")
+                            .sql(' ')
+                            .visit(primaryKey);
+                    break;
+                case ORACLE:
+                    ctx.sql(' ').keyword("drop primary key drop index");
+                    break;
+                default:
+                    ctx.sql(' ').keyword("drop primary key");
+                    break;
+            }
+
+            ctx.data().remove(DATA_CONSTRAINT_REFERENCE);
+            ctx.end(ALTER_TABLE_DROP);
+        }
 
         if (!omitAlterTable)
             ctx.formatIndentEnd();
@@ -1215,10 +1255,10 @@ final class AlterTableImpl extends AbstractQuery implements
 
 
 
-
-
-
-
+            case SQL_SERVER:
+            case ORACLE:
+                ctx.sql(' ').keyword("drop column");
+                break;
 
             default:
                 ctx.visit(K_DROP);

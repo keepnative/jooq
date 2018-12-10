@@ -295,7 +295,7 @@ public class DefaultDataType<T> implements DataType<T> {
         this.collation = collation;
         this.identity = identity;
         this.defaultValue = defaultValue;
-        this.precision = precision0(type, precision);
+        this.precision = precision0(type, precision, this.dialect);
         this.scale = scale;
         this.length = length;
 
@@ -350,14 +350,14 @@ public class DefaultDataType<T> implements DataType<T> {
         this.collation = collation;
         this.identity = identity;
         this.defaultValue = defaultValue;
-        this.precision = precision0(uType, precision);
+        this.precision = precision0(uType, precision, this.dialect);
         this.scale = scale;
         this.length = length;
 
         this.binding = t.binding;
     }
 
-    private static final int precision0(Class<?> type, int precision) {
+    private static final int precision0(Class<?> type, int precision, SQLDialect dialect) {
         if (precision == 0)
             if (type == Long.class || type == ULong.class)
                 precision = LONG_PRECISION;
@@ -367,6 +367,9 @@ public class DefaultDataType<T> implements DataType<T> {
                 precision = SHORT_PRECISION;
             else if (type == Byte.class || type == UByte.class)
                 precision = BYTE_PRECISION;
+            else if (type == Boolean.class && SQLDialect.ORACLE.equals(dialect)) {
+                precision = 1;
+            }
 
         return precision;
     }
@@ -461,6 +464,11 @@ public class DefaultDataType<T> implements DataType<T> {
 
     @Override
     public final boolean hasPrecision() {
+        if (dialect == SQLDialect.ORACLE
+                && (tType == Long.class || tType == Integer.class || tType == Boolean.class)) {
+            return true;
+        }
+
         return tType == BigInteger.class
             || tType == BigDecimal.class
             || tType == Timestamp.class
@@ -491,7 +499,14 @@ public class DefaultDataType<T> implements DataType<T> {
 
     @Override
     public final boolean hasScale() {
-        return tType == BigDecimal.class;
+        if (tType == BigDecimal.class) {
+            return true;
+        } else if (dialect == SQLDialect.ORACLE
+                && (tType == Long.class || tType == Integer.class || tType == Boolean.class)) {
+            return true;
+        }
+
+        return false;
     }
 
     @Override

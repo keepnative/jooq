@@ -48,6 +48,7 @@ import static org.jooq.SQLDialect.FIREBIRD;
 // ...
 // ...
 // ...
+import static org.jooq.SQLDialect.SQL_SERVER;
 import static org.jooq.impl.Keywords.K_CREATE;
 import static org.jooq.impl.Keywords.K_IF_NOT_EXISTS;
 import static org.jooq.impl.Keywords.K_SEQUENCE;
@@ -77,7 +78,7 @@ final class CreateSequenceImpl extends AbstractQuery implements
     private static final long                serialVersionUID         = 8904572826501186329L;
     private static final Clause[]            CLAUSES                  = { CREATE_SEQUENCE };
     private static final EnumSet<SQLDialect> NO_SUPPORT_IF_NOT_EXISTS = EnumSet.of(DERBY, FIREBIRD);
-    private static final EnumSet<SQLDialect> REQUIRES_START_WITH      = EnumSet.of(DERBY);
+    private static final EnumSet<SQLDialect> REQUIRES_START_WITH      = EnumSet.of(DERBY, SQL_SERVER);
 
     private final Sequence<?>                sequence;
     private final boolean                    ifNotExists;

@@ -183,6 +183,21 @@ public enum SQLDialect {
      */
     SQLITE("SQLite", false),
 
+    /**
+     * The Oracle dialect family
+     */
+    ORACLE("Oracle", false),
+
+    /**
+     * The SqlServer dialect family
+     */
+    SQL_SERVER("SqlServer", false),
+
+    /**
+     * The DB2 dialect family
+     */
+    DB2("DB2", false),
+
     // -------------------------------------------------------------------------
     // SQL dialects for commercial usage
     // -------------------------------------------------------------------------
