@@ -181,7 +181,7 @@ final class AlterTableImpl extends AbstractQuery implements
     private static final EnumSet<SQLDialect> NO_SUPPORT_IF_EXISTS                  = EnumSet.of(CUBRID, DERBY, FIREBIRD, MARIADB);
     private static final EnumSet<SQLDialect> NO_SUPPORT_IF_EXISTS_COLUMN           = EnumSet.of(CUBRID, DERBY, FIREBIRD);
     private static final EnumSet<SQLDialect> SUPPORT_RENAME_TABLE                  = EnumSet.of(DERBY);
-    private static final EnumSet<SQLDialect> NO_SUPPORT_ALTER_TYPE_AND_NULL        = EnumSet.of(POSTGRES);
+    private static final EnumSet<SQLDialect> NO_SUPPORT_ALTER_TYPE_AND_NULL        = EnumSet.of(HSQLDB, POSTGRES);
     private static final EnumSet<SQLDialect> REQUIRE_REPEAT_ADD_ON_MULTI_ALTER     = EnumSet.of(FIREBIRD, MARIADB, MYSQL);
     private static final EnumSet<SQLDialect> REQUIRE_REPEAT_DROP_ON_MULTI_ALTER    = EnumSet.of(FIREBIRD, MARIADB, MYSQL);
 
