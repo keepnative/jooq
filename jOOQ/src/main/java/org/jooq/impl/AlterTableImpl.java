@@ -1429,7 +1429,8 @@ final class AlterTableImpl extends AbstractQuery implements
 
             case POSTGRES: {
                 AlterTableAlterStep<?> step = ctx.dsl().alterTable(table).alterColumn(alterColumn);
-                ctx.visit(alterColumnType.nullable() ? step.dropNotNull() : step.setNotNull());
+                ctx.visit(alterColumnType.nullable() ? step.dropNotNull() : step.setNotNull())
+                        .sql(';').formatSeparator();
                 break;
             }
         }
