@@ -51,6 +51,7 @@ import static org.jooq.SQLDialect.MYSQL;
 // ...
 // ...
 // ...
+import static org.jooq.SQLDialect.SQL_SERVER;
 import static org.jooq.impl.DSL.name;
 import static org.jooq.impl.DSL.table;
 import static org.jooq.impl.Keywords.K_DROP_INDEX;
@@ -85,7 +86,7 @@ final class DropIndexImpl extends AbstractQuery implements
     private static final long                serialVersionUID     = 8904572826501186329L;
     private static final Clause[]            CLAUSES              = { DROP_INDEX };
     private static final EnumSet<SQLDialect> NO_SUPPORT_IF_EXISTS = EnumSet.of(CUBRID, DERBY, FIREBIRD);
-    private static final EnumSet<SQLDialect> REQUIRES_ON          = EnumSet.of(MARIADB, MYSQL);
+    private static final EnumSet<SQLDialect> REQUIRES_ON          = EnumSet.of(MARIADB, MYSQL, SQL_SERVER);
 
     private final Index                      index;
     private final boolean                    ifExists;
