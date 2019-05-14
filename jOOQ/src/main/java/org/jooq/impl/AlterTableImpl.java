@@ -182,6 +182,7 @@ final class AlterTableImpl extends AbstractQuery implements
     private static final EnumSet<SQLDialect> NO_SUPPORT_IF_EXISTS                  = EnumSet.of(CUBRID, DERBY, FIREBIRD, MARIADB);
     private static final EnumSet<SQLDialect> NO_SUPPORT_IF_EXISTS_COLUMN           = EnumSet.of(CUBRID, DERBY, FIREBIRD);
     private static final EnumSet<SQLDialect> SUPPORT_RENAME_TABLE                  = EnumSet.of(DERBY);
+    private static final EnumSet<SQLDialect> NO_SUPPORT_RENAME_QUALIFIED_TABLE     = EnumSet.of(HSQLDB, POSTGRES, ORACLE);
     private static final EnumSet<SQLDialect> NO_SUPPORT_ALTER_TYPE_AND_NULL        = EnumSet.of(HSQLDB, POSTGRES, ORACLE);
     private static final EnumSet<SQLDialect> REQUIRE_REPEAT_ADD_ON_MULTI_ALTER     = EnumSet.of(FIREBIRD, MARIADB, MYSQL);
     private static final EnumSet<SQLDialect> REQUIRE_REPEAT_DROP_ON_MULTI_ALTER    = EnumSet.of(FIREBIRD, MARIADB, MYSQL);
@@ -815,12 +816,18 @@ final class AlterTableImpl extends AbstractQuery implements
         else if (renameTo != null) {
             boolean qualify = ctx.qualify();
 
-            ctx.start(ALTER_TABLE_RENAME)
-               .qualify(false)
-               .visit(renameObject || renameTable ? K_TO : K_RENAME_TO).sql(' ')
-               .visit(renameTo)
-               .qualify(qualify)
-               .end(ALTER_TABLE_RENAME);
+            ctx.start(ALTER_TABLE_RENAME);
+
+            if (NO_SUPPORT_RENAME_QUALIFIED_TABLE.contains(ctx.family()))
+                ctx.qualify(false);
+
+            ctx.visit(renameObject || renameTable ? K_TO : K_RENAME_TO).sql(' ')
+               .visit(renameTo);
+
+            if (NO_SUPPORT_RENAME_QUALIFIED_TABLE.contains(ctx.family()))
+                ctx.qualify(qualify);
+
+            ctx.end(ALTER_TABLE_RENAME);
         }
         else if (renameColumn != null) {
             boolean qualify = ctx.qualify();
@@ -923,13 +930,11 @@ final class AlterTableImpl extends AbstractQuery implements
             ctx.end(ALTER_TABLE_RENAME_CONSTRAINT);
         }
         else if (add != null) {
-            boolean qualify = ctx.qualify();
             boolean multiAdd = REQUIRE_REPEAT_ADD_ON_MULTI_ALTER.contains(ctx.family());
             boolean parens = !multiAdd                                                                                     ;
 
             ctx.start(ALTER_TABLE_ADD)
                .visit(K_ADD)
-               .qualify(false)
                .sql(' ');
 
             if (parens)
@@ -964,8 +969,7 @@ final class AlterTableImpl extends AbstractQuery implements
             if (parens)
                 ctx.sql(')');
 
-            ctx.qualify(qualify)
-               .end(ALTER_TABLE_ADD);
+            ctx.end(ALTER_TABLE_ADD);
         }
         else if (addColumn != null) {
             boolean qualify = ctx.qualify();
@@ -1014,15 +1018,11 @@ final class AlterTableImpl extends AbstractQuery implements
             ctx.end(ALTER_TABLE_ADD);
         }
         else if (addConstraint != null) {
-            boolean qualify = ctx.qualify();
-
             ctx.start(ALTER_TABLE_ADD);
 
             ctx.visit(K_ADD)
                .sql(' ')
-               .qualify(false)
-               .visit(addConstraint)
-               .qualify(qualify);
+               .visit(addConstraint);
 
 
 
@@ -1431,7 +1431,7 @@ final class AlterTableImpl extends AbstractQuery implements
             case POSTGRES: {
                 AlterTableAlterStep<?> step = ctx.dsl().alterTable(table).alterColumn(alterColumn);
                 ctx.visit(alterColumnType.nullable() ? step.dropNotNull() : step.setNotNull())
-                        .sql(';').formatSeparator();
+                   .sql(';');
                 break;
             }
         }

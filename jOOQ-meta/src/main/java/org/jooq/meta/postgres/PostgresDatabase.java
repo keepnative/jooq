@@ -380,7 +380,7 @@ public class PostgresDatabase extends AbstractDatabase {
                     .where(TABLES.TABLE_SCHEMA.in(getInputSchemata()))
 
                     // To stay on the safe side, if the INFORMATION_SCHEMA ever
-                    // includs materialised views, let's exclude them from here
+                    // includes materialised views, let's exclude them from here
                     .and(canUseTupleInPredicates()
                         ? row(TABLES.TABLE_SCHEMA, TABLES.TABLE_NAME).notIn(
                             select(
@@ -395,11 +395,13 @@ public class PostgresDatabase extends AbstractDatabase {
 
                 // [#3254] Materialised views are reported only in PG_CLASS, not
                 //         in INFORMATION_SCHEMA.TABLES
+                // [#8478] CockroachDB cannot compare "sql_identifier" types (varchar)
+                //         from information_schema with "name" types from pg_catalog
                 .unionAll(
                     select(
-                        PG_NAMESPACE.NSPNAME,
-                        PG_CLASS.RELNAME,
-                        PG_CLASS.RELNAME,
+                        field("{0}::varchar", PG_NAMESPACE.NSPNAME.getDataType(), PG_NAMESPACE.NSPNAME),
+                        field("{0}::varchar", PG_CLASS.RELNAME.getDataType(), PG_CLASS.RELNAME),
+                        field("{0}::varchar", PG_CLASS.RELNAME.getDataType(), PG_CLASS.RELNAME),
                         inline(false).as("table_valued_function"),
                         inline(true).as("materialized_view"),
                         PG_DESCRIPTION.DESCRIPTION)
@@ -904,8 +906,10 @@ public class PostgresDatabase extends AbstractDatabase {
 
             // [#7270] The tuple in predicate is not implemented in all PostgreSQL
             //         style databases, e.g. CockroachDB
+            // [#8072] Some database versions might support in, but not not in
             try {
                 create(true).select(field("(1, 2) in (select 1, 2)")).fetch();
+                create(true).select(field("(1, 2) not in (select 1, 2)")).fetch();
                 canUseTupleInPredicates = true;
             }
             catch (DataAccessException e) {
