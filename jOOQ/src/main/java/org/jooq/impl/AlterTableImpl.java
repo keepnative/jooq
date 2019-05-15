@@ -37,6 +37,32 @@
  */
 package org.jooq.impl;
 
+import org.jooq.AlterTableAlterStep;
+import org.jooq.AlterTableDropStep;
+import org.jooq.AlterTableFinalStep;
+import org.jooq.AlterTableRenameColumnToStep;
+import org.jooq.AlterTableRenameConstraintToStep;
+import org.jooq.AlterTableRenameIndexToStep;
+import org.jooq.AlterTableStep;
+import org.jooq.AlterTableUsingIndexStep;
+import org.jooq.Clause;
+import org.jooq.Comment;
+import org.jooq.Configuration;
+import org.jooq.Constraint;
+import org.jooq.Context;
+import org.jooq.DataType;
+import org.jooq.Field;
+import org.jooq.FieldOrConstraint;
+import org.jooq.Index;
+import org.jooq.Name;
+import org.jooq.Nullability;
+import org.jooq.SQLDialect;
+import org.jooq.Table;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumSet;
+
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static org.jooq.Clause.ALTER_TABLE;
@@ -52,32 +78,20 @@ import static org.jooq.Clause.ALTER_TABLE_RENAME_INDEX;
 import static org.jooq.Clause.ALTER_TABLE_TABLE;
 import static org.jooq.Nullability.NOT_NULL;
 import static org.jooq.Nullability.NULL;
-// ...
-// ...
-// ...
-// ...
 import static org.jooq.SQLDialect.CUBRID;
-// ...
 import static org.jooq.SQLDialect.DERBY;
 import static org.jooq.SQLDialect.FIREBIRD;
-// ...
 import static org.jooq.SQLDialect.HSQLDB;
 import static org.jooq.SQLDialect.MARIADB;
 import static org.jooq.SQLDialect.MYSQL;
-// ...
 import static org.jooq.SQLDialect.ORACLE;
 import static org.jooq.SQLDialect.POSTGRES;
-// ...
-// ...
-// ...
 import static org.jooq.impl.DSL.alterTable;
 import static org.jooq.impl.DSL.commentOnTable;
 import static org.jooq.impl.DSL.constraint;
 import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.index;
-import static org.jooq.impl.DSL.inline;
 import static org.jooq.impl.DSL.name;
-import static org.jooq.impl.DSL.sql;
 import static org.jooq.impl.Keywords.K_ADD;
 import static org.jooq.impl.Keywords.K_ALTER;
 import static org.jooq.impl.Keywords.K_ALTER_COLUMN;
@@ -85,25 +99,15 @@ import static org.jooq.impl.Keywords.K_ALTER_CONSTRAINT;
 import static org.jooq.impl.Keywords.K_ALTER_TABLE;
 import static org.jooq.impl.Keywords.K_CASCADE;
 import static org.jooq.impl.Keywords.K_CHANGE_COLUMN;
+import static org.jooq.impl.Keywords.K_COLUMN;
 import static org.jooq.impl.Keywords.K_COMMENT;
-import static org.jooq.impl.Keywords.K_DEFAULT;
 import static org.jooq.impl.Keywords.K_DROP;
-import static org.jooq.impl.Keywords.K_DROP_COLUMN;
 import static org.jooq.impl.Keywords.K_DROP_CONSTRAINT;
 import static org.jooq.impl.Keywords.K_DROP_NOT_NULL;
-import static org.jooq.impl.Keywords.K_ELSE;
-import static org.jooq.impl.Keywords.K_END_IF;
-import static org.jooq.impl.Keywords.K_EXCEPTION;
-import static org.jooq.impl.Keywords.K_EXEC;
-import static org.jooq.impl.Keywords.K_IF;
 import static org.jooq.impl.Keywords.K_IF_EXISTS;
 import static org.jooq.impl.Keywords.K_IF_NOT_EXISTS;
-import static org.jooq.impl.Keywords.K_LIKE;
-import static org.jooq.impl.Keywords.K_MODIFY;
 import static org.jooq.impl.Keywords.K_NOT_NULL;
 import static org.jooq.impl.Keywords.K_NULL;
-import static org.jooq.impl.Keywords.K_RAISE;
-import static org.jooq.impl.Keywords.K_RENAME;
 import static org.jooq.impl.Keywords.K_RENAME_COLUMN;
 import static org.jooq.impl.Keywords.K_RENAME_CONSTRAINT;
 import static org.jooq.impl.Keywords.K_RENAME_INDEX;
@@ -113,51 +117,29 @@ import static org.jooq.impl.Keywords.K_RENAME_TO;
 import static org.jooq.impl.Keywords.K_SET_DATA_TYPE;
 import static org.jooq.impl.Keywords.K_SET_DEFAULT;
 import static org.jooq.impl.Keywords.K_SET_NOT_NULL;
-import static org.jooq.impl.Keywords.K_THEN;
 import static org.jooq.impl.Keywords.K_TO;
 import static org.jooq.impl.Keywords.K_TYPE;
-import static org.jooq.impl.Keywords.K_USING_INDEX;
-import static org.jooq.impl.Keywords.K_WHEN;
+import static org.jooq.impl.Tools.DataKey.DATA_CONSTRAINT_REFERENCE;
 import static org.jooq.impl.Tools.begin;
-import static org.jooq.impl.Tools.beginExecuteImmediate;
 import static org.jooq.impl.Tools.beginTryCatch;
 import static org.jooq.impl.Tools.end;
-import static org.jooq.impl.Tools.endExecuteImmediate;
 import static org.jooq.impl.Tools.endTryCatch;
 import static org.jooq.impl.Tools.fieldsByName;
 import static org.jooq.impl.Tools.toSQLDDLTypeDeclaration;
 import static org.jooq.impl.Tools.toSQLDDLTypeDeclarationForAddition;
 import static org.jooq.impl.Tools.toSQLDDLTypeDeclarationIdentityAfterNull;
 import static org.jooq.impl.Tools.toSQLDDLTypeDeclarationIdentityBeforeNull;
-import static org.jooq.impl.Tools.DataKey.DATA_CONSTRAINT_REFERENCE;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.EnumSet;
-
-import org.jooq.AlterTableAlterStep;
-import org.jooq.AlterTableDropStep;
-import org.jooq.AlterTableFinalStep;
-import org.jooq.AlterTableRenameColumnToStep;
-import org.jooq.AlterTableRenameConstraintToStep;
-import org.jooq.AlterTableRenameIndexToStep;
-import org.jooq.AlterTableStep;
-import org.jooq.AlterTableUsingIndexStep;
-import org.jooq.Clause;
-import org.jooq.Comment;
-import org.jooq.Configuration;
-import org.jooq.Constraint;
-import org.jooq.Context;
-import org.jooq.DSLContext;
-import org.jooq.DataType;
-import org.jooq.Field;
-import org.jooq.FieldOrConstraint;
-import org.jooq.Index;
-import org.jooq.Name;
-import org.jooq.Nullability;
-import org.jooq.Query;
-import org.jooq.SQLDialect;
-import org.jooq.Table;
+// ...
+// ...
+// ...
+// ...
+// ...
+// ...
+// ...
+// ...
+// ...
+// ...
 
 /**
  * @author Lukas Eder
@@ -976,6 +958,10 @@ final class AlterTableImpl extends AbstractQuery implements
 
             ctx.start(ALTER_TABLE_ADD)
                .visit(K_ADD).sql(' ');
+
+            if (ctx.family().equals(MARIADB)) {
+                ctx.visit(K_COLUMN).sql(' ');
+            }
 
             if (ifNotExistsColumn) {
                 switch (ctx.family()) {
