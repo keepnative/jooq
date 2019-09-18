@@ -88,6 +88,7 @@ final class Concat extends AbstractField<String> {
 
 
             case MARIADB:
+            case SQL_SERVER:
             case MYSQL:
                 ctx.visit(function("concat", SQLDataType.VARCHAR, cast));
                 break;

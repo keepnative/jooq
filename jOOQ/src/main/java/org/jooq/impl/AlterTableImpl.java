@@ -109,6 +109,7 @@ import static org.jooq.impl.Keywords.K_FOREIGN_KEY;
 import static org.jooq.impl.Keywords.K_IF;
 import static org.jooq.impl.Keywords.K_IF_EXISTS;
 import static org.jooq.impl.Keywords.K_IF_NOT_EXISTS;
+import static org.jooq.impl.Keywords.K_INDEX;
 import static org.jooq.impl.Keywords.K_LIKE;
 import static org.jooq.impl.Keywords.K_MODIFY;
 import static org.jooq.impl.Keywords.K_NOT_NULL;
@@ -1205,7 +1206,12 @@ final class AlterTableImpl extends AbstractRowCountQuery implements
 
                     break;
                 }
-
+                case SQL_SERVER:
+                    ctx.sql(' ').visit(K_ALTER_COLUMN);
+                    break;
+                case ORACLE:
+                    ctx.sql(' ').visit(K_MODIFY);
+                    break;
                 default:
                     ctx.visit(K_ALTER);
                     break;
@@ -1227,9 +1233,9 @@ final class AlterTableImpl extends AbstractRowCountQuery implements
                         ctx.sql(' ').visit(K_SET_DATA_TYPE);
                         break;
 
-
-
-
+                    case DB2:
+                        ctx.sql(' ').visit(K_SET_DATA_TYPE);
+                        break;
                     case FIREBIRD:
                     case POSTGRES:
                         ctx.sql(' ').visit(K_TYPE);
@@ -1364,7 +1370,14 @@ final class AlterTableImpl extends AbstractRowCountQuery implements
         }
         else if (dropConstraintType == PRIMARY_KEY) {
             ctx.start(ALTER_TABLE_DROP);
-            ctx.visit(K_DROP).sql(' ').visit(K_PRIMARY_KEY);
+            switch (family) {
+                case ORACLE:
+                    ctx.visit(K_DROP).sql(' ').visit(K_PRIMARY_KEY).sql(' ').visit(K_DROP).sql(' ').visit(K_INDEX);
+                    break;
+                default:
+                    ctx.visit(K_DROP).sql(' ').visit(K_PRIMARY_KEY);
+                    break;
+            }
             ctx.end(ALTER_TABLE_DROP);
         }
 
@@ -1389,10 +1402,10 @@ final class AlterTableImpl extends AbstractRowCountQuery implements
 
 
 
-
-
-
-
+            case SQL_SERVER:
+            case ORACLE:
+                ctx.sql(' ').keyword("drop column");
+                break;
 
             default:
                 ctx.visit(K_DROP);

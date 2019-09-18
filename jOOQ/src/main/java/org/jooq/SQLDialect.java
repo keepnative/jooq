@@ -230,6 +230,21 @@ public enum SQLDialect {
 
 
 
+    /**
+     * The Oracle dialect family
+     */
+    ORACLE("Oracle", false, true),
+
+    /**
+     * The SqlServer dialect family
+     */
+    SQL_SERVER("SqlServer", false, true),
+
+    /**
+     * The DB2 dialect family
+     */
+    DB2("DB2", false, true),
+
     // -------------------------------------------------------------------------
     // SQL dialects for commercial usage
     // -------------------------------------------------------------------------
