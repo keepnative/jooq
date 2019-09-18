@@ -12,7 +12,7 @@
 
     <groupId>org.jooq</groupId>
     <artifactId>jooq-parent</artifactId>
-    <version>3.12.0</version>
+    <version>3.12.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>jOOQ Parent</name>
@@ -57,6 +57,19 @@
         <url>https://github.com/jOOQ/jOOQ.git</url>
         <connection>git://github.com/jOOQ/jOOQ.git</connection>
     </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>keepnative-releases</id>
+            <name>KeepNative Releases Repository</name>
+            <url>http://repository.keepnative.io/repository/maven-releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>keepnative-snapshots</id>
+            <name>KeepNative Snapshots Repository</name>
+            <url>http://repository.keepnative.io/repository/maven-snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <issueManagement>
         <system>GitHub</system>
@@ -433,17 +446,25 @@
         <profile>
             <id>default</id>
             <properties>
-                <java.version>10</java.version>
+                <java.version>1.8</java.version>
             </properties>
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
 
         <profile>
             <id>release-oss</id>
             <properties>
-                <java.version>10</java.version>
+                <java.version>1.8</java.version>
             </properties>
             <build>
                 <plugins>
