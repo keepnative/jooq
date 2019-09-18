@@ -4602,8 +4602,8 @@ final class Tools {
 
             // Some databases default to NOT NULL, so explicitly setting columns to NULL is mostly required here
             // [#3400] [#4321] [#7392] ... but not in Derby, Firebird, HSQLDB
-        else if (!NO_SUPPORT_NULL.contains(ctx.family()))
-            ctx.sql(' ').visit(K_NULL);
+//        else if (!NO_SUPPORT_NULL.contains(ctx.family()))
+//            ctx.sql(' ').visit(K_NULL);
 
         if (!DEFAULT_BEFORE_NULL.contains(ctx.family()))
             toSQLDDLTypeDeclarationDefault(ctx, type);
