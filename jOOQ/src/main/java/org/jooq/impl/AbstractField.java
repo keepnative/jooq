@@ -248,12 +248,22 @@ abstract class AbstractField<T> extends AbstractNamed implements Field<T> {
 
     @Override
     public final <Z> Field<Z> cast(DataType<Z> type) {
-        return new Cast<>(this, type);
+
+        // [#473] Prevent unnecessary casts
+        if (getDataType().equals(type))
+            return (Field<Z>) this;
+        else
+            return new Cast<Z>(this, type);
     }
 
     @Override
     public final <Z> Field<Z> cast(Class<Z> type) {
-        return cast(DefaultDataType.getDataType(null, type));
+
+        // [#2597] Prevent unnecessary casts
+        if (getType() == type)
+            return (Field<Z>) this;
+        else
+            return cast(DefaultDataType.getDataType(null, type));
     }
 
     // ------------------------------------------------------------------------
@@ -267,7 +277,12 @@ abstract class AbstractField<T> extends AbstractNamed implements Field<T> {
 
     @Override
     public final <Z> Field<Z> coerce(DataType<Z> type) {
-        return new Coerce<>(this, type);
+
+        // [#473] Prevent unnecessary coercions
+        if (getDataType().equals(type))
+            return (Field<Z>) this;
+        else
+            return new Coerce<Z>(this, type);
     }
 
     @Override
